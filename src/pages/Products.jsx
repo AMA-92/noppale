@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { appStorage } from '../utils/storage'
 import { formatDate } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
+import { useProductsRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, Edit2, Trash2, Package, X, Tag, DollarSign, Upload, Image as ImageIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -34,53 +35,76 @@ export default function Products() {
     setFiltered(products.filter(p => !q || p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)))
   }, [products, search])
 
-  const loadProducts = () => {
+  // Écouter les changements en temps réel sur les produits
+  useProductsRealtime((payload) => {
+    console.log('Realtime product change:', payload)
+    // Recharger les produits quand il y a un changement
+    loadProducts()
+  })
+
+  const loadProducts = async () => {
     setLoading(true)
     try {
-      const products = appStorage.getProducts()
+      const products = await appStorage.getProducts()
       setProducts(products)
     } catch(e) { toast.error('Erreur de chargement') }
     finally { setLoading(false) }
   }
 
   const openAdd = () => { setEditingId(null); setForm(emptyProduct); setShowModal(true) }
-  const openEdit = (p) => { 
-    setEditingId(p.id); 
-    setForm({ 
-      name: p.name, 
-      sellingPrice: p.sellingPrice || '', 
-      costPrice: p.costPrice || '', 
-      category: p.category || '', 
-      stock: p.stock || '', 
-      minStock: p.minStock || '', 
-      unit: p.unit || '', 
+  const openEdit = (p) => {
+    setEditingId(p.id);
+    setForm({
+      name: p.name,
+      sellingPrice: p.selling_price || '',
+      costPrice: p.buying_price || '',
+      category: p.category || '',
+      stock: p.stock || '',
+      minStock: p.min_stock || '',
+      unit: p.barcode || '',
       description: p.description || '',
       image: p.image || ''
-    }); 
-    setShowModal(true) 
+    });
+    setShowModal(true)
   }
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
     if (!form.name || !form.sellingPrice) { toast.error('Nom et prix de vente requis'); return }
     setSaving(true)
     try {
       if (editingId) {
+        const updatedProduct = await appStorage.updateProduct(editingId, {
+          name: form.name,
+          category: form.category,
+          buyingPrice: form.costPrice,
+          sellingPrice: form.sellingPrice,
+          stock: form.stock,
+          minStock: form.minStock,
+          barcode: form.unit
+        })
         const updatedProducts = products.map(p => 
-          p.id === editingId ? { ...p, ...form } : p
+          p.id === editingId ? updatedProduct : p
         )
         setProducts(updatedProducts)
-        appStorage.setProducts(updatedProducts)
         toast.success('Produit mis à jour')
       } else {
-        const newProduct = appStorage.addProduct(form)
+        const newProduct = await appStorage.addProduct({
+          name: form.name,
+          category: form.category,
+          buyingPrice: form.costPrice,
+          sellingPrice: form.sellingPrice,
+          stock: form.stock,
+          minStock: form.minStock,
+          barcode: form.unit
+        })
         setProducts([...products, newProduct])
         toast.success('Produit ajouté')
       }
       setShowModal(false)
       setForm(emptyProduct)
       setEditingId(null)
-    } catch(e) { toast.error('Erreur') }
+    } catch(e) { toast.error('Erreur: ' + e.message) }
     finally { setSaving(false) }
   }
 
@@ -100,12 +124,14 @@ export default function Products() {
     }
   }
 
-  const handleDelete = (product) => {
+  const handleDelete = async (product) => {
     if (confirm(`Supprimer ${product.name}?`)) {
-      const updatedProducts = products.filter(p => p.id !== product.id)
-      setProducts(updatedProducts)
-      appStorage.setProducts(updatedProducts)
-      toast.success('Produit supprimé')
+      try {
+        await appStorage.deleteProduct(product.id)
+        const updatedProducts = products.filter(p => p.id !== product.id)
+        setProducts(updatedProducts)
+        toast.success('Produit supprimé')
+      } catch(e) { toast.error('Erreur: ' + e.message) }
     }
   }
 
@@ -167,24 +193,24 @@ export default function Products() {
             )}
             <div className="space-y-1 mb-2">
               <div className="flex items-center justify-between">
-                <p className="text-lg font-bold text-green-600">{formatCurrency(product.sellingPrice)}</p>
+                <p className="text-lg font-bold text-green-600">{formatCurrency(product.selling_price)}</p>
                 <div className="text-right">
                   <p className={`text-sm font-medium ${
-                    (parseInt(product.stock) || 0) === 0 || ((parseInt(product.minStock) || 0) > 0 && (parseInt(product.stock) || 0) <= (parseInt(product.minStock) || 0))
-                      ? 'text-red-600' 
+                    (parseInt(product.stock) || 0) === 0 || ((parseInt(product.min_stock) || 0) > 0 && (parseInt(product.stock) || 0) <= (parseInt(product.min_stock) || 0))
+                      ? 'text-red-600'
                       : 'text-slate-500'
                   }`}>
-                    Stock: {product.stock || 0} {product.unit || ''}
+                    Stock: {product.stock || 0} {product.barcode || ''}
                   </p>
-                  {product.minStock && (
-                    <p className="text-xs text-slate-400">Min: {product.minStock} {product.unit || ''}</p>
+                  {product.min_stock && (
+                    <p className="text-xs text-slate-400">Min: {product.min_stock} {product.barcode || ''}</p>
                   )}
                 </div>
               </div>
-              {product.costPrice && (
-                <p className="text-sm text-slate-500">Achat: {formatCurrency(product.costPrice)}</p>
+              {product.buying_price && (
+                <p className="text-sm text-slate-500">Achat: {formatCurrency(product.buying_price)}</p>
               )}
-              {((parseInt(product.stock) || 0) === 0 || ((parseInt(product.minStock) || 0) > 0 && (parseInt(product.stock) || 0) <= (parseInt(product.minStock) || 0))) && (
+              {((parseInt(product.stock) || 0) === 0 || ((parseInt(product.min_stock) || 0) > 0 && (parseInt(product.stock) || 0) <= (parseInt(product.min_stock) || 0))) && (
                 <div className="bg-red-50 border border-red-200 rounded p-2 mt-2">
                   <p className="text-xs text-red-700 font-medium">
                     ⚠️ {(parseInt(product.stock) || 0) === 0 ? 'Rupture de stock' : 'Stock faible'}

@@ -22,9 +22,27 @@ function App() {
 
   useEffect(() => {
     // Vérifier l'état de l'authentification au chargement
-    const currentUser = authStorage.getCurrentUser()
-    setUser(currentUser)
-    setLoading(false)
+    const checkAuth = async () => {
+      const currentUser = authStorage.getCurrentUser()
+      setUser(currentUser)
+      setLoading(false)
+    }
+
+    checkAuth()
+
+    // Écouter les changements d'état d'authentification
+    const { data: { subscription } } = authStorage.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session)
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setUser(session.user)
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   if (loading) return <LoadingScreen />

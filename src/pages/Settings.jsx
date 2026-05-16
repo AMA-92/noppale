@@ -4,6 +4,7 @@ import storage from '../utils/storage'
 import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useI18n } from '../hooks/useI18n.jsx'
+import { useShopInfoRealtime, useUserPreferencesRealtime, useSecretCodeRealtime } from '../hooks/useRealtime.jsx'
 import { currencies } from '../utils/i18n'
 import { useNavigate } from 'react-router-dom'
 
@@ -68,25 +69,76 @@ export default function Settings() {
       })
     }
 
-    // Charger les préférences sauvegardées
-    const savedPreferences = localStorage.getItem('noppale_preferences')
-    if (savedPreferences) {
-      const preferences = JSON.parse(savedPreferences)
-      setPreferences({
-        darkMode: preferences.darkMode || false,
-        notifications: preferences.notifications !== false,
-        language: preferences.language || 'fr',
-        currency: preferences.currency || 'FCFA'
-      })
-    }
+    // Charger les préférences depuis Supabase
+    loadPreferences()
 
     // Charger les informations de la boutique
-    const savedShopInfo = appStorage.getShopInfo()
-    setShopInfo(savedShopInfo)
-    
-    // Charger le code secret (par défaut 1234)
-    const savedSecretCode = storage.get('secretCode', '1234')
+    loadShopInfo()
+
+    // Charger le code secret depuis Supabase
+    loadSecretCode()
   }, [])
+
+  // Écouter les changements en temps réel sur les informations de la boutique
+  useShopInfoRealtime((payload) => {
+    console.log('Realtime shop_info change:', payload)
+    loadShopInfo()
+  })
+
+  // Écouter les changements en temps réel sur les préférences utilisateur
+  useUserPreferencesRealtime((payload) => {
+    console.log('Realtime user_preferences change:', payload)
+    loadPreferences()
+  })
+
+  // Écouter les changements en temps réel sur le code secret
+  useSecretCodeRealtime((payload) => {
+    console.log('Realtime user_secret_code change:', payload)
+    loadSecretCode()
+  })
+
+  const loadShopInfo = async () => {
+    try {
+      const savedShopInfo = await appStorage.getShopInfo()
+      setShopInfo(savedShopInfo)
+    } catch (error) {
+      console.error('Erreur de chargement des informations de la boutique:', error)
+    }
+  }
+
+  const loadPreferences = async () => {
+    try {
+      const savedPreferences = await appStorage.getUserPreferences()
+      if (savedPreferences) {
+        setPreferences({
+          darkMode: savedPreferences.dark_mode || false,
+          notifications: savedPreferences.notifications !== false,
+          language: savedPreferences.language || 'fr',
+          currency: savedPreferences.currency || 'FCFA'
+        })
+      } else {
+        // Utiliser les valeurs par défaut si pas de préférences dans Supabase
+        setPreferences({
+          darkMode: document.documentElement.classList.contains('dark'),
+          notifications: true,
+          language: language,
+          currency: currency
+        })
+      }
+    } catch (error) {
+      console.error('Erreur de chargement des préférences:', error)
+    }
+  }
+
+  const loadSecretCode = async () => {
+    try {
+      const savedSecretCode = await appStorage.getSecretCode()
+      setSecretCode(savedSecretCode)
+    } catch (error) {
+      console.error('Erreur de chargement du code secret:', error)
+      setSecretCode('1234')
+    }
+  }
 
   // Synchroniser le mode sombre avec l'état actuel du document
   useEffect(() => {
@@ -196,13 +248,22 @@ export default function Settings() {
   }
 
   // Gestion des préférences
-  const handlePreferencesSave = () => {
-    updateLanguage(preferences.language)
-    updateCurrency(preferences.currency)
-    updateDarkMode(preferences.darkMode)
-    
-    toast.success('Préférences sauvegardées avec succès')
-    setShowPreferencesModal(false)
+  const handlePreferencesSave = async () => {
+    try {
+      // Sauvegarder dans Supabase
+      await appStorage.setUserPreferences(preferences)
+
+      // Appliquer les changements localement
+      updateLanguage(preferences.language)
+      updateCurrency(preferences.currency)
+      updateDarkMode(preferences.darkMode)
+
+      toast.success('Préférences sauvegardées avec succès')
+      setShowPreferencesModal(false)
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des préférences:', error)
+      toast.error('Erreur lors de la sauvegarde des préférences')
+    }
   }
 
   // Gestion des informations de la boutique
@@ -451,33 +512,43 @@ export default function Settings() {
     }
   }
 
-  const handleChangeSecretCode = () => {
-    const savedSecretCode = storage.get('secretCode', '1234')
-    
+  const handleChangeSecretCode = async () => {
+    if (!currentCodeForChange || !newSecretCode || !confirmNewSecretCode) {
+      toast.error('❌ Veuillez remplir tous les champs', { duration: 3000 })
+      return
+    }
+
+    // Vérifier le code actuel
+    const savedSecretCode = await appStorage.getSecretCode()
     if (currentCodeForChange !== savedSecretCode) {
       toast.error('❌ Code actuel incorrect - Veuillez réessayer', { duration: 3000 })
       return
     }
-    
+
     if (newSecretCode.length !== 4 || !/^\d+$/.test(newSecretCode)) {
       toast.error('❌ Le code secret doit comporter exactement 4 chiffres', { duration: 3000 })
       return
     }
-    
+
     if (newSecretCode !== confirmNewSecretCode) {
       toast.error('❌ Les nouveaux codes ne correspondent pas', { duration: 3000 })
       return
     }
-    
-    // Sauvegarder le nouveau code secret
-    storage.set('secretCode', newSecretCode)
-    toast.success('✅ Code secret modifié avec succès !', { duration: 3000 })
-    
-    // Réinitialiser le formulaire
-    setCurrentCodeForChange('')
-    setNewSecretCode('')
-    setConfirmNewSecretCode('')
-    setShowChangeCodeModal(false)
+
+    try {
+      // Sauvegarder le nouveau code secret dans Supabase
+      await appStorage.setSecretCode(newSecretCode)
+      toast.success('✅ Code secret modifié avec succès !', { duration: 3000 })
+
+      // Réinitialiser le formulaire
+      setCurrentCodeForChange('')
+      setNewSecretCode('')
+      setConfirmNewSecretCode('')
+      setShowChangeCodeModal(false)
+    } catch (error) {
+      console.error('Erreur lors de la modification du code secret:', error)
+      toast.error('Erreur lors de la modification du code secret')
+    }
   }
 
   const settingsSections = [

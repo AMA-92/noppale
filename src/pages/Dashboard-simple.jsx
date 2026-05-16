@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useI18n } from '../hooks/useI18n'
 import { appStorage } from '../utils/storage'
+import { useProductsRealtime, useSalesRealtime, useExpensesRealtime } from '../hooks/useRealtime.jsx'
 import { formatDate, formatCurrency } from '../utils/helpers'
 
 // Fonctions pour calculer les périodes
@@ -43,7 +44,7 @@ const getYearStart = () => {
 const filterByPeriod = (items, dateField, period) => {
   const now = new Date()
   let startDate
-  
+
   switch(period) {
     case 'day':
       startDate = getToday()
@@ -63,9 +64,9 @@ const filterByPeriod = (items, dateField, period) => {
     default:
       return items
   }
-  
+
   return items.filter(item => {
-    const itemDate = new Date(item[dateField])
+    const itemDate = new Date(item[dateField] || item.created_at || item.date)
     return itemDate >= startDate && itemDate <= now
   })
 }
@@ -99,6 +100,11 @@ export default function Dashboard() {
     loadStats()
   }, [salesPeriod, expensesPeriod, customersPeriod, salesExpensesMode, currency, language, selectedWeek])
 
+  // Écouter les changements en temps réel sur les produits, ventes et dépenses
+  useProductsRealtime(() => loadStats())
+  useSalesRealtime(() => loadStats())
+  useExpensesRealtime(() => loadStats())
+
   // Fermer la liste déroulante quand on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -111,20 +117,20 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showOutOfStockDropdown])
 
-  const loadStats = () => {
+  const loadStats = async () => {
     try {
       console.log('Dashboard: Début du chargement...')
-      
-      const sales = appStorage.getSales() || []
-      const expenses = appStorage.getExpenses() || []
-      const products = appStorage.getProducts() || []
-      const customers = appStorage.getCustomers() || []
 
-      console.log('Dashboard: Données chargées', { 
-        sales: sales.length, 
-        expenses: expenses.length, 
-        products: products.length, 
-        customers: customers.length 
+      const sales = await appStorage.getSales()
+      const expenses = await appStorage.getExpenses()
+      const products = await appStorage.getProducts()
+      const customers = await appStorage.getCustomers()
+
+      console.log('Dashboard: Données chargées', {
+        sales: sales.length,
+        expenses: expenses.length,
+        products: products.length,
+        customers: customers.length
       })
 
       // Filtrer les ventes selon la période pour le calcul des ventes
@@ -142,20 +148,20 @@ export default function Dashboard() {
       let customerNames = []
       try {
         customerNames = [...new Set(filteredSalesForCustomers.map(sale => {
-          return sale.customerName || sale.customerId || 'Anonyme'
+          return sale.customer_name || sale.customerId || 'Anonyme'
         }).filter(name => name && name !== 'Anonyme'))]
       } catch (error) {
         console.error('Erreur dans le calcul des clients:', error)
         customerNames = []
       }
-      
+
       const uniqueCustomers = customerNames.length
 
       // Calculer la valeur du stock total
       const totalStockValue = products.reduce((sum, product) => {
         try {
           const stock = parseInt(product.stock) || 0
-          const price = parseFloat(product.sellingPrice) || 0
+          const price = parseFloat(product.selling_price) || 0
           return sum + (stock * price)
         } catch (error) {
           console.error('Erreur calcul stock pour produit:', product, error)
@@ -163,21 +169,21 @@ export default function Dashboard() {
         }
       }, 0)
       const totalStock = products.reduce((sum, product) => sum + (parseInt(product.stock) || 0), 0)
-      
+
       // Calculer les produits en rupture de stock
       const outOfStockProducts = products.filter(product => {
         const stock = parseInt(product.stock) || 0
-        const minStock = parseInt(product.minStock) || 0
+        const minStock = parseInt(product.min_stock) || 0
         return stock === 0 || (minStock > 0 && stock <= minStock)
       })
       const outOfStockCount = outOfStockProducts.length
 
       const recentSales = sales
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 5)
 
       const recentExpenses = expenses
-        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
         .slice(0, 5)
 
       // Calculer le top 3 des produits les plus vendus
@@ -232,7 +238,7 @@ export default function Dashboard() {
 
         // Filtrer les ventes pour cette journée
         const daySales = sales.filter(sale => {
-          const saleDate = new Date(sale.createdAt)
+          const saleDate = new Date(sale.created_at)
           return saleDate >= date && saleDate <= nextDate
         })
 

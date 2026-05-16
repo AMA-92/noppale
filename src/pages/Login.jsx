@@ -37,8 +37,8 @@ export default function Login() {
     setLoading(true)
     try {
       if (isLogin) {
-        // Connexion
-        const user = usersStorage.authenticate(email, password)
+        // Connexion avec Supabase
+        const user = await usersStorage.signIn(email, password)
         if (user) {
           // Sauvegarder les identifiants si "Se souvenir de moi" est coché
           if (typeof window !== 'undefined' && window.localStorage) {
@@ -61,7 +61,6 @@ export default function Login() {
             }
           }
           
-          authStorage.setCurrentUser(user)
           toast.success('Connexion réussie !')
           // Redirection gérée par le composant App
           window.location.href = '/'
@@ -69,26 +68,16 @@ export default function Login() {
           toast.error('Email ou mot de passe incorrect')
         }
       } else {
-        // Création de compte
-        const existingUser = usersStorage.findUserByEmail(email)
-        if (existingUser) {
-          toast.error('Cet email est déjà utilisé')
-          return
-        }
-        
+        // Création de compte avec Supabase
         if (password.length < 6) {
           toast.error('Mot de passe trop faible (minimum 6 caractères)')
+          setLoading(false)
           return
         }
 
-        const newUser = usersStorage.addUser({
-          email,
-          password,
-          name: email.split('@')[0]
-        })
+        const newUser = await usersStorage.signUp(email, password, email.split('@')[0])
         
         if (newUser) {
-          authStorage.setCurrentUser(newUser)
           toast.success('Compte créé avec succès !')
           window.location.href = '/'
         } else {

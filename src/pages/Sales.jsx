@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { appStorage } from '../utils/storage'
 import { formatDate, getPaymentMethod, formatCurrency } from '../utils/helpers'
+import { useI18n } from '../hooks/useI18n.jsx'
+import { useSalesRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, ShoppingCart, X, DollarSign, Calendar, User, Package, Printer, Eye, Edit } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useI18n } from '../hooks/useI18n.jsx'
 
 const emptySale = {
   customerName: '',
@@ -53,32 +54,42 @@ export default function Sales() {
 
   // Charger les informations de la boutique
   useEffect(() => {
-    try {
-      const shopData = appStorage.getShopInfo()
-      setShopInfo(shopData)
-    } catch(e) { 
-      console.error('Erreur de chargement des informations de la boutique:', e)
+    const loadShopInfo = async () => {
+      try {
+        const shopData = await appStorage.getShopInfo()
+        setShopInfo(shopData)
+      } catch(e) {
+        console.error('Erreur de chargement des informations de la boutique:', e)
+      }
     }
+    loadShopInfo()
   }, [])
 
-  useEffect(() => { 
+  useEffect(() => {
     loadSales()
     loadProducts()
   }, [currency, language])
 
   useEffect(() => {
     const q = search.toLowerCase()
-    setFiltered(sales.filter(s => !q || s.customerName.toLowerCase().includes(q)))
+    setFiltered(sales.filter(s => !q || (s.customer_name && s.customer_name.toLowerCase().includes(q))))
   }, [sales, search])
 
-  const loadProducts = () => {
+  // Écouter les changements en temps réel sur les ventes
+  useSalesRealtime((payload) => {
+    console.log('Realtime sales change:', payload)
+    // Recharger les ventes quand il y a un changement
+    loadSales()
+  })
+
+  const loadProducts = async () => {
     try {
-      const products = appStorage.getProducts()
+      const products = await appStorage.getProducts()
       console.log('📦 Produits chargés:', products.map(p => ({
         id: p.id,
         name: p.name,
-        sellingPrice: p.sellingPrice,
-        costPrice: p.costPrice,
+        selling_price: p.selling_price,
+        buying_price: p.buying_price,
         stock: p.stock
       })))
       setProducts(products)
@@ -99,10 +110,10 @@ export default function Sales() {
     return receivedNum - totalNum
   }
 
-  const loadSales = () => {
+  const loadSales = async () => {
     setLoading(true)
     try {
-      const sales = appStorage.getSales()
+      const sales = await appStorage.getSales()
       setSales(sales)
     } catch(e) { toast.error('Erreur de chargement') }
     finally { setLoading(false) }
@@ -125,61 +136,61 @@ export default function Sales() {
   const selectProduct = (product) => {
     try {
       console.log('Produit ajouté au panier:', product)
-      
+
       // Validation du produit
       if (!product || !product.id) {
         console.error('Produit invalide:', product)
         toast.error('Produit invalide')
         return
       }
-      
+
       // Vérifier si le produit est déjà dans le panier
       const existingItem = form.items.find(item => item.productId === product.id)
       const currentQuantity = existingItem ? parseInt(existingItem.quantity || 0) : 0
       const availableStock = parseInt(product.stock || 0)
-      
+
       // Validation du stock disponible
       if (currentQuantity >= availableStock) {
         toast.error(`Stock insuffisant ! Il ne reste que ${availableStock} unité(s) de ${product.name}`)
         return
       }
-      
-      const unitPrice = parseFloat(product.sellingPrice) || 0
+
+      const unitPrice = parseFloat(product.selling_price) || 0
       const quantity = 1
-      
+
       // Validation du prix
       if (unitPrice <= 0) {
         console.error('Prix invalide:', unitPrice)
         toast.error('Prix du produit invalide')
         return
       }
-      
+
       console.log('Prix unitaire:', unitPrice, 'Quantité:', quantity, 'Stock disponible:', availableStock)
-      
+
       // Créer l'item pour le panier
       const newItem = {
         productId: product.id,
         quantity: quantity,
         unitPrice: unitPrice,
-        costPrice: parseFloat(product.costPrice || 0), // AJOUTER LE PRIX D'ACHAT
+        costPrice: parseFloat(product.buying_price || 0),
         totalPrice: calculateItemTotal(quantity, unitPrice),
         productName: product.name || 'Produit sans nom',
-        productUnit: product.unit || 'unité'
+        productUnit: product.barcode || 'unité'
       }
-      
+
       console.log('Nouvel item créé:', newItem)
-      
+
       // Ajouter directement au panier
       const currentItems = form.items || []
       const existingItemIndex = currentItems.findIndex(item => item.productId === product.id)
-      
+
       let updatedItems
       if (existingItemIndex >= 0) {
         // Si le produit existe déjà, augmenter la quantité
         updatedItems = [...currentItems]
         updatedItems[existingItemIndex].quantity += quantity
         updatedItems[existingItemIndex].totalPrice = calculateItemTotal(
-          updatedItems[existingItemIndex].quantity, 
+          updatedItems[existingItemIndex].quantity,
           updatedItems[existingItemIndex].unitPrice
         )
         console.log('Produit existant mis à jour:', updatedItems[existingItemIndex])
@@ -188,13 +199,13 @@ export default function Sales() {
         updatedItems = [...currentItems, newItem]
         console.log('Nouveau produit ajouté:', newItem)
       }
-      
+
       // Calculer le nouveau total
       const newTotal = calculateTotal(updatedItems)
       const newChange = calculateChange(newTotal, form.amountReceived || 0)
-      
+
       console.log('Nouveaux totaux - Total:', newTotal, 'Change:', newChange)
-      
+
       // Mettre à jour le formulaire
       setForm({
         ...form,
@@ -202,14 +213,14 @@ export default function Sales() {
         total: newTotal,
         change: newChange
       })
-      
+
       // Réinitialiser la recherche
       setProductSearch('')
       setShowProductDropdown(false)
-      
+
       // Mettre à jour currentItem pour l'affichage
       setCurrentItem(emptyItem)
-      
+
       toast.success(`${product.name || 'Produit'} ajouté au panier`)
       console.log('Panier mis à jour avec succès:', updatedItems)
     } catch (error) {
@@ -287,30 +298,28 @@ export default function Sales() {
   }
 
   const getAvailableStock = (productId) => {
-    const products = appStorage.getProducts() || []
     const product = products.find(p => p.id === productId)
     return product ? parseInt(product.stock || 0) : 999
   }
 
   const updateItemQuantity = (productId, quantity) => {
     // Récupérer le produit pour vérifier le stock disponible
-    const availableProducts = appStorage.getProducts() || []
-    const product = availableProducts.find(p => p.id === productId)
-    
+    const product = products.find(p => p.id === productId)
+
     if (!product) {
       toast.error('Produit non trouvé')
       return
     }
-    
+
     const newQuantity = parseFloat(quantity) || 1
     const availableStock = parseInt(product.stock || 0)
-    
+
     // Validation du stock disponible
     if (newQuantity > availableStock) {
       toast.error(`Quantité trop élevée ! Il ne reste que ${availableStock} unité(s) de ${product.name}`)
       return
     }
-    
+
     const updatedItems = form.items.map(item => {
       if (item.productId === productId) {
         const unitPrice = parseFloat(item.unitPrice) || 0
@@ -324,7 +333,7 @@ export default function Sales() {
     })
     const newTotal = calculateTotal(updatedItems)
     const newChange = calculateChange(newTotal, form.amountReceived)
-    
+
     setForm({
       ...form,
       items: updatedItems,
@@ -342,57 +351,43 @@ export default function Sales() {
     })
   }
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     if (e) e.preventDefault()
-    
-    if (!form.customerName || !form.items || form.items.length === 0) { 
-      toast.error('Client et articles requis'); 
-      return 
+
+    if (!form.customerName || !form.items || form.items.length === 0) {
+      toast.error('Client et articles requis')
+      return
     }
-    
+
     if (form.paymentMethod === 'especes' && (form.amountReceived || 0) < (form.total || 0)) {
-      toast.error('Le montant reçu est insuffisant'); 
-      return 
+      toast.error('Le montant reçu est insuffisant')
+      return
     }
-    
+
     setSaving(true)
     try {
-      // Mettre à jour le stock des produits avant d'enregistrer la vente
-      const currentProducts = appStorage.getProducts()
-      const updatedProducts = currentProducts.map(product => {
-        // Chercher si ce produit est dans la vente
-        const soldItem = form.items.find(item => item.productId === product.id)
-        if (soldItem) {
-          // Déduire la quantité vendue du stock
-          const newStock = Math.max(0, (parseFloat(product.stock) || 0) - (parseFloat(soldItem.quantity) || 0))
-          return { ...product, stock: newStock.toString() }
-        }
-        return product
+      // Enregistrer la vente avec Supabase (gère automatiquement le stock)
+      const newSale = await appStorage.addSale({
+        customerName: form.customerName,
+        total: form.total,
+        paymentMethod: form.paymentMethod,
+        notes: form.notes,
+        items: form.items
       })
-      
-      // Sauvegarder les produits avec le stock mis à jour
-      appStorage.setProducts(updatedProducts)
-      setProducts(updatedProducts)
-      
-      // Enregistrer la vente
-      const newSale = appStorage.addSale(form)
+
       setSales(prev => [...prev, newSale])
-      
-      // Afficher les détails des produits mis à jour pour le débogage
-      console.log('📦 Stock mis à jour après vente:', updatedProducts.map(p => ({
-        name: p.name,
-        stock: p.stock,
-        sold: form.items.find(item => item.productId === p.id)?.quantity || 0
-      })))
-      
+
+      // Recharger les produits pour mettre à jour le stock affiché
+      await loadProducts()
+
       toast.success('Vente enregistrée et stock mis à jour')
       setShowModal(false)
       setForm(emptySale)
       setCurrentItem(emptyItem)
       setProductSearch('')
-    } catch(e) { 
+    } catch(e) {
       console.error('Erreur détaillée:', e)
-      toast.error('Erreur lors de l\'enregistrement de la vente')
+      toast.error('Erreur lors de l\'enregistrement de la vente: ' + e.message)
     } finally {
       setSaving(false)
     }
@@ -414,65 +409,11 @@ export default function Sales() {
   }
 
   const saveEditedSale = () => {
-    if (!editingSaleData || !editingSaleData.id) return
-    
-    setSaving(true)
-    try {
-      // Récupérer toutes les ventes
-      const allSales = appStorage.getSales() || []
-      
-      // Récupérer l'ancienne vente pour comparer les stocks
-      const oldSale = allSales.find(s => s.id === editingSaleData.id)
-      
-      // Récupérer tous les produits
-      const allProducts = appStorage.getProducts() || []
-      
-      // Remettre en stock les anciens articles
-      if (oldSale && oldSale.items) {
-        oldSale.items.forEach(oldItem => {
-          const product = allProducts.find(p => p.id === oldItem.productId)
-          if (product) {
-            product.stock = (parseInt(product.stock || 0) + parseInt(oldItem.quantity || 0)).toString()
-          }
-        })
-      }
-      
-      // Retirer du stock les nouveaux articles
-      if (editingSaleData.items) {
-        editingSaleData.items.forEach(newItem => {
-          const product = allProducts.find(p => p.id === newItem.productId)
-          if (product) {
-            const newStock = parseInt(product.stock || 0) - parseInt(newItem.quantity || 0)
-            product.stock = Math.max(0, newStock).toString()
-          }
-        })
-      }
-      
-      // Sauvegarder les produits avec le stock mis à jour
-      appStorage.setProducts(allProducts)
-      setProducts(allProducts)
-      
-      // Mettre à jour la vente
-      const updatedSales = allSales.map(sale => 
-        sale.id === editingSaleData.id ? editingSaleData : sale
-      )
-      appStorage.saveSales(updatedSales)
-      setSales(updatedSales)
-      
-      console.log('📦 Stock mis à jour après modification de vente:', allProducts.map(p => ({
-        name: p.name,
-        stock: p.stock
-      })))
-      
-      toast.success('Vente modifiée et stock mis à jour')
-      setIsEditingSale(false)
-      setEditingSaleData(null)
-    } catch (error) {
-      console.error('Erreur lors de la modification:', error)
-      toast.error('Erreur lors de la modification')
-    } finally {
-      setSaving(false)
-    }
+    // Pour l'instant, la modification de vente est désactivée avec Supabase
+    // car elle nécessite une logique complexe de gestion du stock
+    toast.error('La modification de vente n\'est pas encore supportée avec Supabase')
+    setIsEditingSale(false)
+    setEditingSaleData(null)
   }
 
   const cancelEditingSale = () => {

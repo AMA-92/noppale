@@ -1,300 +1,778 @@
-// Système de stockage local pour Noppalé
-// Utilise localStorage pour la persistance des données
+// Système de stockage Supabase pour Noppalé
+// Utilise Supabase pour la persistance des données avec synchronisation en temps réel
 
-class LocalStorage {
-  constructor() {
-    this.prefix = 'noppale_'
-  }
+import { supabase } from '../supabase/config.js'
 
-  // Récupérer une clé avec préfixe
-  getKey(key) {
-    return `${this.prefix}${key}`
-  }
-
-  // Sauvegarder des données
-  set(key, data) {
-    try {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return false
-      }
-      const value = JSON.stringify(data)
-      localStorage.setItem(this.getKey(key), value)
-      return true
-    } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error)
-      return false
-    }
-  }
-
-  // Récupérer des données
-  get(key, defaultValue = null) {
-    try {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return defaultValue
-      }
-      const value = localStorage.getItem(this.getKey(key))
-      return value ? JSON.parse(value) : defaultValue
-    } catch (error) {
-      console.error('Erreur lors de la lecture:', error)
-      return defaultValue
-    }
-  }
-
-  // Supprimer des données
-  remove(key) {
-    try {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return false
-      }
-      localStorage.removeItem(this.getKey(key))
-      return true
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error)
-      return false
-    }
-  }
-
-  // Vider toutes les données Noppalé
-  clear() {
-    try {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return false
-      }
-      Object.keys(localStorage)
-        .filter(key => key.startsWith(this.prefix))
-        .forEach(key => localStorage.removeItem(key))
-      return true
-    } catch (error) {
-      console.error('Erreur lors du nettoyage:', error)
-      return false
-    }
-  }
-
-  // Vérifier si une clé existe
-  exists(key) {
-    if (typeof window === 'undefined' || !window.localStorage) {
-      return false
-    }
-    return localStorage.getItem(this.getKey(key)) !== null
-  }
+// Obtenir l'ID de l'utilisateur connecté
+const getCurrentUserId = () => {
+  const { data } = supabase.auth.getUser()
+  return data.user?.id
 }
 
-// Instance unique du stockage
-const storage = new LocalStorage()
-
-// Gestion des utilisateurs
+// Gestion des utilisateurs avec Supabase Auth
 export const usersStorage = {
-  // Obtenir tous les utilisateurs
-  getUsers() {
-    return storage.get('users', [])
-  },
-
-  // Définir la liste des utilisateurs
-  setUsers(users) {
-    return storage.set('users', users)
-  },
-
-  // Ajouter un utilisateur
-  addUser(user) {
-    const users = this.getUsers()
-    const newUser = {
-      id: Date.now().toString(),
-      email: user.email,
-      password: user.password, // En production, il faudrait hasher ce mot de passe
-      name: user.name || user.email.split('@')[0],
-      createdAt: new Date().toISOString(),
-      ...user
+  // Inscription d'un utilisateur
+  async signUp(email, password, name) {
+    try {
+      console.log('🔐 Tentative d\'inscription:', { email, name })
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name },
+          emailConfirmTo: false // Désactiver la confirmation par email
+        }
+      })
+      console.log('📝 Réponse Supabase:', { data, error })
+      if (error) throw error
+      console.log('✅ Utilisateur créé:', data.user)
+      return data.user
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'inscription:', error)
+      throw error
     }
-    users.push(newUser)
-    storage.set('users', users)
-    return newUser
   },
 
-  // Trouver un utilisateur par email
-  findUserByEmail(email) {
-    const users = this.getUsers()
-    return users.find(user => user.email === email)
-  },
-
-  // Vérifier les identifiants
-  authenticate(email, password) {
-    const user = this.findUserByEmail(email)
-    if (user && user.password === password) {
-      // Retourner l'utilisateur sans le mot de passe
-      const { password: _, ...userWithoutPassword } = user
-      return userWithoutPassword
+  // Connexion d'un utilisateur
+  async signIn(email, password) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+      if (error) throw error
+      return data.user
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error)
+      throw error
     }
-    return null
   },
 
-  // Mettre à jour un utilisateur
-  updateUser(userId, updates) {
-    const users = this.getUsers()
-    const index = users.findIndex(user => user.id === userId)
-    if (index !== -1) {
-      users[index] = { ...users[index], ...updates }
-      storage.set('users', users)
-      return users[index]
+  // Déconnexion
+  async signOut() {
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error)
+      throw error
     }
-    return null
+  },
+
+  // Obtenir l'utilisateur actuel
+  getCurrentUser() {
+    const { data } = supabase.auth.getUser()
+    return data.user
+  },
+
+  // Mettre à jour le profil utilisateur
+  async updateUser(updates) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour:', error)
+      throw error
+    }
   }
 }
 
 // Gestion de l'authentification
 export const authStorage = {
-  // Sauvegarder l'utilisateur connecté
+  // Sauvegarder l'utilisateur connecté (géré par Supabase)
   setCurrentUser(user) {
-    storage.set('currentUser', user)
+    // Supabase gère automatiquement la session
+    console.log('Session gérée par Supabase')
   },
 
   // Obtenir l'utilisateur connecté
   getCurrentUser() {
-    return storage.get('currentUser')
+    const { data } = supabase.auth.getUser()
+    return data.user
   },
 
   // Déconnexion
-  logout() {
-    storage.remove('currentUser')
+  async logout() {
+    const { error } = await supabase.auth.signOut()
+    if (error) console.error('Erreur lors de la déconnexion:', error)
   },
 
   // Vérifier si un utilisateur est connecté
   isAuthenticated() {
-    return this.getCurrentUser() !== null
+    const { data } = supabase.auth.getUser()
+    return data.user !== null
+  },
+
+  // Écouter les changements d'authentification
+  onAuthStateChange(callback) {
+    return supabase.auth.onAuthStateChange(callback)
   }
 }
 
-// Gestion des données de l'application
+// Gestion des données de l'application avec Supabase
 export const appStorage = {
   // Produits
-  getProducts() {
-    return storage.get('products', [])
-  },
+  async getProducts() {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return []
 
-  setProducts(products) {
-    return storage.set('products', products)
-  },
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
 
-  addProduct(product) {
-    const products = this.getProducts()
-    const newProduct = {
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      ...product
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Erreur lors de la récupération des produits:', error)
+      return []
     }
-    products.push(newProduct)
-    this.setProducts(products)
-    return newProduct
   },
 
-  saveProducts(products) {
-    return this.setProducts(products)
-  },
-
-  // Clients
-  getCustomers() {
-    return storage.get('customers', [])
-  },
-
-  setCustomers(customers) {
-    return storage.set('customers', customers)
-  },
-
-  addCustomer(customer) {
-    const customers = this.getCustomers()
-    const newCustomer = {
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      ...customer
-    }
-    customers.push(newCustomer)
-    this.setCustomers(customers)
-    return newCustomer
-  },
-
-  // Ventes
-  getSales() {
-    return storage.get('sales', [])
-  },
-
-  setSales(sales) {
-    return storage.set('sales', sales)
-  },
-
-  addSale(sale) {
-    const sales = this.getSales()
-    const newSale = {
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      ...sale
-    }
-    sales.push(newSale)
-    this.setSales(sales)
-    return newSale
-  },
-
-  saveSales(sales) {
-    return this.setSales(sales)
-  },
-
-  // Dépenses
-  getExpenses() {
-    return storage.get('expenses', [])
-  },
-
-  setExpenses(expenses) {
-    return storage.set('expenses', expenses)
-  },
-
-  addExpense(expense) {
-    const expenses = this.getExpenses()
-    const newExpense = {
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      ...expense
-    }
-    expenses.push(newExpense)
-    this.setExpenses(expenses)
-    return newExpense
-  },
-
-  updateExpense(id, updates) {
-    const expenses = this.getExpenses()
-    const index = expenses.findIndex(e => e.id === id)
-    if (index === -1) throw new Error('Dépense non trouvée')
-    
-    expenses[index] = { ...expenses[index], ...updates }
-    this.setExpenses(expenses)
-    return expenses[index]
-  },
-
-  deleteExpense(id) {
-    const expenses = this.getExpenses()
-    const filteredExpenses = expenses.filter(e => e.id !== id)
-    this.setExpenses(filteredExpenses)
+  async setProducts(products) {
+    // Supabase gère les produits individuellement, pas en lot
+    console.log('Utilisez addProduct/updateProduct pour Supabase')
     return true
   },
 
+  async addProduct(product) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          user_id: userId,
+          name: product.name,
+          category: product.category || '',
+          buying_price: product.buyingPrice || 0,
+          selling_price: product.sellingPrice || 0,
+          stock: product.stock || 0,
+          min_stock: product.minStock || 0,
+          barcode: product.barcode || ''
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du produit:', error)
+      throw error
+    }
+  },
+
+  async updateProduct(id, updates) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('products')
+        .update({
+          name: updates.name,
+          category: updates.category,
+          buying_price: updates.buyingPrice,
+          selling_price: updates.sellingPrice,
+          stock: updates.stock,
+          min_stock: updates.minStock,
+          barcode: updates.barcode,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du produit:', error)
+      throw error
+    }
+  },
+
+  async deleteProduct(id) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la suppression du produit:', error)
+      throw error
+    }
+  },
+
+  // Clients
+  async getCustomers() {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return []
+
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Erreur lors de la récupération des clients:', error)
+      return []
+    }
+  },
+
+  async addCustomer(customer) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('customers')
+        .insert({
+          user_id: userId,
+          name: customer.name,
+          phone: customer.phone || '',
+          email: customer.email || '',
+          address: customer.address || ''
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du client:', error)
+      throw error
+    }
+  },
+
+  async updateCustomer(id, updates) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('customers')
+        .update({
+          name: updates.name,
+          phone: updates.phone,
+          email: updates.email,
+          address: updates.address,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du client:', error)
+      throw error
+    }
+  },
+
+  async deleteCustomer(id) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la suppression du client:', error)
+      throw error
+    }
+  },
+
+  // Ventes
+  async getSales() {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return []
+
+      const { data, error } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          sale_items (*)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Erreur lors de la récupération des ventes:', error)
+      return []
+    }
+  },
+
+  async addSale(sale) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      // Créer la vente
+      const { data: saleData, error: saleError } = await supabase
+        .from('sales')
+        .insert({
+          user_id: userId,
+          customer_id: sale.customerId || null,
+          customer_name: sale.customerName || '',
+          total: sale.total,
+          payment_method: sale.paymentMethod || 'cash',
+          notes: sale.notes || ''
+        })
+        .select()
+        .single()
+
+      if (saleError) throw saleError
+
+      // Ajouter les items de la vente
+      if (sale.items && Array.isArray(sale.items)) {
+        const saleItems = sale.items.map(item => ({
+          sale_id: saleData.id,
+          product_id: item.productId || null,
+          product_name: item.productName,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice
+        }))
+
+        const { error: itemsError } = await supabase
+          .from('sale_items')
+          .insert(saleItems)
+
+        if (itemsError) throw itemsError
+      }
+
+      // Mettre à jour le stock des produits
+      if (sale.items && Array.isArray(sale.items)) {
+        for (const item of sale.items) {
+          if (item.productId) {
+            const { data: product } = await supabase
+              .from('products')
+              .select('stock')
+              .eq('id', item.productId)
+              .single()
+
+            if (product) {
+              const newStock = Math.max(0, product.stock - item.quantity)
+              await supabase
+                .from('products')
+                .update({ stock: newStock })
+                .eq('id', item.productId)
+            }
+          }
+        }
+      }
+
+      return saleData
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la vente:', error)
+      throw error
+    }
+  },
+
+  async deleteSale(id) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la vente:', error)
+      throw error
+    }
+  },
+
+  // Dépenses
+  async getExpenses() {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return []
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', userId)
+        .order('date', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    } catch (error) {
+      console.error('Erreur lors de la récupération des dépenses:', error)
+      return []
+    }
+  },
+
+  async addExpense(expense) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert({
+          user_id: userId,
+          category: expense.category,
+          description: expense.description || '',
+          amount: expense.amount,
+          date: expense.date || new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la dépense:', error)
+      throw error
+    }
+  },
+
+  async updateExpense(id, updates) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .update({
+          category: updates.category,
+          description: updates.description,
+          amount: updates.amount,
+          date: updates.date
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la dépense:', error)
+      throw error
+    }
+  },
+
+  async deleteExpense(id) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la dépense:', error)
+      throw error
+    }
+  },
+
   // Informations de la boutique
-  getShopInfo() {
-    return storage.get('shopInfo', {
-      name: '',
-      address: '',
-      phone: '',
-      email: '',
-      logo: ''
-    })
+  async getShopInfo() {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return {
+        name: '',
+        address: '',
+        phone: '',
+        email: '',
+        logo: ''
+      }
+
+      const { data, error } = await supabase
+        .from('shop_info')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Pas de données, retourner les valeurs par défaut
+          return {
+            name: '',
+            address: '',
+            phone: '',
+            email: '',
+            logo: ''
+          }
+        }
+        throw error
+      }
+
+      return data || {
+        name: '',
+        address: '',
+        phone: '',
+        email: '',
+        logo: ''
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des infos boutique:', error)
+      return {
+        name: '',
+        address: '',
+        phone: '',
+        email: '',
+        logo: ''
+      }
+    }
   },
 
-  setShopInfo(shopInfo) {
-    return storage.set('shopInfo', shopInfo)
+  async setShopInfo(shopInfo) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      // Vérifier si les infos existent déjà
+      const { data: existing } = await supabase
+        .from('shop_info')
+        .select('id')
+        .eq('user_id', userId)
+        .single()
+
+      if (existing) {
+        // Mettre à jour
+        const { data, error } = await supabase
+          .from('shop_info')
+          .update({
+            name: shopInfo.name,
+            address: shopInfo.address,
+            phone: shopInfo.phone,
+            email: shopInfo.email,
+            logo: shopInfo.logo,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      } else {
+        // Créer
+        const { data, error } = await supabase
+          .from('shop_info')
+          .insert({
+            user_id: userId,
+            name: shopInfo.name,
+            address: shopInfo.address,
+            phone: shopInfo.phone,
+            email: shopInfo.email,
+            logo: shopInfo.logo
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des infos boutique:', error)
+      throw error
+    }
   },
 
-  updateShopInfo(updates) {
-    const currentInfo = this.getShopInfo()
-    const updatedInfo = { ...currentInfo, ...updates }
-    this.setShopInfo(updatedInfo)
-    return updatedInfo
+  // Obtenir les préférences utilisateur
+  async getUserPreferences() {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return null
+
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Pas de préférences trouvées, retourner null
+          return null
+        }
+        throw error
+      }
+
+      return data
+    } catch (error) {
+      console.error('Erreur lors de la récupération des préférences:', error)
+      throw error
+    }
+  },
+
+  // Sauvegarder les préférences utilisateur
+  async setUserPreferences(preferences) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      // Vérifier si les préférences existent déjà
+      const { data: existing } = await supabase
+        .from('user_preferences')
+        .select('id')
+        .eq('user_id', userId)
+        .single()
+
+      if (existing) {
+        // Mettre à jour
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .update({
+            language: preferences.language || 'fr',
+            currency: preferences.currency || 'FCFA',
+            dark_mode: preferences.darkMode || false,
+            notifications: preferences.notifications !== false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      } else {
+        // Créer
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .insert({
+            user_id: userId,
+            language: preferences.language || 'fr',
+            currency: preferences.currency || 'FCFA',
+            dark_mode: preferences.darkMode || false,
+            notifications: preferences.notifications !== false
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des préférences:', error)
+      throw error
+    }
+  },
+
+  // Obtenir le code secret
+  async getSecretCode() {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) return '1234'
+
+      const { data, error } = await supabase
+        .from('user_secret_code')
+        .select('secret_code')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Pas de code secret trouvé, retourner le code par défaut
+          return '1234'
+        }
+        throw error
+      }
+
+      return data.secret_code
+    } catch (error) {
+      console.error('Erreur lors de la récupération du code secret:', error)
+      return '1234'
+    }
+  },
+
+  // Sauvegarder le code secret
+  async setSecretCode(secretCode) {
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      // Vérifier si le code secret existe déjà
+      const { data: existing } = await supabase
+        .from('user_secret_code')
+        .select('id')
+        .eq('user_id', userId)
+        .single()
+
+      if (existing) {
+        // Mettre à jour
+        const { data, error } = await supabase
+          .from('user_secret_code')
+          .update({
+            secret_code: secretCode,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      } else {
+        // Créer
+        const { data, error } = await supabase
+          .from('user_secret_code')
+          .insert({
+            user_id: userId,
+            secret_code: secretCode
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+        return data
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde du code secret:', error)
+      throw error
+    }
   }
 }
 
-export default storage
+export default null

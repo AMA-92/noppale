@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { appStorage } from '../utils/storage'
 import { formatDate } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
+import { useExpensesRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, Wallet, X, Calendar, Tag, Edit, Trash2, BarChart3, TrendingDown, PieChart as PieChartIcon, TrendingUp, DollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
@@ -55,15 +56,22 @@ export default function Expenses() {
     loadExpenses()
   }, [currency])
 
-  const loadExpenses = () => {
+  // Écouter les changements en temps réel sur les dépenses
+  useExpensesRealtime((payload) => {
+    console.log('Realtime expenses change:', payload)
+    // Recharger les dépenses quand il y a un changement
+    loadExpenses()
+  })
+
+  const loadExpenses = async () => {
     try {
       console.log('Expenses: Début du chargement...')
       setLoading(true)
       setError(null)
-      
-      const data = appStorage.getExpenses() || []
+
+      const data = await appStorage.getExpenses()
       console.log('Expenses: Données chargées', data.length)
-      
+
       setExpenses(data)
       setFiltered(data)
     } catch (error) {
@@ -161,36 +169,36 @@ export default function Expenses() {
     setShowModal(true) 
   }
 
-  const handleDelete = (expense) => {
+  const handleDelete = async (expense) => {
     if (window.confirm(`Êtes-vous sûr de vouloir supprimer la dépense "${expense.description}" ?`)) {
       try {
-        appStorage.deleteExpense(expense.id)
+        await appStorage.deleteExpense(expense.id)
         setExpenses(expenses.filter(e => e.id !== expense.id))
         toast.success('Dépense supprimée')
       } catch(e) { toast.error('Erreur lors de la suppression') }
     }
   }
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
     if (!form.description || !form.amount) { toast.error('Description et montant requis'); return }
     setSaving(true)
     try {
       if (editingId) {
         // Mode modification
-        const updatedExpense = appStorage.updateExpense(editingId, form)
+        const updatedExpense = await appStorage.updateExpense(editingId, form)
         setExpenses(expenses.map(e => e.id === editingId ? updatedExpense : e))
         toast.success('Dépense modifiée')
       } else {
         // Mode ajout
-        const newExpense = appStorage.addExpense(form)
+        const newExpense = await appStorage.addExpense(form)
         setExpenses([...expenses, newExpense])
         toast.success('Dépense enregistrée')
       }
       setShowModal(false)
       setForm(emptyExpense)
       setEditingId(null)
-    } catch(e) { toast.error('Erreur') }
+    } catch(e) { toast.error('Erreur: ' + e.message) }
     finally { setSaving(false) }
   }
 
