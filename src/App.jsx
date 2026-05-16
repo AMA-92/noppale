@@ -23,7 +23,7 @@ function App() {
   useEffect(() => {
     // Vérifier l'état de l'authentification au chargement
     const checkAuth = async () => {
-      const currentUser = authStorage.getCurrentUser()
+      const currentUser = await authStorage.getCurrentUser()
       setUser(currentUser)
       setLoading(false)
     }

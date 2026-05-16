@@ -97,9 +97,18 @@ export const authStorage = {
   },
 
   // Obtenir l'utilisateur connecté
-  getCurrentUser() {
-    const { data } = supabase.auth.getUser()
-    return data.user
+  async getCurrentUser() {
+    try {
+      const { data, error } = await supabase.auth.getUser()
+      if (error) {
+        console.error('Erreur getCurrentUser:', error)
+        return null
+      }
+      return data?.user || null
+    } catch (error) {
+      console.error('Erreur getCurrentUser:', error)
+      return null
+    }
   },
 
   // Déconnexion
@@ -109,9 +118,18 @@ export const authStorage = {
   },
 
   // Vérifier si un utilisateur est connecté
-  isAuthenticated() {
-    const { data } = supabase.auth.getUser()
-    return data.user !== null
+  async isAuthenticated() {
+    try {
+      const { data, error } = await supabase.auth.getUser()
+      if (error) {
+        console.error('Erreur isAuthenticated:', error)
+        return false
+      }
+      return data?.user !== null
+    } catch (error) {
+      console.error('Erreur isAuthenticated:', error)
+      return false
+    }
   },
 
   // Écouter les changements d'authentification
