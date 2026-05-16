@@ -5,6 +5,12 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://votre-projet.supabase.co'
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'votre-clé-anonyme'
 
+console.log('🔧 Configuration Supabase:', {
+  url: supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  isDefault: supabaseUrl === 'https://votre-projet.supabase.co'
+})
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Tables de la base de données
