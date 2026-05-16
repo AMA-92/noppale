@@ -4,9 +4,18 @@
 import { supabase } from '../supabase/config.js'
 
 // Obtenir l'ID de l'utilisateur connecté
-const getCurrentUserId = () => {
-  const { data } = supabase.auth.getUser()
-  return data.user?.id
+const getCurrentUserId = async () => {
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      console.error('Erreur getCurrentUserId:', error)
+      return null
+    }
+    return data?.user?.id || null
+  } catch (error) {
+    console.error('Erreur getCurrentUserId:', error)
+    return null
+  }
 }
 
 // Gestion des utilisateurs avec Supabase Auth
