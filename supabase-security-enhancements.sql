@@ -31,8 +31,7 @@ ADD CONSTRAINT check_notes_length CHECK (char_length(notes) <= 500);
 
 ALTER TABLE expenses 
 ADD CONSTRAINT check_description_length CHECK (char_length(description) <= 500),
-ADD CONSTRAINT check_category_length CHECK (char_length(category) <= 100),
-ADD CONSTRAINT check_notes_length CHECK (char_length(notes) <= 500);
+ADD CONSTRAINT check_category_length CHECK (char_length(category) <= 100);
 
 ALTER TABLE customers 
 ADD CONSTRAINT check_name_length CHECK (char_length(name) <= 200),
