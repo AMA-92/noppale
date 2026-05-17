@@ -9,11 +9,9 @@ export default function PWAInstallPrompt() {
   useEffect(() => {
     // Écouter l'événement beforeinstallprompt
     const handleBeforeInstallPrompt = (e) => {
-      // Empêcher le comportement par défaut
+      if (window.matchMedia('(display-mode: standalone)').matches) return
       e.preventDefault()
-      // Sauvegarder l'événement pour l'utiliser plus tard
       setDeferredPrompt(e)
-      // Afficher la bannière d'installation
       setShowInstallBanner(true)
     }
 

@@ -590,10 +590,10 @@ export const appStorage = {
         .from('shop_info')
         .select('*')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === 'PGRST116' || error.status === 406) {
           // Pas de données, retourner les valeurs par défaut
           return {
             name: '',
@@ -635,7 +635,7 @@ export const appStorage = {
         .from('shop_info')
         .select('id')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         // Mettre à jour
@@ -689,10 +689,10 @@ export const appStorage = {
         .from('user_preferences')
         .select('*')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === 'PGRST116' || error.status === 406) {
           // Pas de préférences trouvées, retourner null
           return null
         }
@@ -717,7 +717,7 @@ export const appStorage = {
         .from('user_preferences')
         .select('id')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         // Mettre à jour
@@ -769,10 +769,10 @@ export const appStorage = {
         .from('user_secret_code')
         .select('secret_code')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
       if (error) {
-        if (error.code === 'PGRST116') {
+        if (error.code === 'PGRST116' || error.status === 406) {
           // Pas de code secret trouvé, retourner le code par défaut
           return '1234'
         }
@@ -797,7 +797,7 @@ export const appStorage = {
         .from('user_secret_code')
         .select('id')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         // Mettre à jour
