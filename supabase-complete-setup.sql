@@ -215,6 +215,10 @@ DROP POLICY IF EXISTS "Users can update own shop_info" ON shop_info;
 CREATE POLICY "Users can update own shop_info" ON shop_info
   FOR UPDATE USING (auth.uid()::text = user_id::text);
 
+DROP POLICY IF EXISTS "Users can delete own shop_info" ON shop_info;
+CREATE POLICY "Users can delete own shop_info" ON shop_info
+  FOR DELETE USING (auth.uid()::text = user_id::text);
+
 -- Politiques RLS pour user_preferences
 DROP POLICY IF EXISTS "Users can view own preferences" ON user_preferences;
 CREATE POLICY "Users can view own preferences" ON user_preferences
