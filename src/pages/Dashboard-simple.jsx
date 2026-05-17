@@ -119,19 +119,10 @@ export default function Dashboard() {
 
   const loadStats = async () => {
     try {
-      console.log('Dashboard: Début du chargement...')
-
       const sales = await appStorage.getSales()
       const expenses = await appStorage.getExpenses()
       const products = await appStorage.getProducts()
       const customers = await appStorage.getCustomers()
-
-      console.log('Dashboard: Données chargées', {
-        sales: sales.length,
-        expenses: expenses.length,
-        products: products.length,
-        customers: customers.length
-      })
 
       // Filtrer les ventes selon la période pour le calcul des ventes
       const filteredSales = salesPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', salesPeriod)

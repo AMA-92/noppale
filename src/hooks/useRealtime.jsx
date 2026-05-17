@@ -29,7 +29,6 @@ export function useRealtimeSubscription(tableName, onUpdate, filter = '') {
             table: tableName,
             filter: filter
           }, (payload) => {
-            console.log(`Realtime change on ${tableName}:`, payload)
             if (onUpdate) onUpdate(payload)
           })
         } else {
@@ -38,14 +37,11 @@ export function useRealtimeSubscription(tableName, onUpdate, filter = '') {
             schema: 'public',
             table: tableName
           }, (payload) => {
-            console.log(`Realtime change on ${tableName}:`, payload)
             if (onUpdate) onUpdate(payload)
           })
         }
 
-        subscription = await channel.subscribe((status) => {
-          console.log(`Subscription status for ${tableName}:`, status)
-        })
+        subscription = await channel.subscribe()
       } catch (error) {
         console.error(`Error setting up realtime subscription for ${tableName}:`, error)
       }

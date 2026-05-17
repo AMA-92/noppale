@@ -81,19 +81,16 @@ export default function Settings() {
 
   // Écouter les changements en temps réel sur les informations de la boutique
   useShopInfoRealtime((payload) => {
-    console.log('Realtime shop_info change:', payload)
     loadShopInfo()
   })
 
   // Écouter les changements en temps réel sur les préférences utilisateur
   useUserPreferencesRealtime((payload) => {
-    console.log('Realtime user_preferences change:', payload)
     loadPreferences()
   })
 
   // Écouter les changements en temps réel sur le code secret
   useSecretCodeRealtime((payload) => {
-    console.log('Realtime user_secret_code change:', payload)
     loadSecretCode()
   })
 
@@ -150,51 +147,39 @@ export default function Settings() {
   const handlePasswordChange = (e) => {
     e.preventDefault()
     
-    console.log('🔍 Début changement mot de passe')
-    console.log('📝 Formulaire:', passwordForm)
     
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      console.log('❌ Champs manquants')
       toast.error('Tous les champs sont requis')
       return
     }
     
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      console.log('❌ Mots de passe ne correspondent pas')
       toast.error('Les nouveaux mots de passe ne correspondent pas')
       return
     }
     
     if (passwordForm.newPassword.length < 6) {
-      console.log('❌ Mot de passe trop court')
       toast.error('Le mot de passe doit contenir au moins 6 caractères')
       return
     }
     
     try {
       const currentUser = authStorage.getCurrentUser()
-      console.log('👤 Utilisateur actuel:', currentUser)
       
       if (!currentUser) {
-        console.log('❌ Aucun utilisateur connecté')
         toast.error('Aucun utilisateur connecté')
         return
       }
       
-      console.log('🔐 Vérification authentification avec:', currentUser.email, passwordForm.currentPassword)
       const authenticatedUser = usersStorage.authenticate(currentUser.email, passwordForm.currentPassword)
-      console.log('✅ Résultat authentification:', authenticatedUser)
       
       if (authenticatedUser) {
-        console.log('🔄 Mise à jour mot de passe pour utilisateur ID:', currentUser.id)
         const updatedUser = usersStorage.updateUser(currentUser.id, { password: passwordForm.newPassword })
-        console.log('✅ Utilisateur mis à jour:', updatedUser)
         
         toast.success('Mot de passe changé avec succès')
         setShowPasswordModal(false)
         setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       } else {
-        console.log('❌ Échec authentification')
         toast.error('Mot de passe actuel incorrect')
       }
     } catch (error) {
@@ -207,37 +192,28 @@ export default function Settings() {
   const handleProfileUpdate = (e) => {
     e.preventDefault()
     
-    console.log('🔍 Début mise à jour profil')
-    console.log('📝 Formulaire profil:', profileForm)
     
     if (!profileForm.name || !profileForm.email) {
-      console.log('❌ Champs manquants')
       toast.error('Tous les champs sont requis')
       return
     }
     
     try {
       const currentUser = authStorage.getCurrentUser()
-      console.log('👤 Utilisateur actuel pour mise à jour:', currentUser)
       
       if (!currentUser) {
-        console.log('❌ Aucun utilisateur connecté')
         toast.error('Aucun utilisateur connecté')
         return
       }
       
-      console.log('🔄 Mise à jour utilisateur ID:', currentUser.id, 'avec:', { name: profileForm.name, email: profileForm.email })
       const updatedUser = usersStorage.updateUser(currentUser.id, {
         name: profileForm.name,
         email: profileForm.email
       })
-      console.log('✅ Utilisateur mis à jour dans storage:', updatedUser)
       
       // Mettre à jour l'utilisateur connecté
       const updatedCurrentUser = { ...currentUser, name: profileForm.name, email: profileForm.email }
       authStorage.setCurrentUser(updatedCurrentUser)
-      console.log('✅ Session utilisateur mise à jour:', updatedCurrentUser)
-      console.log('🔄 Notification envoyée au Layout pour synchronisation')
       
       toast.success('Informations mises à jour avec succès')
       setShowProfileModal(false)
@@ -305,10 +281,8 @@ export default function Settings() {
 
   // Fonction de bypass pour test (sans vérification mot de passe)
   const bypassDataDelete = () => {
-    console.log('🚨 BYPASS - Suppression sans vérification')
     
     if (confirm('⚠️ ATTENTION: Ceci est un test de bypass. Voulez-vous vraiment supprimer toutes les données sans vérification de mot de passe?')) {
-      console.log('🗑️ Lancement suppression directe...')
       handleClearData()
       setShowDataDeleteModal(false)
       setDataDeletePassword('')
@@ -318,38 +292,26 @@ export default function Settings() {
 
   // Fonction de test pour vérifier l'authentification
   const testAuthentication = () => {
-    console.log('TEST AUTHENTIFICATION - MEME METHODE QUE LOGIN.JS')
     
     const currentUser = authStorage.getCurrentUser()
-    console.log('Utilisateur connecte:', currentUser?.email)
     
     if (!currentUser) {
-      console.log('Aucun utilisateur connecte')
       return
     }
     
     if (!dataDeletePassword) {
-      console.log('Aucun mot de passe fourni')
       return
     }
     
-    console.log('Test avec usersStorage.authenticate()...')
-    console.log('- Email:', currentUser.email)
-    console.log('- Password provided:', dataDeletePassword ? 'YES' : 'NO')
     
     // UTILISER EXACTEMENT LA MEME METHODE
     const authenticatedUser = usersStorage.authenticate(currentUser.email, dataDeletePassword)
     
     if (authenticatedUser) {
-      console.log('RESULTAT: SUCCES - Le mot de passe est CORRECT')
-      console.log('La suppression devrait fonctionner')
     } else {
-      console.log('RESULTAT: ECHEC - Le mot de passe est INCORRECT')
-      console.log('Le meme probleme que si vous essayiez de vous reconnecter avec ce mot de passe')
     }
     
     // Debug: voir l'utilisateur retourne
-    console.log('Authenticated user details:', authenticatedUser)
   }
 
   // Gestion de la suppression des données
@@ -369,21 +331,15 @@ export default function Settings() {
         return
       }
       
-      console.log('Test authentification avec la meme methode que Login.jsx')
-      console.log('Email:', currentUser.email)
-      console.log('Password provided:', dataDeletePassword ? 'YES' : 'NO')
       
       // UTILISER EXACTEMENT LA MEME METHODE QUE LOGIN.JS
       const authenticatedUser = usersStorage.authenticate(currentUser.email, dataDeletePassword)
-      console.log('Authentication result:', authenticatedUser ? 'SUCCESS' : 'FAILED')
       
       if (authenticatedUser) {
-        console.log('Mot de passe correct - suppression autorisee')
         handleClearData()
         setShowDataDeleteModal(false)
         setDataDeletePassword('')
       } else {
-        console.log('Mot de passe incorrect - meme methode que login')
         toast.error('Mot de passe incorrect')
       }
     } catch (error) {
@@ -393,7 +349,6 @@ export default function Settings() {
   }
 
   const handleClearData = () => {
-    console.log('🗑️ Début suppression complète des données')
     
     try {
       // Étape 1: Compter les données avant suppression
@@ -410,11 +365,8 @@ export default function Settings() {
         customers: appStorage.getCustomers().length,
         shopInfo: shopInfoBeforeCount
       }
-      console.log('📊 Données avant suppression:', dataBefore)
-      console.log('📊 ShopInfo avant suppression détaillé:', shopInfoBefore)
       
       // Étape 2: Suppression complète et forcée de toutes les données
-      console.log('🧹 Nettoyage complet en cours...')
       
       // Vider toutes les collections avec des valeurs par défaut
       appStorage.setProducts([])
@@ -440,7 +392,6 @@ export default function Settings() {
       allKeys.forEach(key => {
         if (key.startsWith('noppale_')) {
           localStorage.removeItem(key)
-          console.log(`🗑️ Supprimé: ${key}`)
         }
       })
       
@@ -451,7 +402,6 @@ export default function Settings() {
       storage.clear()
       
       // Étape 3: Vérification immédiate de la suppression
-      console.log('🔍 Vérification de la suppression...')
       
       const shopInfo = appStorage.getShopInfo()
       const shopInfoCount = Object.values(shopInfo).filter(value => 
@@ -466,14 +416,11 @@ export default function Settings() {
         customers: appStorage.getCustomers().length,
         shopInfo: shopInfoCount
       }
-      console.log('📊 Données après suppression:', dataAfter)
-      console.log('📊 ShopInfo détaillé:', shopInfo)
       
       // Étape 4: Confirmation et redirection
       const totalRemaining = Object.values(dataAfter).reduce((sum, count) => sum + count, 0)
       
       if (totalRemaining === 0) {
-        console.log('✅ Toutes les données ont été supprimées avec succès!')
         toast.success('✅ Toutes les données ont été supprimées avec succès !', { duration: 3000 })
         
         // Forcer le rechargement complet après un court délai
@@ -560,7 +507,6 @@ export default function Settings() {
           label: t('shopInfo'),
           description: t('shopInfoDesc'),
           action: () => {
-            console.log('🏪 Clic sur Information de la boutique')
             setShowShopInfoModal(true)
           }
         }

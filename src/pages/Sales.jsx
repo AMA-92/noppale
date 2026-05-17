@@ -77,22 +77,13 @@ export default function Sales() {
   }, [sales, search])
 
   // Écouter les changements en temps réel sur les ventes
-  useSalesRealtime((payload) => {
-    console.log('Realtime sales change:', payload)
-    // Recharger les ventes quand il y a un changement
+  useSalesRealtime(() => {
     loadSales()
   })
 
   const loadProducts = async () => {
     try {
       const products = await appStorage.getProducts()
-      console.log('📦 Produits chargés:', products.map(p => ({
-        id: p.id,
-        name: p.name,
-        selling_price: p.selling_price,
-        buying_price: p.buying_price,
-        stock: p.stock
-      })))
       setProducts(products)
     } catch(e) { toast.error('Erreur de chargement des produits') }
   }
@@ -136,8 +127,6 @@ export default function Sales() {
 
   const selectProduct = (product) => {
     try {
-      console.log('Produit ajouté au panier:', product)
-
       // Validation du produit
       if (!product || !product.id) {
         console.error('Produit invalide:', product)
@@ -166,8 +155,6 @@ export default function Sales() {
         return
       }
 
-      console.log('Prix unitaire:', unitPrice, 'Quantité:', quantity, 'Stock disponible:', availableStock)
-
       // Créer l'item pour le panier
       const newItem = {
         productId: product.id,
@@ -178,8 +165,6 @@ export default function Sales() {
         productName: product.name || 'Produit sans nom',
         productUnit: product.barcode || 'unité'
       }
-
-      console.log('Nouvel item créé:', newItem)
 
       // Ajouter directement au panier
       const currentItems = form.items || []
@@ -194,18 +179,14 @@ export default function Sales() {
           updatedItems[existingItemIndex].quantity,
           updatedItems[existingItemIndex].unitPrice
         )
-        console.log('Produit existant mis à jour:', updatedItems[existingItemIndex])
       } else {
         // Sinon ajouter le nouveau produit
         updatedItems = [...currentItems, newItem]
-        console.log('Nouveau produit ajouté:', newItem)
       }
 
       // Calculer le nouveau total
       const newTotal = calculateTotal(updatedItems)
       const newChange = calculateChange(newTotal, form.amountReceived || 0)
-
-      console.log('Nouveaux totaux - Total:', newTotal, 'Change:', newChange)
 
       // Mettre à jour le formulaire
       setForm({
@@ -223,7 +204,6 @@ export default function Sales() {
       setCurrentItem(emptyItem)
 
       toast.success(`${product.name || 'Produit'} ajouté au panier`)
-      console.log('Panier mis à jour avec succès:', updatedItems)
     } catch (error) {
       console.error('Erreur dans selectProduct:', error)
       toast.error('Erreur lors de l\'ajout du produit')

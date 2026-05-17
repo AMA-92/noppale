@@ -41,36 +41,20 @@ export default function Layout({ user }) {
 
   // Charger les informations de la boutique
   useEffect(() => {
-    try {
-      const savedShopInfo = appStorage.getShopInfo()
-      console.log('Shop info loaded:', savedShopInfo)
-      setShopInfo(savedShopInfo)
-    } catch (error) {
-      console.error('Erreur de chargement des informations de la boutique:', error)
+    const loadShopInfo = async () => {
+      try {
+        const savedShopInfo = await appStorage.getShopInfo()
+        setShopInfo(savedShopInfo || {})
+      } catch (error) {
+        console.error('Erreur de chargement des informations de la boutique:', error)
+      }
     }
+    loadShopInfo()
   }, [language])
 
-  // Synchroniser l'utilisateur connecté
   useEffect(() => {
-    const updatedUser = authStorage.getCurrentUser()
-    if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(currentUser)) {
-      console.log('🔄 Utilisateur mis à jour dans Layout:', updatedUser)
-      setCurrentUser(updatedUser)
-    }
-  }, [user, language])
-
-  // Vérifier périodiquement les changements d'utilisateur
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const updatedUser = authStorage.getCurrentUser()
-      if (updatedUser && JSON.stringify(updatedUser) !== JSON.stringify(currentUser)) {
-        console.log('🔄 Changement d utilisateur détecté:', updatedUser)
-        setCurrentUser(updatedUser)
-      }
-    }, 1000) // Vérifier chaque seconde
-
-    return () => clearInterval(interval)
-  }, [currentUser])
+    setCurrentUser(user)
+  }, [user])
 
   const handleLogout = () => {
     try {

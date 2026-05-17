@@ -30,7 +30,7 @@ export default function PWAInstallPrompt() {
 
     // Vérifier si l'application est déjà installée
     if (window.matchMedia('(display-mode: standalone)').matches) {
-      console.log('Application déjà installée')
+      setShowInstallBanner(false)
     }
 
     return () => {
@@ -52,10 +52,7 @@ export default function PWAInstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice
     
     if (outcome === 'accepted') {
-      console.log('Utilisateur a accepté l\'installation')
       toast.success('Installation en cours...')
-    } else {
-      console.log('Utilisateur a refusé l\'installation')
     }
     
     // Nettoyer

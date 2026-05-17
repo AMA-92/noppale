@@ -23,7 +23,6 @@ export const usersStorage = {
   // Inscription d'un utilisateur
   async signUp(email, password, name) {
     try {
-      console.log('🔐 Tentative d\'inscription:', { email, name })
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -32,9 +31,7 @@ export const usersStorage = {
           emailConfirmTo: false // Désactiver la confirmation par email
         }
       })
-      console.log('📝 Réponse Supabase:', { data, error })
       if (error) throw error
-      console.log('✅ Utilisateur créé:', data.user)
       return data.user
     } catch (error) {
       console.error('❌ Erreur lors de l\'inscription:', error)
@@ -100,9 +97,8 @@ export const usersStorage = {
 // Gestion de l'authentification
 export const authStorage = {
   // Sauvegarder l'utilisateur connecté (géré par Supabase)
-  setCurrentUser(user) {
+  setCurrentUser() {
     // Supabase gère automatiquement la session
-    console.log('Session gérée par Supabase')
   },
 
   // Obtenir l'utilisateur connecté
@@ -169,9 +165,8 @@ export const appStorage = {
     }
   },
 
-  async setProducts(products) {
+  async setProducts() {
     // Supabase gère les produits individuellement, pas en lot
-    console.log('Utilisez addProduct/updateProduct pour Supabase')
     return true
   },
 

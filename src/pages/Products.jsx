@@ -37,9 +37,7 @@ export default function Products() {
   }, [products, search])
 
   // Écouter les changements en temps réel sur les produits
-  useProductsRealtime((payload) => {
-    console.log('Realtime product change:', payload)
-    // Recharger les produits quand il y a un changement
+  useProductsRealtime(() => {
     loadProducts()
   })
 
