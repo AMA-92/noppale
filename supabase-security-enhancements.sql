@@ -16,7 +16,8 @@ ADD CONSTRAINT check_amount_positive CHECK (amount >= 0);
 
 ALTER TABLE sale_items 
 ADD CONSTRAINT check_quantity_positive CHECK (quantity >= 0),
-ADD CONSTRAINT check_price_positive CHECK (price >= 0);
+ADD CONSTRAINT check_unit_price_positive CHECK (unit_price >= 0),
+ADD CONSTRAINT check_total_price_positive CHECK (total_price >= 0);
 
 -- 2. Add constraints to prevent overly long strings (defense in depth)
 ALTER TABLE products 
