@@ -353,12 +353,31 @@ export const appStorage = {
 
       const { data, error } = await supabase
         .from('sales')
-        .select('*')
+        .select('*, sale_items(*)')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data || []
+      return (data || []).map((sale) => ({
+        id: sale.id,
+        user_id: sale.user_id,
+        customerId: sale.customer_id,
+        customerName: sale.customer_name || '',
+        customer_name: sale.customer_name || '',
+        total: sale.total,
+        paymentMethod: sale.payment_method,
+        payment_method: sale.payment_method,
+        notes: sale.notes,
+        createdAt: sale.created_at,
+        created_at: sale.created_at,
+        items: (sale.sale_items || []).map((item) => ({
+          productId: item.product_id,
+          productName: item.product_name,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          totalPrice: item.total_price
+        }))
+      }))
     } catch (error) {
       console.error('Erreur lors de la récupération des ventes:', error)
       return []

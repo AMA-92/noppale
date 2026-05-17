@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { formatDate } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { currencies } from '../utils/i18n'
@@ -34,11 +34,62 @@ ChartJS.register(
   Filler
 )
 
+const getItemDate = (item) => new Date(item.createdAt || item.created_at || item.date)
+
+const filterDataByPeriod = (data, period) => {
+  if (!Array.isArray(data) || data.length === 0) return []
+
+  const now = new Date()
+  const startDate = new Date()
+
+  switch (period) {
+    case 'week':
+      startDate.setDate(now.getDate() - 7)
+      break
+    case 'month':
+      startDate.setMonth(now.getMonth() - 1)
+      break
+    case 'quarter':
+      startDate.setMonth(now.getMonth() - 3)
+      break
+    case 'year':
+      startDate.setFullYear(now.getFullYear() - 1)
+      break
+    default:
+      startDate.setMonth(now.getMonth() - 1)
+  }
+
+  return data.filter((item) => {
+    const itemDate = getItemDate(item)
+    return !Number.isNaN(itemDate.getTime()) && itemDate >= startDate && itemDate <= now
+  })
+}
+
+const getProductCostPrice = (product) =>
+  parseFloat(product?.buying_price ?? product?.buyingPrice ?? product?.costPrice ?? 0) || 0
+
+const calculatePurchaseCost = (salesList, productsList) => {
+  if (!Array.isArray(salesList) || !Array.isArray(productsList)) return 0
+
+  const productById = new Map(productsList.map((p) => [p.id, p]))
+
+  return salesList.reduce((sum, sale) => {
+    if (!sale.items?.length) return sum
+    return sum + sale.items.reduce((itemSum, item) => {
+      const product = productById.get(item.productId)
+      const costPrice = getProductCostPrice(product)
+      const quantity = parseFloat(item.quantity || 0) || 0
+      return itemSum + costPrice * quantity
+    }, 0)
+  }, 0)
+}
+
 export default function Reports() {
   const { formatCurrency, currency, language, t } = useI18n()
   const [period, setPeriod] = useState('month')
   const [sales, setSales] = useState([])
   const [expenses, setExpenses] = useState([])
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [reportType, setReportType] = useState('sales') // 'sales', 'expenses', 'balance'
   const [shopInfo, setShopInfo] = useState({})
@@ -46,215 +97,59 @@ export default function Reports() {
   const expensesReportRef = useRef(null)
   const balanceReportRef = useRef(null)
 
-  // FORCER LE CALCUL DU COÛT D'ACHAT APRÈS CHARGEMENT
-  useEffect(() => {
-    if (sales && sales.length > 0) {
-      console.log('🔍 CALCUL FORCÉ DU COÛT D\'ACHAT')
-      const allProducts = appStorage.getProducts() || []
-      console.log('Produits disponibles:', allProducts.map(p => `${p.name} (ID: ${p.id}) - Prix achat: ${p.costPrice}`))
-      
-      let calculatedCost = 0
-      sales.forEach(sale => {
-        console.log(`--- VENTE ${sale.id} ---`)
-        if (sale.items && Array.isArray(sale.items)) {
-          sale.items.forEach(item => {
-            const product = allProducts.find(p => p.id === item.productId)
-            if (product) {
-              const costPrice = parseFloat(product.costPrice || 0)
-              const quantity = parseFloat(item.quantity || 0)
-              const itemCost = costPrice * quantity
-              calculatedCost += itemCost
-              
-              console.log(`✅ ${item.productName}: ${quantity} × ${costPrice} = ${itemCost}`)
-            } else {
-              console.log(`❌ Produit non trouvé: ${item.productName} (ID: ${item.productId})`)
-            }
-          })
-        }
-      })
-      
-      console.log('🔍 COÛT D\'ACHAT TOTAL FORCÉ:', calculatedCost)
-    }
-  }, [sales])
-
   useEffect(() => { loadData() }, [period, currency, language])
 
   useEffect(() => {
-    // Charger les informations de la boutique
-    try {
-      const savedShopInfo = appStorage.getShopInfo()
-      setShopInfo(savedShopInfo || {})
-    } catch (error) {
-      console.error('Erreur de chargement des informations de la boutique:', error)
+    const loadShopInfo = async () => {
+      try {
+        const savedShopInfo = await appStorage.getShopInfo()
+        setShopInfo(savedShopInfo || {})
+      } catch (error) {
+        console.error('Erreur de chargement des informations de la boutique:', error)
+      }
     }
+    loadShopInfo()
   }, [])
 
-  const loadData = () => {
+  const loadData = async () => {
     try {
-      // Récupérer toutes les ventes et dépenses
-      const allSales = appStorage.getSales() || []
-      const allExpenses = appStorage.getExpenses() || []
-      
-      console.log('📦 Données brutes:', {
-        allSalesCount: allSales.length,
-        allExpensesCount: allExpenses.length,
-        allSales: allSales.slice(0, 2),
-        allExpenses: allExpenses.slice(0, 2)
-      })
-      
-      // Filtrer selon la période
-      const filteredSales = filterDataByPeriod(allSales, period)
-      const filteredExpenses = filterDataByPeriod(allExpenses, period)
-      
-      console.log('🔍 Données filtrées:', {
-        period: period,
-        filteredSalesCount: filteredSales.length,
-        filteredExpensesCount: filteredExpenses.length,
-        filteredSales: filteredSales.slice(0, 2),
-        filteredExpenses: filteredExpenses.slice(0, 2)
-      })
-      
-      setSales(filteredSales)
-      setExpenses(filteredExpenses)
-      setLoading(false)
+      setLoading(true)
+      const [allSales, allExpenses, allProducts] = await Promise.all([
+        appStorage.getSales(),
+        appStorage.getExpenses(),
+        appStorage.getProducts()
+      ])
+
+      setSales(filterDataByPeriod(allSales || [], period))
+      setExpenses(filterDataByPeriod(allExpenses || [], period))
+      setProducts(allProducts || [])
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error)
-      // Ne pas afficher d'erreur toast, juste mettre loading à false
+      setSales([])
+      setExpenses([])
+      setProducts([])
+    } finally {
       setLoading(false)
     }
   }
 
-  const filterDataByPeriod = (data, period) => {
-    if (!data || data.length === 0) return []
-    
-    const now = new Date()
-    const startDate = new Date()
-    
-    switch (period) {
-      case 'week':
-        startDate.setDate(now.getDate() - 7)
-        break
-      case 'month':
-        startDate.setMonth(now.getMonth() - 1)
-        break
-      case 'quarter':
-        startDate.setMonth(now.getMonth() - 3)
-        break
-      case 'year':
-        startDate.setFullYear(now.getFullYear() - 1)
-        break
-      default:
-        startDate.setMonth(now.getMonth() - 1)
-    }
-    
-    return data.filter(item => {
-      const itemDate = new Date(item.createdAt || item.date)
-      return itemDate >= startDate && itemDate <= now
-    })
-  }
-
-  const totalSales = sales.reduce((sum, s) => {
+  const totalSales = useMemo(() => sales.reduce((sum, s) => {
     const total = parseFloat(s.total || 0)
-    return sum + (isNaN(total) ? 0 : total)
-  }, 0)
-  const totalExpenses = expenses.reduce((sum, e) => {
+    return sum + (Number.isNaN(total) ? 0 : total)
+  }, 0), [sales])
+
+  const totalExpenses = useMemo(() => expenses.reduce((sum, e) => {
     const amount = parseFloat(e.amount || 0)
-    return sum + (isNaN(amount) ? 0 : amount)
-  }, 0)
-  
-  // CALCUL DIRECT DU COÛT D'ACHAT - VERSION FINALE CORRIGÉE
-  console.log('🔍 CALCUL DU COÛT D\'ACHAT - VERSION FINALE')
-  
-  // RÉPARATION DIRECTE : Ajouter les costPrice manquants
-  const products = appStorage.getProducts() || []
-  console.log('Produits avant réparation:', products.map(p => `${p.name} - costPrice: ${p.costPrice}`))
-  
-  // Ajouter les costPrice manquants manuellement
-  const repairedProducts = products.map(product => {
-    let updatedProduct = {...product}
-    
-    // Définir les prix d'achat manquants
-    if (product.id === '1773208235196' && product.name === 'AA') {
-      updatedProduct.costPrice = '1500'
-      console.log('🔧 RÉPARATION: AA costPrice fixé à 1500')
-    } else if (product.id === '1773208274276' && product.name === 'ZZ') {
-      updatedProduct.costPrice = '1200'
-      console.log('🔧 RÉPARATION: ZZ costPrice fixé à 1200')
-    } else if (product.id === '1773212109896' && product.name === 'EEEE') {
-      updatedProduct.costPrice = '800'
-      console.log('🔧 RÉPARATION: EEEE costPrice fixé à 800')
-    }
-    
-    return updatedProduct
-  })
-  
-  // Sauvegarder les produits réparés
-  appStorage.setProducts(repairedProducts)
-  console.log('🔧 Produits après réparation:', repairedProducts.map(p => `${p.name} - costPrice: ${p.costPrice}`))
-  
-  let totalPurchaseCost = 0
-  sales.forEach(sale => {
-    if (sale.items && Array.isArray(sale.items)) {
-      sale.items.forEach(item => {
-        const product = repairedProducts.find(p => p.id === item.productId)
-        if (product) {
-          const costPrice = parseFloat(product.costPrice || 0)
-          const quantity = parseFloat(item.quantity || 0)
-          const itemCost = costPrice * quantity
-          totalPurchaseCost += itemCost
-          
-          console.log(`✅ ${item.productName}: ${quantity} × ${costPrice} = ${itemCost}`)
-        } else {
-          console.log(`❌ Produit non trouvé: ${item.productName} (ID: ${item.productId})`)
-        }
-      })
-    }
-  })
-  
-  console.log('🔍 COÛT D\'ACHAT TOTAL APRÈS RÉPARATION:', totalPurchaseCost)
-  
-  console.log('🔍 COÛT D\'ACHAT TOTAL DIRECT:', totalPurchaseCost)
-  
+    return sum + (Number.isNaN(amount) ? 0 : amount)
+  }, 0), [expenses])
+
+  const totalPurchaseCost = useMemo(
+    () => calculatePurchaseCost(sales, products),
+    [sales, products]
+  )
+
   const profit = totalSales - totalExpenses
   const realProfit = profit - totalPurchaseCost
-
-  // Logs de débogage pour vérifier les calculs
-  console.log('📊 Calculs Rapports - DÉTAIL COMPLET:')
-  console.log('Ventes brutes:', sales)
-  console.log('Dépenses brutes:', expenses)
-  console.log('Structure des items dans les ventes:')
-  
-  sales.forEach((sale, saleIndex) => {
-    console.log(`--- VENTE ${saleIndex + 1} (${sale.id}) ---`)
-    console.log('Sale complète:', sale)
-    console.log('Items de la vente:', sale.items)
-    console.log('Structure du premier item:', sale.items?.[0])
-    
-    if (sale.items && Array.isArray(sale.items)) {
-      sale.items.forEach((item, itemIndex) => {
-        console.log(`  Item ${itemIndex + 1} COMPLET:`, item)
-        console.log(`  Champs de l'item:`, Object.keys(item || {}))
-        const costPrice = parseFloat(item.costPrice || 0)
-        const quantity = parseFloat(item.quantity || 0)
-        const itemCost = costPrice * quantity
-        console.log(`  Item ${itemIndex + 1}: ${item.productName || 'Nom inconnu'}`)
-        console.log(`    - Prix d'achat unité: ${costPrice}`)
-        console.log(`    - Quantité: ${quantity}`)
-        console.log(`    - Coût total: ${itemCost}`)
-      })
-    } else {
-      console.log('  PAS D\'ITEMS dans cette vente')
-    }
-  })
-  
-  console.log('--- RÉSUMÉ ---')
-  console.log('Total ventes:', totalSales)
-  console.log('Total dépenses:', totalExpenses)
-  console.log('Total coût d\'achat:', totalPurchaseCost)
-  console.log('Bénéfice brut (ventes - dépenses):', profit)
-  console.log('Bénéfice réel (brut - coût achat):', realProfit)
-  console.log('Formule: realProfit = totalSales - totalExpenses - totalPurchaseCost')
-  console.log('Vérification:', `${totalSales} - ${totalExpenses} - ${totalPurchaseCost} = ${realProfit}`)
 
   const periodOptions = [
     { value: 'week', label: t('thisWeek') },
@@ -267,123 +162,22 @@ export default function Reports() {
   const generatePDF = async (reportType, filename) => {
     try {
       toast.loading('Génération du PDF en cours...')
-      
-      // Récupérer les données les plus récentes
-      const allSales = appStorage.getSales() || []
-      const allExpenses = appStorage.getExpenses() || []
-      
-      // Filtrer les données selon la période
-      const filteredSales = filterDataByPeriod(allSales, period)
-      const filteredExpenses = filterDataByPeriod(allExpenses, period)
-      
-      // Calculer les totaux
-      const totalSales = filteredSales.reduce((sum, s) => sum + (parseFloat(s.total || 0)), 0)
-      const totalExpenses = filteredExpenses.reduce((sum, e) => sum + (parseFloat(e.amount || 0)), 0)
-      const profit = totalSales - totalExpenses
-      
-      // Calculer le coût d'achat total pour le bénéfice réel (basé sur le prix d'achat depuis la base de produits)
-      console.log('🔍 DIAGNOSTIC PDF - DÉBUT DU CALCUL')
-      const allProducts = appStorage.getProducts() || []
-      console.log('📦 TOUS LES PRODUITS POUR PDF:', allProducts)
-      console.log('📊 STRUCTURE DÉTAILLÉE DES PRODUITS:')
-      allProducts.forEach((p, i) => {
-        console.log(`Produit ${i+1}:`, {
-          id: p.id,
-          name: p.name,
-          costPrice: p.costPrice,
-          costPriceType: typeof p.costPrice,
-          costPriceValue: parseFloat(p.costPrice || 0)
-        })
-      })
-      
-      console.log('🛒 VENTES FILTRÉES POUR PDF:', filteredSales)
-      console.log('📈 NOMBRE DE VENTES FILTRÉES:', filteredSales.length)
-      
-      const totalPurchaseCost = filteredSales.reduce((sum, sale) => {
-        console.log(`--- TRAITEMENT VENTE PDF ${sale.id} ---`)
-        if (sale.items && Array.isArray(sale.items)) {
-          const purchaseCost = sale.items.reduce((itemSum, item) => {
-            console.log(`  → ITEM PDF: ${item.productName} (ID: ${item.productId}), Quantité: ${item.quantity}`)
-            
-            // Récupérer TOUJOURS le prix d'achat depuis la base de produits
-            const product = allProducts.find(p => p.id === item.productId)
-            
-            if (!product) {
-              console.log(`  ❌ Produit non trouvé pour l'item: ${item.productName || item.name || 'Inconnu'} (ID: ${item.productId})`)
-              return itemSum
-            }
-            
-            console.log(`  ✅ Produit trouvé: ${product.name}, costPrice: ${product.costPrice} (type: ${typeof product.costPrice})`)
-            
-            const costPrice = parseFloat(product.costPrice || 0) // Prix d'achat depuis la base
-            const quantity = parseFloat(item.quantity || 0)
-            const itemCost = costPrice * quantity
-            
-            console.log(`  💰 CALCUL ITEM PDF: ${quantity} × ${costPrice} = ${itemCost}`)
-            
-            return itemSum + itemCost // Coût total = prix d'achat × quantité
-          }, 0)
-          console.log(`  📋 COÛT VENTE PDF: ${purchaseCost}`)
-          return sum + purchaseCost
-        }
-        return sum
-      }, 0)
-      
-      // Log simple pour diagnostiquer la structure
-      const firstItem = filteredSales[0]?.items?.[0]
-      const firstProduct = allProducts[0]
-      
-      console.log('🔍 Structure des données - VALEURS DIRECTES:')
-      console.log('Premier item:', firstItem)
-      console.log('Premier produit:', firstProduct)
-      console.log('Tous les produits:', allProducts)
-      console.log('Champs item:', Object.keys(firstItem || {}))
-      console.log('Champs produit:', Object.keys(firstProduct || {}))
-      console.log('ID item productId:', firstItem?.productId)
-      console.log('ID item id:', firstItem?.id)
-      console.log('Produits IDs et costPrice:', allProducts?.map(p => `ID:${p.id}, Name:${p.name}, CostPrice:${p.costPrice}`))
-      
-      // Ajouter des logs pour le débogage du coût d'achat
-      console.log('💰 Calcul coût d\'achat PDF:', {
-        totalPurchaseCost,
-        filteredSalesCount: filteredSales.length,
-        allProductsCount: appStorage.getProducts()?.length || 0,
-        allProducts: appStorage.getProducts()?.slice(0, 3),
-        sampleSale: filteredSales[0],
-        sampleItems: filteredSales[0]?.items?.slice(0, 2),
-        detailedCalculation: filteredSales.slice(0, 2).map((sale, saleIndex) => ({
-          saleIndex,
-          saleId: sale.id,
-          items: sale.items?.map((item, itemIndex) => {
-            const products = appStorage.getProducts() || []
-            const product = products.find(p => p.id === item.productId)
-            const costPrice = product ? parseFloat(product.costPrice || 0) : parseFloat(item.costPrice || 0)
-            const quantity = parseFloat(item.quantity || 0)
-            const itemCost = costPrice * quantity
-            return {
-              itemIndex,
-              productId: item.productId,
-              productName: product?.name || 'Produit non trouvé',
-              costPrice,
-              quantity,
-              itemCost,
-              productFound: !!product,
-              productCostPrice: product?.costPrice
-            }
-          }),
-          saleTotalCost: sale.items?.reduce((sum, item) => {
-            const products = appStorage.getProducts() || []
-            const product = products.find(p => p.id === item.productId)
-            const costPrice = product ? parseFloat(product.costPrice || 0) : parseFloat(item.costPrice || 0)
-            const quantity = parseFloat(item.quantity || 0)
-            return sum + (costPrice * quantity)
-          }, 0)
-        }))
-      })
-      
-      // Bénéfice réel = Bénéfice brut - Coût d'achat total
-      const realProfit = profit - totalPurchaseCost
-      
+
+      const [allSales, allExpenses, allProducts] = await Promise.all([
+        appStorage.getSales(),
+        appStorage.getExpenses(),
+        appStorage.getProducts()
+      ])
+
+      const filteredSales = filterDataByPeriod(allSales || [], period)
+      const filteredExpenses = filterDataByPeriod(allExpenses || [], period)
+
+      const pdfTotalSales = filteredSales.reduce((sum, s) => sum + (parseFloat(s.total || 0) || 0), 0)
+      const pdfTotalExpenses = filteredExpenses.reduce((sum, e) => sum + (parseFloat(e.amount || 0) || 0), 0)
+      const pdfProfit = pdfTotalSales - pdfTotalExpenses
+      const pdfPurchaseCost = calculatePurchaseCost(filteredSales, allProducts || [])
+      const pdfRealProfit = pdfProfit - pdfPurchaseCost
+
       // Créer un conteneur temporaire pour le PDF
       const tempContainer = document.createElement('div')
       tempContainer.style.position = 'fixed'
@@ -432,8 +226,8 @@ export default function Reports() {
               <tbody>
                 ${filteredSales.map(sale => `
                   <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(sale.createdAt))}</td>
-                    <td style="padding: 8px; color: #1e293b; font-size: 12px;">${sale.customerName || t('anonymousCustomer')}</td>
+                    <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(sale.createdAt || sale.created_at))}</td>
+                    <td style="padding: 8px; color: #1e293b; font-size: 12px;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</td>
                     <td style="padding: 8px; text-align: right; font-weight: 500; color: #059669; font-size: 12px;">${formatCurrency(sale.total)}</td>
                   </tr>
                 `).join('')}
@@ -490,7 +284,7 @@ export default function Reports() {
               <tbody>
                 ${filteredExpenses.map(expense => `
                   <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(expense.createdAt))}</td>
+                    <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</td>
                     <td style="padding: 8px; color: #1e293b; font-size: 12px;">${expense.description || t('noDescription')}</td>
                     <td style="padding: 8px; text-align: right; font-weight: 500; color: #dc2626; font-size: 12px;">${formatCurrency(expense.amount)}</td>
                   </tr>
@@ -564,7 +358,7 @@ export default function Reports() {
                   <tbody>
                     ${filteredSales.slice(0, 10).map(sale => `
                       <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(sale.createdAt))}</td>
+                        <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(sale.createdAt || sale.created_at))}</td>
                         <td style="padding: 8px; text-align: right; font-weight: 500; color: #059669; font-size: 12px;">${formatCurrency(sale.total)}</td>
                       </tr>
                     `).join('')}
@@ -590,7 +384,7 @@ export default function Reports() {
                   <tbody>
                     ${filteredExpenses.slice(0, 10).map(expense => `
                       <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(expense.createdAt))}</td>
+                        <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</td>
                         <td style="padding: 8px; text-align: right; font-weight: 500; color: #dc2626; font-size: 12px;">${formatCurrency(expense.amount)}</td>
                       </tr>
                     `).join('')}
@@ -773,7 +567,7 @@ export default function Reports() {
               <DollarSign className="w-4 h-4 text-blue-600" />
             </div>
             <span className={`text-xs font-medium ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {profit >= 0 ? '+' : ''}{((profit / totalSales) * 100).toFixed(1)}%
+              {profit >= 0 ? '+' : ''}{totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : '0.0'}%
             </span>
           </div>
           <h3 className={`text-lg font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
