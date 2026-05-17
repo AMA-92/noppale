@@ -13,9 +13,22 @@ export default function Layout({ user }) {
   const { t, language } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false) // Closed by default on mobile
   const [shopInfo, setShopInfo] = useState({})
   const [currentUser, setCurrentUser] = useState(user)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+      setSidebarOpen(window.innerWidth >= 768) // Open on desktop, closed on mobile
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   const navItems = [
     { path: '/', label: t('dashboard'), icon: LayoutDashboard },
@@ -71,9 +84,33 @@ export default function Layout({ user }) {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-100">
-      {/* Bandeau de la boutique */}
-      {shopInfo.name && (
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 shadow-md">
+      {/* Mobile header */}
+      {isMobile && (
+        <div className="bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 rounded-lg hover:bg-slate-100 text-slate-600"
+            >
+              <Menu size={20} />
+            </button>
+            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-black text-sm">N</span>
+            </div>
+            <span className="font-black text-slate-800 text-base">Noppalé</span>
+          </div>
+          {shopInfo.name && (
+            <div className="flex items-center gap-1 text-sm text-slate-600">
+              <Store size={16} />
+              <span className="font-medium truncate max-w-[120px]">{shopInfo.name}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Bandeau de la boutique (desktop only) */}
+      {!isMobile && shopInfo.name && (
+        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-4 shadow-md flex-shrink-0">
           <div className="flex items-center justify-center">
             <div className="flex items-center gap-3">
               <Store className="w-6 h-6" />
@@ -83,12 +120,20 @@ export default function Layout({ user }) {
         </div>
       )}
       
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Mobile sidebar overlay */}
+        {isMobile && sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-30"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        
         {/* Sidebar */}
-        <aside className={`${sidebarOpen ? 'w-60' : 'w-16'} bg-white border-r border-slate-100 flex flex-col transition-all duration-200 shadow-sm flex-shrink-0`}>
+        <aside className={`${sidebarOpen ? 'translate-x-0' : isMobile ? '-translate-x-full' : 'w-16'} ${isMobile ? 'fixed inset-y-0 left-0 z-40 w-64' : 'relative'} bg-white border-r border-slate-100 flex flex-col transition-all duration-200 shadow-sm flex-shrink-0`}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
-          {sidebarOpen && (
+          {!isMobile && sidebarOpen && (
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-primary-600 rounded-xl flex items-center justify-center">
                 <span className="text-white font-black text-sm">N</span>
@@ -99,12 +144,22 @@ export default function Layout({ user }) {
               </div>
             </div>
           )}
-          <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
-          >
-            {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
-          </button>
+          {!isMobile && (
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+            >
+              {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
+            </button>
+          )}
+          {isMobile && (
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
@@ -114,13 +169,16 @@ export default function Layout({ user }) {
             return (
               <button
                 key={path}
-                onClick={() => navigate(path)}
-                className={`sidebar-item w-full ${isActive ? 'active' : ''} ${!sidebarOpen ? 'justify-center' : ''}`}
-                title={!sidebarOpen ? label : ''}
+                onClick={() => {
+                  navigate(path)
+                  if (isMobile) setSidebarOpen(false)
+                }}
+                className={`sidebar-item w-full ${isActive ? 'active' : ''} ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
+                title={(!sidebarOpen && !isMobile) ? label : ''}
               >
                 <Icon size={18} className="flex-shrink-0" />
-                {sidebarOpen && <span className="truncate">{label}</span>}
-                {sidebarOpen && isActive && <ChevronRight size={14} className="ml-auto text-primary-400" />}
+                {(sidebarOpen || isMobile) && <span className="truncate">{label}</span>}
+                {(sidebarOpen || isMobile) && isActive && <ChevronRight size={14} className="ml-auto text-primary-400" />}
               </button>
             )
           })}
@@ -128,7 +186,7 @@ export default function Layout({ user }) {
 
         {/* User section */}
         <div className="border-t border-slate-100 p-3">
-          {sidebarOpen && (
+          {(sidebarOpen || isMobile) && (
             <div className="flex items-center gap-3 px-2 py-2 mb-2">
               <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-primary-700 font-bold text-xs">
@@ -145,18 +203,18 @@ export default function Layout({ user }) {
           )}
           <button
             onClick={handleLogout}
-            className={`sidebar-item w-full text-red-500 hover:bg-red-50 hover:text-red-600 ${!sidebarOpen ? 'justify-center' : ''}`}
-            title={!sidebarOpen ? 'Déconnexion' : ''}
+            className={`sidebar-item w-full text-red-500 hover:bg-red-50 hover:text-red-600 ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
+            title={(!sidebarOpen && !isMobile) ? 'Déconnexion' : ''}
           >
             <LogOut size={18} className="flex-shrink-0" />
-            {sidebarOpen && <span>Déconnexion</span>}
+            {(sidebarOpen || isMobile) && <span>Déconnexion</span>}
           </button>
         </div>
       </aside>
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-6 animate-fade-in">
+        <div className={`${isMobile ? 'p-4' : 'p-6'} animate-fade-in`}>
           <Outlet />
         </div>
       </main>

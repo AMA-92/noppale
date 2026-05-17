@@ -559,3 +559,132 @@ tbody td {
   .no-print { display: none !important; }
   .print-only { display: block !important; }
 }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Prevent horizontal overflow */
+  * {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Responsive grid */
+  .grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Responsive modal */
+  .modal-content {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    max-height: 100vh;
+  }
+
+  /* Responsive tables */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  /* Responsive cards */
+  .card {
+    padding: 1rem;
+  }
+
+  /* Responsive buttons */
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+
+  /* Responsive inputs */
+  .input-field {
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+
+  /* Responsive sidebar */
+  .sidebar {
+    position: fixed;
+    left: -100%;
+    top: 0;
+    height: 100vh;
+    width: 280px;
+    z-index: 40;
+    transition: left 0.3s ease;
+  }
+
+  .sidebar.open {
+    left: 0;
+  }
+
+  /* Responsive stat cards */
+  .stat-card {
+    padding: 1rem;
+  }
+
+  /* Chart container overflow fix */
+  .chart-container,
+  [class*="chart"],
+  canvas,
+  svg {
+    max-width: 100%;
+    height: auto !important;
+    overflow: hidden;
+  }
+
+  /* Responsive spacing */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+
+  /* Responsive text */
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+  }
+
+  /* Hide non-essential elements on very small screens */
+  @media (max-width: 480px) {
+    .hide-mobile {
+      display: none !important;
+    }
+  }
+}
+
+/* Tablet responsive styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .grid-cols-3,
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
