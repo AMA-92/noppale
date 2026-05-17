@@ -95,6 +95,11 @@ export default function Expenses() {
   }
 
   useEffect(() => {
+    if (!Array.isArray(expenses)) {
+      console.error('Expenses: expenses is not an array', expenses)
+      setFiltered([])
+      return
+    }
     const q = search.toLowerCase()
     setFiltered(expenses.filter(e => !q || e.description.toLowerCase().includes(q) || e.category.toLowerCase().includes(q)))
   }, [expenses, search])

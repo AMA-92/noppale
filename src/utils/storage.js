@@ -467,7 +467,8 @@ export const appStorage = {
         .order('date', { ascending: false })
 
       if (error) throw error
-      return data || []
+      console.log('Storage: Expenses data retrieved', data)
+      return Array.isArray(data) ? data : []
     } catch (error) {
       console.error('Erreur lors de la récupération des dépenses:', error)
       return []
