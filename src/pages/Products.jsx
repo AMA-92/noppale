@@ -5,6 +5,7 @@ import { useI18n } from '../hooks/useI18n.jsx'
 import { useProductsRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, Edit2, Trash2, Package, X, Tag, DollarSign, Upload, Image as ImageIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { validateProductData, sanitizeString, truncateString } from '../utils/security'
 
 const emptyProduct = { 
   name: '', 
@@ -70,19 +71,38 @@ export default function Products() {
 
   const handleSave = async (e) => {
     e.preventDefault()
-    if (!form.name || !form.sellingPrice) { toast.error('Nom et prix de vente requis'); return }
+    
+    // Sanitize and validate input
+    const sanitizedForm = {
+      name: sanitizeString(truncateString(form.name, 200)),
+      category: sanitizeString(truncateString(form.category || '', 100)),
+      buyingPrice: form.costPrice,
+      sellingPrice: form.sellingPrice,
+      stock: form.stock,
+      minStock: form.minStock,
+      barcode: sanitizeString(truncateString(form.unit || '', 50)),
+      image: form.image
+    }
+    
+    // Validate product data
+    const validation = validateProductData(sanitizedForm)
+    if (!validation.isValid) {
+      toast.error(validation.errors[0])
+      return
+    }
+    
     setSaving(true)
     try {
       if (editingId) {
         const updatedProduct = await appStorage.updateProduct(editingId, {
-          name: form.name,
-          category: form.category,
-          buyingPrice: form.costPrice,
-          sellingPrice: form.sellingPrice,
-          stock: form.stock,
-          minStock: form.minStock,
-          barcode: form.unit,
-          image: form.image
+          name: sanitizedForm.name,
+          category: sanitizedForm.category,
+          buyingPrice: sanitizedForm.buyingPrice,
+          sellingPrice: sanitizedForm.sellingPrice,
+          stock: sanitizedForm.stock,
+          minStock: sanitizedForm.minStock,
+          barcode: sanitizedForm.barcode,
+          image: sanitizedForm.image
         })
         const updatedProducts = products.map(p => 
           p.id === editingId ? updatedProduct : p
@@ -91,14 +111,14 @@ export default function Products() {
         toast.success('Produit mis à jour')
       } else {
         const newProduct = await appStorage.addProduct({
-          name: form.name,
-          category: form.category,
-          buyingPrice: form.costPrice,
-          sellingPrice: form.sellingPrice,
-          stock: form.stock,
-          minStock: form.minStock,
-          barcode: form.unit,
-          image: form.image
+          name: sanitizedForm.name,
+          category: sanitizedForm.category,
+          buyingPrice: sanitizedForm.buyingPrice,
+          sellingPrice: sanitizedForm.sellingPrice,
+          stock: sanitizedForm.stock,
+          minStock: sanitizedForm.minStock,
+          barcode: sanitizedForm.barcode,
+          image: sanitizedForm.image
         })
         setProducts([...products, newProduct])
         toast.success('Produit ajouté')

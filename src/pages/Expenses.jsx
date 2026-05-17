@@ -5,6 +5,7 @@ import { useI18n } from '../hooks/useI18n.jsx'
 import { useExpensesRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, Wallet, X, Calendar, Tag, Edit, Trash2, BarChart3, TrendingDown, PieChart as PieChartIcon, TrendingUp, DollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { validateExpenseData, sanitizeString, truncateString } from '../utils/security'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -181,17 +182,33 @@ export default function Expenses() {
 
   const handleSave = async (e) => {
     e.preventDefault()
-    if (!form.description || !form.amount) { toast.error('Description et montant requis'); return }
+    
+    // Sanitize and validate input
+    const sanitizedExpense = {
+      description: sanitizeString(truncateString(form.description || '', 500)),
+      amount: form.amount,
+      category: sanitizeString(truncateString(form.category || '', 100)),
+      date: form.date,
+      notes: sanitizeString(truncateString(form.notes || '', 500))
+    }
+    
+    // Validate expense data
+    const validation = validateExpenseData(sanitizedExpense)
+    if (!validation.isValid) {
+      toast.error(validation.errors[0])
+      return
+    }
+    
     setSaving(true)
     try {
       if (editingId) {
         // Mode modification
-        const updatedExpense = await appStorage.updateExpense(editingId, form)
+        const updatedExpense = await appStorage.updateExpense(editingId, sanitizedExpense)
         setExpenses(expenses.map(e => e.id === editingId ? updatedExpense : e))
         toast.success('Dépense modifiée')
       } else {
         // Mode ajout
-        const newExpense = await appStorage.addExpense(form)
+        const newExpense = await appStorage.addExpense(sanitizedExpense)
         setExpenses([...expenses, newExpense])
         toast.success('Dépense enregistrée')
       }

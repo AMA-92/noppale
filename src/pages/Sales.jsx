@@ -5,6 +5,7 @@ import { useI18n } from '../hooks/useI18n.jsx'
 import { useSalesRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, ShoppingCart, X, DollarSign, Calendar, User, Package, Printer, Eye, Edit } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { validateSaleData, sanitizeString, truncateString } from '../utils/security'
 
 const emptySale = {
   customerName: '',
@@ -354,12 +355,26 @@ export default function Sales() {
   const handleSave = async (e) => {
     if (e) e.preventDefault()
 
-    if (!form.customerName || !form.items || form.items.length === 0) {
-      toast.error('Client et articles requis')
+    // Sanitize and validate input
+    const sanitizedSale = {
+      customerName: sanitizeString(truncateString(form.customerName || '', 200)),
+      total: form.total,
+      paymentMethod: form.paymentMethod,
+      notes: sanitizeString(truncateString(form.notes || '', 500)),
+      items: form.items.map(item => ({
+        ...item,
+        productName: sanitizeString(truncateString(item.productName || '', 200))
+      }))
+    }
+
+    // Validate sale data
+    const validation = validateSaleData(sanitizedSale)
+    if (!validation.isValid) {
+      toast.error(validation.errors[0])
       return
     }
 
-    if (form.paymentMethod === 'especes' && (form.amountReceived || 0) < (form.total || 0)) {
+    if (sanitizedSale.paymentMethod === 'especes' && (form.amountReceived || 0) < (sanitizedSale.total || 0)) {
       toast.error('Le montant reçu est insuffisant')
       return
     }
@@ -368,11 +383,11 @@ export default function Sales() {
     try {
       // Enregistrer la vente avec Supabase (gère automatiquement le stock)
       const newSale = await appStorage.addSale({
-        customerName: form.customerName,
-        total: form.total,
-        paymentMethod: form.paymentMethod,
-        notes: form.notes,
-        items: form.items
+        customerName: sanitizedSale.customerName,
+        total: sanitizedSale.total,
+        paymentMethod: sanitizedSale.paymentMethod,
+        notes: sanitizedSale.notes,
+        items: sanitizedSale.items
       })
 
       setSales(prev => [...prev, newSale])
