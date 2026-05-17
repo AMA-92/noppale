@@ -105,12 +105,16 @@ export default function Expenses() {
       return
     }
     const q = search.toLowerCase()
-    setFiltered(expenses.filter(e => !q || e.description.toLowerCase().includes(q) || e.category.toLowerCase().includes(q)))
+    setFiltered(expenses.filter(e => {
+      const description = e.description ? e.description.toLowerCase() : ''
+      const category = e.category ? e.category.toLowerCase() : ''
+      return !q || description.includes(q) || category.includes(q)
+    }))
   }, [expenses, search])
 
   // Préparer les données pour le graphique d'évolution des dépenses
   const getEvolutionData = () => {
-    if (expenses.length === 0) return []
+    if (!Array.isArray(expenses) || expenses.length === 0) return []
     
     try {
       const last30Days = Array.from({length: 30}, (_, i) => {
@@ -149,7 +153,7 @@ export default function Expenses() {
       { category: 'Autres', amount: 5000 }
     ]
     
-    let dataToUse = expenses.length > 0 ? expenses : testData
+    let dataToUse = Array.isArray(expenses) && expenses.length > 0 ? expenses : testData
     
     if (dataToUse.length === 0) return []
     
@@ -161,7 +165,7 @@ export default function Expenses() {
         return acc
       }, {})
 
-      const totalExpenses = dataToUse.reduce((sum, e) => sum + parseFloat(e.amount) || 0, 0)
+      const totalExpenses = dataToUse.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
 
       return Object.entries(categoryTotals).map(([category, amount], index) => ({
         category,
@@ -173,6 +177,14 @@ export default function Expenses() {
       return []
     }
   }
+
+  // Calculer le total des dépenses en toute sécurité
+  const calculateTotalExpenses = () => {
+    if (!Array.isArray(expenses)) return 0
+    return expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0)
+  }
+
+  const totalExpenses = calculateTotalExpenses()
 
   const openAdd = () => { setForm(emptyExpense); setEditingId(null); setShowModal(true) }
 
@@ -394,7 +406,7 @@ export default function Expenses() {
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-orange-600">
-                  {formatCurrency(expenses.reduce((sum, e) => sum + parseFloat(e.amount) || 0, 0))}
+                  {formatCurrency(totalExpenses)}
                 </div>
                 <div className="text-xs text-slate-500">Total des dépenses</div>
               </div>
@@ -590,7 +602,7 @@ export default function Expenses() {
                         <Edit size={16} />
                       </button>
                       <button 
-                        onClick={() => deleteExpense(expense)}
+                        onClick={() => handleDelete(expense)}
                         className="text-red-600 hover:text-red-700 p-1 rounded"
                         title="Supprimer"
                       >
