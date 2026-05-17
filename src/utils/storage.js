@@ -6,6 +6,11 @@ import { supabase } from '../supabase/config.js'
 // Obtenir l'ID de l'utilisateur connecté
 const getCurrentUserId = async () => {
   try {
+    // Skip auth in local development
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'local-dev-user-id'
+    }
+
     const { data, error } = await supabase.auth.getUser()
     if (error) {
       console.error('Erreur getCurrentUserId:', error)
@@ -459,6 +464,31 @@ export const appStorage = {
     try {
       const userId = await getCurrentUserId()
       if (!userId) return []
+
+      // Return mock data in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔓 Mode développement local: données mock pour expenses')
+        return [
+          {
+            id: '1',
+            user_id: userId,
+            category: 'Transport',
+            description: 'Essence voiture',
+            amount: 5000,
+            date: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          },
+          {
+            id: '2',
+            user_id: userId,
+            category: 'Nourriture',
+            description: 'Courses alimentaires',
+            amount: 15000,
+            date: new Date(Date.now() - 86400000).toISOString(),
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ]
+      }
 
       const { data, error } = await supabase
         .from('expenses')

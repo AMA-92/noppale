@@ -23,6 +23,14 @@ function App() {
   useEffect(() => {
     // Vérifier l'état de l'authentification au chargement
     const checkAuth = async () => {
+      // Skip auth in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔓 Mode développement local: authentification désactivée')
+        setUser({ id: 'local-dev-user', email: 'local@dev.com' })
+        setLoading(false)
+        return
+      }
+
       const currentUser = await authStorage.getCurrentUser()
       setUser(currentUser)
       setLoading(false)
