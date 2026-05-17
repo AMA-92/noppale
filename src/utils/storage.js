@@ -502,8 +502,7 @@ export const appStorage = {
           category: expense.category || '',
           description: expense.description || '',
           amount: parseFloat(expense.amount) || 0,
-          date: expense.date || new Date().toISOString().split('T')[0],
-          notes: expense.notes || ''
+          date: expense.date || new Date().toISOString().split('T')[0]
         })
         .select()
         .single()
@@ -527,8 +526,7 @@ export const appStorage = {
           category: updates.category,
           description: updates.description,
           amount: parseFloat(updates.amount) || 0,
-          date: updates.date,
-          notes: updates.notes
+          date: updates.date
         })
         .eq('id', id)
         .eq('user_id', userId)
