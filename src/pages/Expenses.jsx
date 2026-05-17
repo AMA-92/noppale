@@ -71,7 +71,16 @@ export default function Expenses() {
       setError(null)
 
       const data = await appStorage.getExpenses()
-      console.log('Expenses: Données chargées', data.length)
+      console.log('Expenses: Données chargées', data)
+      console.log('Expenses: Type de données', typeof data)
+      console.log('Expenses: Est un tableau?', Array.isArray(data))
+
+      if (!Array.isArray(data)) {
+        console.error('Expenses: Les données ne sont pas un tableau', data)
+        setExpenses([])
+        setFiltered([])
+        return
+      }
 
       setExpenses(data)
       setFiltered(data)
