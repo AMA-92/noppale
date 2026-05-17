@@ -78,7 +78,7 @@ export const usersStorage = {
   // Mettre à jour le profil utilisateur
   async updateUser(updates) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { data, error } = await supabase
@@ -152,7 +152,7 @@ export const appStorage = {
   // Produits
   async getProducts() {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) return []
 
       const { data, error } = await supabase
@@ -177,7 +177,7 @@ export const appStorage = {
 
   async addProduct(product) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { data, error } = await supabase
@@ -205,7 +205,7 @@ export const appStorage = {
 
   async updateProduct(id, updates) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { data, error } = await supabase
@@ -235,7 +235,7 @@ export const appStorage = {
 
   async deleteProduct(id) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { error } = await supabase
@@ -255,7 +255,7 @@ export const appStorage = {
   // Clients
   async getCustomers() {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) return []
 
       const { data, error } = await supabase
@@ -274,7 +274,7 @@ export const appStorage = {
 
   async addCustomer(customer) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { data, error } = await supabase
@@ -299,7 +299,7 @@ export const appStorage = {
 
   async updateCustomer(id, updates) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { data, error } = await supabase
@@ -326,7 +326,7 @@ export const appStorage = {
 
   async deleteCustomer(id) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { error } = await supabase
@@ -346,7 +346,7 @@ export const appStorage = {
   // Ventes
   async getSales() {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) return []
 
       const { data, error } = await supabase
@@ -368,7 +368,7 @@ export const appStorage = {
 
   async addSale(sale) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       // Créer la vente
@@ -435,7 +435,7 @@ export const appStorage = {
 
   async deleteSale(id) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { error } = await supabase
@@ -455,7 +455,7 @@ export const appStorage = {
   // Dépenses
   async getExpenses() {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) return []
 
       const { data, error } = await supabase
@@ -474,7 +474,7 @@ export const appStorage = {
 
   async addExpense(expense) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { data, error } = await supabase
@@ -499,7 +499,7 @@ export const appStorage = {
 
   async updateExpense(id, updates) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { data, error } = await supabase
@@ -525,7 +525,7 @@ export const appStorage = {
 
   async deleteExpense(id) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       const { error } = await supabase
@@ -545,7 +545,7 @@ export const appStorage = {
   // Informations de la boutique
   async getShopInfo() {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) return {
         name: '',
         address: '',
@@ -595,7 +595,7 @@ export const appStorage = {
 
   async setShopInfo(shopInfo) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       // Vérifier si les infos existent déjà
@@ -650,7 +650,7 @@ export const appStorage = {
   // Obtenir les préférences utilisateur
   async getUserPreferences() {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) return null
 
       const { data, error } = await supabase
@@ -677,7 +677,7 @@ export const appStorage = {
   // Sauvegarder les préférences utilisateur
   async setUserPreferences(preferences) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       // Vérifier si les préférences existent déjà
@@ -730,7 +730,7 @@ export const appStorage = {
   // Obtenir le code secret
   async getSecretCode() {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) return '1234'
 
       const { data, error } = await supabase
@@ -757,7 +757,7 @@ export const appStorage = {
   // Sauvegarder le code secret
   async setSecretCode(secretCode) {
     try {
-      const userId = getCurrentUserId()
+      const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
       // Vérifier si le code secret existe déjà
