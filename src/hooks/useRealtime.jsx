@@ -9,15 +9,21 @@ import { supabase } from '../supabase/config.js'
  */
 export function useRealtimeSubscription(tableName, onUpdate, filter = '') {
   useEffect(() => {
+    let channel
     let subscription
 
     const setupSubscription = async () => {
       try {
+        // Nettoyer l'ancien channel s'il existe
+        if (channel) {
+          supabase.removeChannel(channel)
+        }
+
         // Créer un abonnement aux changements
-        let channel = supabase.channel(`realtime:${tableName}`)
+        channel = supabase.channel(`realtime:${tableName}`)
 
         if (filter) {
-          channel = channel.on('postgres_changes', {
+          channel.on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: tableName,
@@ -27,7 +33,7 @@ export function useRealtimeSubscription(tableName, onUpdate, filter = '') {
             if (onUpdate) onUpdate(payload)
           })
         } else {
-          channel = channel.on('postgres_changes', {
+          channel.on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: tableName
@@ -48,8 +54,8 @@ export function useRealtimeSubscription(tableName, onUpdate, filter = '') {
     setupSubscription()
 
     return () => {
-      if (subscription) {
-        supabase.removeChannel(subscription)
+      if (channel) {
+        supabase.removeChannel(channel)
       }
     }
   }, [tableName, filter, onUpdate])
