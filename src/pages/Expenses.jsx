@@ -70,8 +70,12 @@ export default function Expenses() {
       setLoading(true)
       setError(null)
 
-      const data = await appStorage.getExpenses()
-      console.log('Expenses: Données chargées', data)
+      const result = appStorage.getExpenses()
+      console.log('Expenses: Résultat de getExpenses()', result)
+      console.log('Expenses: Type du résultat', typeof result)
+      
+      const data = await result
+      console.log('Expenses: Données chargées après await', data)
       console.log('Expenses: Type de données', typeof data)
       console.log('Expenses: Est un tableau?', Array.isArray(data))
 
