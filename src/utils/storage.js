@@ -113,6 +113,11 @@ export const authStorage = {
   // Obtenir l'utilisateur connecté
   async getCurrentUser() {
     try {
+      // Skip auth in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return { id: 'local-dev-user', email: 'local@dev.com' }
+      }
+
       const { data, error } = await supabase.auth.getUser()
       if (error) {
         console.error('Erreur getCurrentUser:', error)
