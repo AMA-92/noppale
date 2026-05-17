@@ -165,6 +165,37 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) return []
 
+      // Return mock data in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔓 Mode développement local: données mock pour products')
+        return [
+          {
+            id: '1',
+            user_id: userId,
+            name: 'Produit 1',
+            category: 'Catégorie A',
+            barcode: '123456789',
+            buying_price: 1000,
+            selling_price: 1500,
+            stock: 50,
+            min_stock: 10,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: '2',
+            user_id: userId,
+            name: 'Produit 2',
+            category: 'Catégorie B',
+            barcode: '987654321',
+            buying_price: 2000,
+            selling_price: 3000,
+            stock: 30,
+            min_stock: 5,
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ]
+      }
+
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -270,6 +301,29 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) return []
 
+      // Return mock data in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔓 Mode développement local: données mock pour customers')
+        return [
+          {
+            id: '1',
+            user_id: userId,
+            name: 'Client 1',
+            phone: '771234567',
+            email: 'client1@example.com',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: '2',
+            user_id: userId,
+            name: 'Client 2',
+            phone: '779876543',
+            email: 'client2@example.com',
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ]
+      }
+
       const { data, error } = await supabase
         .from('customers')
         .select('*')
@@ -361,12 +415,34 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) return []
 
+      // Return mock data in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔓 Mode développement local: données mock pour sales')
+        return [
+          {
+            id: '1',
+            user_id: userId,
+            customer_name: 'Client 1',
+            total: 15000,
+            payment_method: 'Espèces',
+            notes: '',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: '2',
+            user_id: userId,
+            customer_name: 'Client 2',
+            total: 30000,
+            payment_method: 'Carte',
+            notes: '',
+            created_at: new Date(Date.now() - 86400000).toISOString()
+          }
+        ]
+      }
+
       const { data, error } = await supabase
         .from('sales')
-        .select(`
-          *,
-          sale_items (*)
-        `)
+        .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
@@ -590,6 +666,18 @@ export const appStorage = {
         phone: '',
         email: '',
         logo: ''
+      }
+
+      // Return mock data in local development
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('🔓 Mode développement local: données mock pour shop_info')
+        return {
+          name: 'Ma Boutique',
+          address: '123 Rue Principale',
+          phone: '771234567',
+          email: 'contact@boutique.com',
+          logo: ''
+        }
       }
 
       const { data, error } = await supabase
