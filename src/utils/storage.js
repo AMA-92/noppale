@@ -190,7 +190,8 @@ export const appStorage = {
           selling_price: product.sellingPrice || 0,
           stock: product.stock || 0,
           min_stock: product.minStock || 0,
-          barcode: product.barcode || ''
+          barcode: product.barcode || '',
+          image: product.image || ''
         })
         .select()
         .single()
@@ -218,6 +219,7 @@ export const appStorage = {
           stock: updates.stock,
           min_stock: updates.minStock,
           barcode: updates.barcode,
+          image: updates.image || '',
           updated_at: new Date().toISOString()
         })
         .eq('id', id)

@@ -81,7 +81,8 @@ export default function Products() {
           sellingPrice: form.sellingPrice,
           stock: form.stock,
           minStock: form.minStock,
-          barcode: form.unit
+          barcode: form.unit,
+          image: form.image
         })
         const updatedProducts = products.map(p => 
           p.id === editingId ? updatedProduct : p
@@ -96,7 +97,8 @@ export default function Products() {
           sellingPrice: form.sellingPrice,
           stock: form.stock,
           minStock: form.minStock,
-          barcode: form.unit
+          barcode: form.unit,
+          image: form.image
         })
         setProducts([...products, newProduct])
         toast.success('Produit ajouté')
