@@ -54,14 +54,14 @@ export default function Expenses() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    loadExpenses()
+    loadExpenses().catch(err => console.error('Error loading expenses on mount:', err))
   }, [currency])
 
   // Écouter les changements en temps réel sur les dépenses
   useExpensesRealtime((payload) => {
     console.log('Realtime expenses change:', payload)
     // Recharger les dépenses quand il y a un changement
-    loadExpenses()
+    loadExpenses().catch(err => console.error('Error reloading expenses:', err))
   })
 
   const loadExpenses = async () => {
