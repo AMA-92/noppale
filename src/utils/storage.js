@@ -180,6 +180,8 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
+      console.log('📦 Ajout produit avec image:', product.image ? 'OUI (' + product.image.length + ' caractères)' : 'NON')
+
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -197,6 +199,7 @@ export const appStorage = {
         .single()
 
       if (error) throw error
+      console.log('✅ Produit ajouté avec image:', data.image ? 'OUI' : 'NON')
       return data
     } catch (error) {
       console.error('Erreur lors de l\'ajout du produit:', error)
@@ -208,6 +211,8 @@ export const appStorage = {
     try {
       const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
+
+      console.log('📦 Mise à jour produit avec image:', updates.image ? 'OUI (' + updates.image.length + ' caractères)' : 'NON')
 
       const { data, error } = await supabase
         .from('products')
@@ -228,6 +233,7 @@ export const appStorage = {
         .single()
 
       if (error) throw error
+      console.log('✅ Produit mis à jour avec image:', data.image ? 'OUI' : 'NON')
       return data
     } catch (error) {
       console.error('Erreur lors de la mise à jour du produit:', error)
