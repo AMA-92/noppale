@@ -14,8 +14,6 @@ import Settings from './pages/Settings'
 import LoadingScreen from './components/LoadingScreen'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 
-console.log('🚀 Noppale PWA - Mode Web')
-
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -23,14 +21,6 @@ function App() {
   useEffect(() => {
     // Vérifier l'état de l'authentification au chargement
     const checkAuth = async () => {
-      // Skip auth in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('🔓 Mode développement local: authentification désactivée')
-        setUser({ id: 'local-dev-user', email: 'local@dev.com' })
-        setLoading(false)
-        return
-      }
-
       const currentUser = await authStorage.getCurrentUser()
       setUser(currentUser)
       setLoading(false)
@@ -40,7 +30,6 @@ function App() {
 
     // Écouter les changements d'état d'authentification
     const { data: { subscription } } = authStorage.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session)
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setUser(session.user)
       } else if (event === 'SIGNED_OUT') {

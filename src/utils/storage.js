@@ -6,11 +6,6 @@ import { supabase } from '../supabase/config.js'
 // Obtenir l'ID de l'utilisateur connecté
 const getCurrentUserId = async () => {
   try {
-    // Skip auth in local development
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'local-dev-user-id'
-    }
-
     const { data, error } = await supabase.auth.getUser()
     if (error) {
       console.error('Erreur getCurrentUserId:', error)
@@ -113,11 +108,6 @@ export const authStorage = {
   // Obtenir l'utilisateur connecté
   async getCurrentUser() {
     try {
-      // Skip auth in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return { id: 'local-dev-user', email: 'local@dev.com' }
-      }
-
       const { data, error } = await supabase.auth.getUser()
       if (error) {
         console.error('Erreur getCurrentUser:', error)
@@ -164,37 +154,6 @@ export const appStorage = {
     try {
       const userId = await getCurrentUserId()
       if (!userId) return []
-
-      // Return mock data in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('🔓 Mode développement local: données mock pour products')
-        return [
-          {
-            id: '1',
-            user_id: userId,
-            name: 'Produit 1',
-            category: 'Catégorie A',
-            barcode: '123456789',
-            buying_price: 1000,
-            selling_price: 1500,
-            stock: 50,
-            min_stock: 10,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            user_id: userId,
-            name: 'Produit 2',
-            category: 'Catégorie B',
-            barcode: '987654321',
-            buying_price: 2000,
-            selling_price: 3000,
-            stock: 30,
-            min_stock: 5,
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          }
-        ]
-      }
 
       const { data, error } = await supabase
         .from('products')
@@ -301,29 +260,6 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) return []
 
-      // Return mock data in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('🔓 Mode développement local: données mock pour customers')
-        return [
-          {
-            id: '1',
-            user_id: userId,
-            name: 'Client 1',
-            phone: '771234567',
-            email: 'client1@example.com',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            user_id: userId,
-            name: 'Client 2',
-            phone: '779876543',
-            email: 'client2@example.com',
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          }
-        ]
-      }
-
       const { data, error } = await supabase
         .from('customers')
         .select('*')
@@ -414,31 +350,6 @@ export const appStorage = {
     try {
       const userId = await getCurrentUserId()
       if (!userId) return []
-
-      // Return mock data in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('🔓 Mode développement local: données mock pour sales')
-        return [
-          {
-            id: '1',
-            user_id: userId,
-            customer_name: 'Client 1',
-            total: 15000,
-            payment_method: 'Espèces',
-            notes: '',
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            user_id: userId,
-            customer_name: 'Client 2',
-            total: 30000,
-            payment_method: 'Carte',
-            notes: '',
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          }
-        ]
-      }
 
       const { data, error } = await supabase
         .from('sales')
@@ -546,31 +457,6 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) return []
 
-      // Return mock data in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('🔓 Mode développement local: données mock pour expenses')
-        return [
-          {
-            id: '1',
-            user_id: userId,
-            category: 'Transport',
-            description: 'Essence voiture',
-            amount: 5000,
-            date: new Date().toISOString(),
-            created_at: new Date().toISOString()
-          },
-          {
-            id: '2',
-            user_id: userId,
-            category: 'Nourriture',
-            description: 'Courses alimentaires',
-            amount: 15000,
-            date: new Date(Date.now() - 86400000).toISOString(),
-            created_at: new Date(Date.now() - 86400000).toISOString()
-          }
-        ]
-      }
-
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
@@ -578,11 +464,29 @@ export const appStorage = {
         .order('date', { ascending: false })
 
       if (error) throw error
-      console.log('Storage: Expenses data retrieved', data)
       return Array.isArray(data) ? data : []
     } catch (error) {
       console.error('Erreur lors de la récupération des dépenses:', error)
       return []
+    }
+  },
+
+  async setExpenses(expenses) {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      if (Array.isArray(expenses) && expenses.length === 0) {
+        const { error } = await supabase
+          .from('expenses')
+          .delete()
+          .eq('user_id', userId)
+        if (error) throw error
+      }
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des dépenses:', error)
+      throw error
     }
   },
 
@@ -595,10 +499,11 @@ export const appStorage = {
         .from('expenses')
         .insert({
           user_id: userId,
-          category: expense.category,
+          category: expense.category || '',
           description: expense.description || '',
-          amount: expense.amount,
-          date: expense.date || new Date().toISOString()
+          amount: parseFloat(expense.amount) || 0,
+          date: expense.date || new Date().toISOString().split('T')[0],
+          notes: expense.notes || ''
         })
         .select()
         .single()
@@ -621,8 +526,9 @@ export const appStorage = {
         .update({
           category: updates.category,
           description: updates.description,
-          amount: updates.amount,
-          date: updates.date
+          amount: parseFloat(updates.amount) || 0,
+          date: updates.date,
+          notes: updates.notes
         })
         .eq('id', id)
         .eq('user_id', userId)
@@ -666,18 +572,6 @@ export const appStorage = {
         phone: '',
         email: '',
         logo: ''
-      }
-
-      // Return mock data in local development
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('🔓 Mode développement local: données mock pour shop_info')
-        return {
-          name: 'Ma Boutique',
-          address: '123 Rue Principale',
-          phone: '771234567',
-          email: 'contact@boutique.com',
-          logo: ''
-        }
       }
 
       const { data, error } = await supabase

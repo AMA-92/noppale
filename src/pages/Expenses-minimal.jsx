@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Search, Wallet, X, Trash2, Edit } from 'lucide-react'
 import { useI18n } from '../hooks/useI18n'
 import { appStorage } from '../utils/storage'
+import { useExpensesRealtime } from '../hooks/useRealtime.jsx'
 import toast from 'react-hot-toast'
 
 const emptyExpense = {
@@ -28,6 +29,10 @@ export default function Expenses() {
     loadExpenses()
   }, [language])
 
+  useExpensesRealtime(() => {
+    loadExpenses()
+  })
+
   useEffect(() => {
     const q = search.toLowerCase()
     setFiltered(expenses.filter(e => 
@@ -37,22 +42,23 @@ export default function Expenses() {
     ))
   }, [expenses, search])
 
-  const loadExpenses = () => {
+  const loadExpenses = async () => {
     try {
-      console.log('Expenses: Début du chargement...')
       setLoading(true)
       setError(null)
-      
-      const data = appStorage.getExpenses() || []
-      console.log('Expenses: Données chargées', data.length, data)
-      
+
+      const data = await appStorage.getExpenses()
+
+      if (!Array.isArray(data)) {
+        setExpenses([])
+        return
+      }
+
       setExpenses(data)
-      setFiltered(data)
     } catch (error) {
       console.error('Expenses: Erreur de chargement:', error)
       setError('Erreur lors du chargement des dépenses')
       setExpenses([])
-      setFiltered([])
     } finally {
       setLoading(false)
     }
@@ -85,23 +91,12 @@ export default function Expenses() {
       }
 
       if (editingId) {
-        // Modification
-        const updated = expenses.map(e => 
-          e.id === editingId ? {...expenseToSave, id: editingId} : e
-        )
-        appStorage.setExpenses(updated)
-        setExpenses(updated)
+        const updatedExpense = await appStorage.updateExpense(editingId, expenseToSave)
+        setExpenses(expenses.map(e => e.id === editingId ? updatedExpense : e))
         toast.success('Dépense modifiée')
       } else {
-        // Ajout
-        const newExpense = {
-          ...expenseToSave,
-          id: Date.now().toString(),
-          createdAt: new Date().toISOString()
-        }
-        const updated = [newExpense, ...expenses]
-        appStorage.setExpenses(updated)
-        setExpenses(updated)
+        const newExpense = await appStorage.addExpense(expenseToSave)
+        setExpenses([newExpense, ...expenses])
         toast.success('Dépense ajoutée')
       }
       
@@ -116,17 +111,15 @@ export default function Expenses() {
     }
   }
 
-  const handleDelete = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette dépense ?')) {
-      try {
-        const updated = expenses.filter(e => e.id !== id)
-        appStorage.setExpenses(updated)
-        setExpenses(updated)
-        toast.success('Dépense supprimée')
-      } catch (error) {
-        console.error('Expenses: Erreur suppression:', error)
-        toast.error('Erreur lors de la suppression')
-      }
+  const handleDelete = async (id) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette dépense ?')) return
+    try {
+      await appStorage.deleteExpense(id)
+      setExpenses(expenses.filter(e => e.id !== id))
+      toast.success('Dépense supprimée')
+    } catch (error) {
+      console.error('Expenses: Erreur suppression:', error)
+      toast.error('Erreur lors de la suppression')
     }
   }
 

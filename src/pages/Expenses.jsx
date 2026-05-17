@@ -690,5 +690,3 @@ export default function Expenses() {
     </div>
   )
 }
-
-export default Expenses
