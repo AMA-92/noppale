@@ -10,7 +10,7 @@
   "license": "MIT",
   "private": true,
   "engines": {
-    "node": ">=18.0.0 <=22.x"
+    "node": ">=18.0.0 <=24.x"
   },
   "scripts": {
     "dev": "vite",
