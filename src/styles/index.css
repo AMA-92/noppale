@@ -384,10 +384,13 @@ tbody td {
 }
 
 .modal-content {
-  @apply bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  touch-action: manipulation;
+  @apply bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] animate-fade-in;
+}
+
+.sale-modal-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Stat card */
@@ -569,9 +572,7 @@ tbody td {
     font-size: 14px;
   }
 
-  /* Prevent horizontal overflow */
-  * {
-    max-width: 100%;
+  body {
     overflow-x: hidden;
   }
 
@@ -586,12 +587,41 @@ tbody td {
     grid-template-columns: 1fr !important;
   }
 
-  /* Responsive modal */
+  /* Responsive modal — bottom sheet sur mobile */
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
   .modal-content {
     max-width: 100%;
     margin: 0;
-    border-radius: 0;
-    max-height: 100vh;
+    border-radius: 1rem 1rem 0 0;
+    max-height: 92dvh;
+    width: 100%;
+  }
+
+  .sale-modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 92dvh;
+    height: auto;
+  }
+
+  .sale-modal-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .sale-product-list {
+    max-height: min(42dvh, 280px);
+    min-height: 160px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   /* Responsive tables */
@@ -609,14 +639,22 @@ tbody td {
     padding: 1rem;
   }
 
-  /* Responsive buttons */
-  .btn-primary,
-  .btn-secondary,
-  .btn-danger,
-  .btn-success {
+  /* Boutons pleine largeur sauf barres d'outils dans les modals */
+  main .btn-primary,
+  main .btn-secondary,
+  main .btn-danger,
+  main .btn-success,
+  .page-actions .btn-primary,
+  .page-actions .btn-secondary {
     width: 100%;
     justify-content: center;
     padding: 0.75rem 1rem;
+  }
+
+  .sale-modal-footer > .btn-primary,
+  .sale-modal-footer > .btn-secondary {
+    width: auto;
+    flex: 1 1 0%;
   }
 
   /* Responsive inputs */

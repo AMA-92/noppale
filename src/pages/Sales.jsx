@@ -725,7 +725,7 @@ export default function Sales() {
       {/* Modal */}
       {showModal && (
         <div className="modal-overlay">
-          <div className="modal-content max-w-2xl">
+          <div className="modal-content sale-modal-content max-w-2xl">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-slate-800">{t('newSale')}</h2>
               <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
@@ -733,114 +733,34 @@ export default function Sales() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label htmlFor="sale-customer-name" className="label-field">Nom du client</label>
-                <input
-                  id="sale-customer-name"
-                  name="customerName"
-                  type="text"
-                  autoComplete="name"
-                  value={form.customerName}
-                  onChange={e => setForm({...form, customerName: e.target.value})}
-                  className="input-field"
-                  placeholder="Client (optionnel)"
-                />
-              </div>
-
-              {/* Product Selection */}
-              <div>
-                <label htmlFor="sale-product-search" className="label-field">Article</label>
+            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
+              <div className="sale-modal-scroll space-y-4">
+              <div className="sale-product-section">
+                <label htmlFor="sale-product-search" className="label-field">Choisir un produit</label>
                 
-                {/* Panier en temps réel */}
-                {cartItems.length > 0 && (
-                  <div className="mb-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-semibold text-primary-800">
-                        🛒 Panier ({cartItems.length} article{cartItems.length > 1 ? 's' : ''})
-                      </span>
-                      <span className="text-sm font-bold text-primary-600">
-                        {(() => {
-                          try {
-                            const total = cartItems.reduce((sum, item) => {
-                              const itemTotal = parseFloat(item.totalPrice) || 0
-                              return sum + itemTotal
-                            }, 0)
-                            return formatCurrency(total)
-                          } catch (error) {
-                            console.error('Erreur calcul total panier:', error)
-                            return '0 FCFA'
-                          }
-                        })()}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      {cartItems.map((item, index) => (
-                        <div key={item.productId || index} className="flex justify-between items-center text-xs">
-                          <span className="text-slate-700">
-                            {item.productName || 'Produit'} x{item.quantity || 1}
-                          </span>
-                          <span className="text-slate-600 font-medium">
-                            {(() => {
-                              try {
-                                return formatCurrency(parseFloat(item.totalPrice) || 0)
-                              } catch (error) {
-                                console.error('Erreur formatage prix:', error)
-                                return '0 FCFA'
-                              }
-                            })()}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                <div
-                  className="relative product-dropdown-container"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        id="sale-product-search"
-                        name="productSearch"
-                        type="search"
-                        autoComplete="off"
-                        value={productSearch}
-                        onChange={e => {
-                          setProductSearch(e.target.value)
-                          setShowProductDropdown(true)
-                        }}
-                        onFocus={() => setShowProductDropdown(true)}
-                        placeholder="Cliquez sur un produit pour l'ajouter au panier..."
-                        className="input-field pl-10"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleSave()}
-                      className="btn-primary flex items-center gap-2 px-4 shrink-0"
-                      disabled={!cartItems.length || saving}
-                    >
-                      <ShoppingCart size={18} />
-                      <span>
-                        {cartItems.length
-                          ? `Panier (${cartItems.length})`
-                          : 'Panier vide'}
-                      </span>
-                    </button>
-                  </div>
+                <div className="relative product-dropdown-container">
+                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
+                  <input
+                    id="sale-product-search"
+                    name="productSearch"
+                    type="search"
+                    inputMode="search"
+                    autoComplete="off"
+                    value={productSearch}
+                    onChange={e => setProductSearch(e.target.value)}
+                    placeholder="Rechercher un produit..."
+                    className="input-field pl-10 w-full"
+                  />
+                </div>
 
-                  <div className="mt-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                  <div className="sale-product-list mt-2 bg-white border border-slate-200 rounded-lg shadow-sm">
                       {filteredProducts.length > 0 ? (
                           filteredProducts.map(product => (
                             <button
                               key={product.id}
                               type="button"
                               onClick={(e) => addProductToCart(product, e)}
-                              className="w-full text-left px-4 py-3 min-h-[48px] hover:bg-slate-50 active:bg-primary-50 border-b border-slate-100 flex items-center justify-between touch-manipulation select-none cursor-pointer"
+                              className="w-full text-left px-4 py-3 min-h-[52px] hover:bg-slate-50 active:bg-primary-50 border-b border-slate-100 last:border-b-0 flex items-center justify-between touch-manipulation cursor-pointer"
                             >
                               <div>
                                 <div className="font-medium text-slate-800">{product.name}</div>
@@ -862,52 +782,61 @@ export default function Sales() {
                           </div>
                         )}
                   </div>
-                </div>
               </div>
 
-              {/* Selected Items */}
               {cartItems.length > 0 && (
-                <div>
-                  <p className="label-field" id="sale-items-label">Articles sélectionnés</p>
-                  <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
+                <div className="p-3 bg-primary-50 border border-primary-200 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-primary-800">Panier ({cartItems.length})</span>
+                    <span className="text-sm font-bold text-primary-600">
+                      {formatCurrency(cartItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0))}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
                     {cartItems.map((item) => (
-                      <div key={item.productId} className="p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-800">{item.productName}</p>
-                            <p className="text-sm text-slate-500">{formatCurrency(item.unitPrice)} / {item.productUnit || 'pièce'}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <input
-                              id={`sale-qty-${item.productId}`}
-                              name={`quantity-${item.productId}`}
-                              type="number"
-                              min="1"
-                              max={getAvailableStock(item.productId)}
-                              value={item.quantity}
-                              onChange={e => updateItemQuantity(item.productId, parseInt(e.target.value) || 1)}
-                              className="w-20 px-2 py-1 border border-slate-200 rounded text-center"
-                              aria-label={`Quantité pour ${item.productName}`}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeItemFromSale(item.productId)}
-                              className="p-1 text-red-500 hover:bg-red-50 rounded"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
+                      <div key={item.productId} className="flex items-center justify-between gap-2 bg-white rounded-lg p-2 border border-primary-100">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">{item.productName}</p>
+                          <p className="text-xs text-slate-500">{formatCurrency(item.unitPrice)}</p>
                         </div>
-                        <div className="mt-2 text-right">
-                          <span className="font-semibold text-green-600">
-                            {formatCurrency(item.totalPrice)}
-                          </span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <input
+                            type="number"
+                            min="1"
+                            max={getAvailableStock(item.productId)}
+                            value={item.quantity}
+                            onChange={e => updateItemQuantity(item.productId, parseInt(e.target.value, 10) || 1)}
+                            className="w-14 px-1 py-1 border border-slate-200 rounded text-center text-sm"
+                            aria-label={`Quantité ${item.productName}`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeItemFromSale(item.productId)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded touch-manipulation"
+                            aria-label="Retirer"
+                          >
+                            <X size={16} />
+                          </button>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
+
+              <div>
+                <label htmlFor="sale-customer-name" className="label-field">Nom du client</label>
+                <input
+                  id="sale-customer-name"
+                  name="customerName"
+                  type="text"
+                  autoComplete="name"
+                  value={form.customerName}
+                  onChange={e => setForm({...form, customerName: e.target.value})}
+                  className="input-field w-full"
+                  placeholder="Client (optionnel)"
+                />
+              </div>
 
               {/* Total */}
               <div className="border-t pt-4">
@@ -995,7 +924,9 @@ export default function Sales() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              </div>
+
+              <div className="sale-modal-footer flex-shrink-0 border-t border-slate-200 pt-4 mt-2 flex gap-3">
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
                   Annuler
                 </button>
