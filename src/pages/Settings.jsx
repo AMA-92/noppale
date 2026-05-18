@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { authStorage, usersStorage, appStorage } from '../utils/storage'
-import storage from '../utils/storage'
+import { authStorage, appStorage } from '../utils/storage'
+import { supabase } from '../supabase/config.js'
 import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useI18n } from '../hooks/useI18n.jsx'
@@ -9,7 +9,7 @@ import { currencies } from '../utils/i18n'
 import { useNavigate } from 'react-router-dom'
 
 export default function Settings() {
-  const { updateLanguage, updateCurrency, updateDarkMode, language, currency, t, availableLanguages } = useI18n()
+  const { updateLanguage, updateCurrency, updateDarkMode, applyRemotePreferences, language, currency, t, availableLanguages } = useI18n()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('personal')
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -60,23 +60,19 @@ export default function Settings() {
   })
 
   useEffect(() => {
-    // Charger les informations de l'utilisateur et les préférences
-    const currentUser = authStorage.getCurrentUser()
-    if (currentUser) {
-      setProfileForm({
-        name: currentUser.name || '',
-        email: currentUser.email || ''
-      })
+    const init = async () => {
+      const currentUser = await authStorage.getCurrentUser()
+      if (currentUser) {
+        setProfileForm({
+          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '',
+          email: currentUser.email || ''
+        })
+      }
+      loadPreferences()
+      loadShopInfo()
+      loadSecretCode()
     }
-
-    // Charger les préférences depuis Supabase
-    loadPreferences()
-
-    // Charger les informations de la boutique
-    loadShopInfo()
-
-    // Charger le code secret depuis Supabase
-    loadSecretCode()
+    init()
   }, [])
 
   // Écouter les changements en temps réel sur les informations de la boutique
@@ -107,14 +103,15 @@ export default function Settings() {
     try {
       const savedPreferences = await appStorage.getUserPreferences()
       if (savedPreferences) {
-        setPreferences({
+        const prefs = {
           darkMode: savedPreferences.dark_mode || false,
           notifications: savedPreferences.notifications !== false,
           language: savedPreferences.language || 'fr',
           currency: savedPreferences.currency || 'FCFA'
-        })
+        }
+        setPreferences(prefs)
+        applyRemotePreferences(savedPreferences)
       } else {
-        // Utiliser les valeurs par défaut si pas de préférences dans Supabase
         setPreferences({
           darkMode: document.documentElement.classList.contains('dark'),
           notifications: true,
@@ -144,82 +141,84 @@ export default function Settings() {
   }, [])
 
   // Gestion du changement de mot de passe
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = async (e) => {
     e.preventDefault()
-    
-    
+
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
       toast.error('Tous les champs sont requis')
       return
     }
-    
+
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       toast.error('Les nouveaux mots de passe ne correspondent pas')
       return
     }
-    
+
     if (passwordForm.newPassword.length < 6) {
       toast.error('Le mot de passe doit contenir au moins 6 caractères')
       return
     }
-    
+
     try {
-      const currentUser = authStorage.getCurrentUser()
-      
-      if (!currentUser) {
+      const currentUser = await authStorage.getCurrentUser()
+      if (!currentUser?.email) {
         toast.error('Aucun utilisateur connecté')
         return
       }
-      
-      const authenticatedUser = usersStorage.authenticate(currentUser.email, passwordForm.currentPassword)
-      
-      if (authenticatedUser) {
-        const updatedUser = usersStorage.updateUser(currentUser.id, { password: passwordForm.newPassword })
-        
-        toast.success('Mot de passe changé avec succès')
-        setShowPasswordModal(false)
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
-      } else {
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: passwordForm.currentPassword
+      })
+
+      if (signInError) {
         toast.error('Mot de passe actuel incorrect')
+        return
       }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword
+      })
+
+      if (updateError) throw updateError
+
+      toast.success('Mot de passe changé avec succès')
+      setShowPasswordModal(false)
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
     } catch (error) {
-      console.error('💥 Erreur lors du changement de mot de passe:', error)
-      toast.error(`Erreur: ${error.message || 'Erreur lors du changement de mot de passe'}`)
+      console.error('Erreur lors du changement de mot de passe:', error)
+      toast.error(error.message || 'Erreur lors du changement de mot de passe')
     }
   }
 
   // Gestion des informations personnelles
-  const handleProfileUpdate = (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault()
-    
-    
+
     if (!profileForm.name || !profileForm.email) {
       toast.error('Tous les champs sont requis')
       return
     }
-    
+
     try {
-      const currentUser = authStorage.getCurrentUser()
-      
+      const currentUser = await authStorage.getCurrentUser()
       if (!currentUser) {
         toast.error('Aucun utilisateur connecté')
         return
       }
-      
-      const updatedUser = usersStorage.updateUser(currentUser.id, {
-        name: profileForm.name,
-        email: profileForm.email
+
+      const { error } = await supabase.auth.updateUser({
+        email: profileForm.email,
+        data: { name: profileForm.name }
       })
-      
-      // Mettre à jour l'utilisateur connecté
-      const updatedCurrentUser = { ...currentUser, name: profileForm.name, email: profileForm.email }
-      authStorage.setCurrentUser(updatedCurrentUser)
-      
+
+      if (error) throw error
+
       toast.success('Informations mises à jour avec succès')
       setShowProfileModal(false)
     } catch (error) {
-      console.error('💥 Erreur lors de la mise à jour du profil:', error)
-      toast.error(`Erreur: ${error.message || 'Erreur lors de la mise à jour des informations'}`)
+      console.error('Erreur lors de la mise à jour du profil:', error)
+      toast.error(error.message || 'Erreur lors de la mise à jour des informations')
     }
   }
 
@@ -229,10 +228,10 @@ export default function Settings() {
       // Sauvegarder dans Supabase
       await appStorage.setUserPreferences(preferences)
 
-      // Appliquer les changements localement
-      updateLanguage(preferences.language)
-      updateCurrency(preferences.currency)
-      updateDarkMode(preferences.darkMode)
+      // Appliquer les changements localement (déjà sauvegardés dans Supabase)
+      updateLanguage(preferences.language, { persist: false })
+      updateCurrency(preferences.currency, { persist: false })
+      updateDarkMode(preferences.darkMode, { persist: false })
 
       toast.success('Préférences sauvegardées avec succès')
       setShowPreferencesModal(false)
@@ -243,11 +242,11 @@ export default function Settings() {
   }
 
   // Gestion des informations de la boutique
-  const handleShopInfoUpdate = (e) => {
+  const handleShopInfoUpdate = async (e) => {
     e.preventDefault()
-    
+
     try {
-      appStorage.setShopInfo(shopInfo)
+      await appStorage.setShopInfo(shopInfo)
       toast.success('Informations de la boutique mises à jour avec succès')
       setShowShopInfoModal(false)
     } catch (error) {
@@ -279,183 +278,82 @@ export default function Settings() {
     window.location.href = '/login'
   }
 
-  // Fonction de bypass pour test (sans vérification mot de passe)
-  const bypassDataDelete = () => {
-    
-    if (confirm('⚠️ ATTENTION: Ceci est un test de bypass. Voulez-vous vraiment supprimer toutes les données sans vérification de mot de passe?')) {
-      handleClearData()
-      setShowDataDeleteModal(false)
-      setDataDeletePassword('')
-      toast.warning('Suppression effectuée via bypass de test')
-    }
-  }
-
-  // Fonction de test pour vérifier l'authentification
-  const testAuthentication = () => {
-    
-    const currentUser = authStorage.getCurrentUser()
-    
-    if (!currentUser) {
-      return
-    }
-    
-    if (!dataDeletePassword) {
-      return
-    }
-    
-    
-    // UTILISER EXACTEMENT LA MEME METHODE
-    const authenticatedUser = usersStorage.authenticate(currentUser.email, dataDeletePassword)
-    
-    if (authenticatedUser) {
-    } else {
-    }
-    
-    // Debug: voir l'utilisateur retourne
-  }
-
-  // Gestion de la suppression des données
-  const handleSecureDataDelete = (e) => {
+  // Gestion de la suppression des données (avec vérification mot de passe)
+  const handleSecureDataDelete = async (e) => {
     e.preventDefault()
-    
+
     if (!dataDeletePassword) {
       toast.error('Veuillez entrer votre mot de passe')
       return
     }
-    
+
     try {
-      const currentUser = authStorage.getCurrentUser()
-      
-      if (!currentUser) {
-        toast.error('Aucun utilisateur connecte')
+      const currentUser = await authStorage.getCurrentUser()
+      if (!currentUser?.email) {
+        toast.error('Aucun utilisateur connecté')
         return
       }
-      
-      
-      // UTILISER EXACTEMENT LA MEME METHODE QUE LOGIN.JS
-      const authenticatedUser = usersStorage.authenticate(currentUser.email, dataDeletePassword)
-      
-      if (authenticatedUser) {
-        handleClearData()
-        setShowDataDeleteModal(false)
-        setDataDeletePassword('')
-      } else {
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: dataDeletePassword
+      })
+
+      if (signInError) {
         toast.error('Mot de passe incorrect')
+        return
       }
+
+      await handleClearData()
+      setShowDataDeleteModal(false)
+      setDataDeletePassword('')
     } catch (error) {
-      console.error('Erreur verification mot de passe:', error)
-      toast.error('Erreur lors de la verification')
+      console.error('Erreur vérification mot de passe:', error)
+      toast.error('Erreur lors de la vérification')
     }
   }
 
-  const handleClearData = () => {
-    
+  const handleClearData = async () => {
     try {
-      // Étape 1: Compter les données avant suppression
-      const shopInfoBefore = appStorage.getShopInfo()
-      const shopInfoBeforeCount = Object.values(shopInfoBefore).filter(value => 
-        value !== '' && value !== null && value !== undefined
-      ).length
-      
-      const dataBefore = {
-        users: usersStorage.getUsers().length,
-        products: appStorage.getProducts().length,
-        sales: appStorage.getSales().length,
-        expenses: appStorage.getExpenses().length,
-        customers: appStorage.getCustomers().length,
-        shopInfo: shopInfoBeforeCount
-      }
-      
-      // Étape 2: Suppression complète et forcée de toutes les données
-      
-      // Vider toutes les collections avec des valeurs par défaut
-      appStorage.setProducts([])
-      appStorage.setSales([])
-      appStorage.setExpenses([])
-      appStorage.setCustomers([])
-      appStorage.setShopInfo({
-        name: '',
-        address: '',
-        phone: '',
-        email: '',
-        logo: ''
-      })
-      
-      // Vider tous les utilisateurs
-      usersStorage.setUsers([])
-      
-      // Supprimer l'utilisateur connecté
-      authStorage.logout()
-      
-      // Nettoyage complet du localStorage
+      await appStorage.clearAllUserData()
+
       const allKeys = Object.keys(localStorage)
       allKeys.forEach(key => {
         if (key.startsWith('noppale_')) {
           localStorage.removeItem(key)
         }
       })
-      
-      // Nettoyage du sessionStorage
       sessionStorage.clear()
-      
-      // Utiliser la fonction clear() du storage
-      storage.clear()
-      
-      // Étape 3: Vérification immédiate de la suppression
-      
-      const shopInfo = appStorage.getShopInfo()
-      const shopInfoCount = Object.values(shopInfo).filter(value => 
-        value !== '' && value !== null && value !== undefined
-      ).length
-      
-      const dataAfter = {
-        users: usersStorage.getUsers().length,
-        products: appStorage.getProducts().length,
-        sales: appStorage.getSales().length,
-        expenses: appStorage.getExpenses().length,
-        customers: appStorage.getCustomers().length,
-        shopInfo: shopInfoCount
-      }
-      
-      // Étape 4: Confirmation et redirection
-      const totalRemaining = Object.values(dataAfter).reduce((sum, count) => sum + count, 0)
-      
-      if (totalRemaining === 0) {
-        toast.success('✅ Toutes les données ont été supprimées avec succès !', { duration: 3000 })
-        
-        // Forcer le rechargement complet après un court délai
-        setTimeout(() => {
-          toast('🔄 Redirection vers la page de connexion...', { duration: 2000 })
-          // Redirection forcée pour éviter les caches
-          window.location.replace('/login')
-        }, 2000)
-      } else {
-        console.error('❌ Certaines données n\'ont pas été supprimées:', dataAfter)
-        toast.error('❌ Erreur: Certaines données n\'ont pas pu être supprimées', { duration: 4000 })
-      }
-      
+
+      await authStorage.logout()
+
+      toast.success('Toutes les données ont été supprimées avec succès', { duration: 3000 })
+      setTimeout(() => {
+        window.location.replace('/login')
+      }, 1500)
     } catch (error) {
-      console.error('💥 Erreur critique lors de la suppression:', error)
-      toast.error(`💥 Erreur lors de la suppression: ${error.message}`, { duration: 4000 })
+      console.error('Erreur lors de la suppression:', error)
+      toast.error(error.message || 'Erreur lors de la suppression des données')
     }
   }
 
   // Gestion du code secret
-  const handleSecretCodeSubmit = () => {
-    const savedSecretCode = storage.get('secretCode', '1234')
-    
-    if (secretCode === savedSecretCode) {
-      // Code correct - supprimer toutes les données
-      toast.loading('Suppression de toutes les données en cours...', { duration: 1000 })
-      
-      setTimeout(() => {
-        handleClearData()
+  const handleSecretCodeSubmit = async () => {
+    try {
+      const savedSecretCode = await appStorage.getSecretCode()
+
+      if (secretCode === savedSecretCode) {
+        toast.loading('Suppression de toutes les données en cours...')
+        await handleClearData()
         setShowSecretCodeModal(false)
         setSecretCode('')
-      }, 1000)
-    } else {
-      toast.error('❌ Code secret incorrect - Veuillez réessayer', { duration: 3000 })
-      setSecretCode('')
+      } else {
+        toast.error('Code secret incorrect')
+        setSecretCode('')
+      }
+    } catch (error) {
+      console.error('Erreur vérification code secret:', error)
+      toast.error('Erreur lors de la vérification du code secret')
     }
   }
 
@@ -1160,8 +1058,8 @@ export default function Settings() {
               <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
                 <p className="text-red-800 font-medium mb-2">⚠️ Attention - Action irréversible</p>
                 <p className="text-red-700 text-sm">
-                  Cette action supprimera définitivement toutes vos données locales :
-                  clients, produits, ventes, dépenses et votre compte.
+                  Cette action supprimera définitivement toutes vos données :
+                  clients, produits, ventes, dépenses et paramètres.
                 </p>
               </div>
               <p className="text-slate-600">Êtes-vous absolument sûr de vouloir continuer ?</p>
@@ -1175,22 +1073,12 @@ export default function Settings() {
                 Annuler
               </button>
               <button
-                onClick={testAuthentication}
-                className="btn-warning flex-1 mr-2"
-                type="button"
-              >
-                🧪 Tester
-              </button>
-              <button
-                onClick={bypassDataDelete}
-                className="btn-danger flex-1 mr-2"
-                type="button"
-              >
-                🚨 Bypass
-              </button>
-              <button
-                onClick={handleClearData}
+                onClick={() => {
+                  setShowClearDataModal(false)
+                  setShowDataDeleteModal(true)
+                }}
                 className="btn-danger flex-1"
+                type="button"
               >
                 Supprimer tout
               </button>

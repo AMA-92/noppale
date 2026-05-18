@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { authStorage, appStorage } from '../utils/storage'
 import { useI18n } from '../hooks/useI18n.jsx'
+import { useShopInfoRealtime } from '../hooks/useRealtime.jsx'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   BarChart3, LogOut, Settings, Wallet, Menu, X,
@@ -39,18 +40,22 @@ export default function Layout({ user }) {
     { path: '/settings', label: t('settings'), icon: Settings },
   ]
 
-  // Charger les informations de la boutique
-  useEffect(() => {
-    const loadShopInfo = async () => {
-      try {
-        const savedShopInfo = await appStorage.getShopInfo()
-        setShopInfo(savedShopInfo || {})
-      } catch (error) {
-        console.error('Erreur de chargement des informations de la boutique:', error)
-      }
+  const loadShopInfo = async () => {
+    try {
+      const savedShopInfo = await appStorage.getShopInfo()
+      setShopInfo(savedShopInfo || {})
+    } catch (error) {
+      console.error('Erreur de chargement des informations de la boutique:', error)
     }
+  }
+
+  useEffect(() => {
     loadShopInfo()
   }, [language])
+
+  useShopInfoRealtime(() => {
+    loadShopInfo()
+  })
 
   useEffect(() => {
     setCurrentUser(user)

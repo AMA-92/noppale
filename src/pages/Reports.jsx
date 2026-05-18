@@ -18,6 +18,7 @@ import {
   Filler,
 } from 'chart.js'
 import { appStorage } from '../utils/storage'
+import { useProductsRealtime, useSalesRealtime, useExpensesRealtime } from '../hooks/useRealtime.jsx'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -98,6 +99,10 @@ export default function Reports() {
   const balanceReportRef = useRef(null)
 
   useEffect(() => { loadData() }, [period, currency, language])
+
+  useProductsRealtime(() => loadData())
+  useSalesRealtime(() => loadData())
+  useExpensesRealtime(() => loadData())
 
   useEffect(() => {
     const loadShopInfo = async () => {

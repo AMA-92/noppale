@@ -829,7 +829,7 @@ export default function Sales() {
                                 <div className="text-sm text-slate-500">Stock: {product.stock}</div>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold text-primary-600">{formatCurrency(product.sellingPrice)}</div>
+                                <div className="font-semibold text-primary-600">{formatCurrency(product.selling_price ?? product.sellingPrice)}</div>
                               </div>
                             </button>
                           ))
@@ -858,7 +858,7 @@ export default function Sales() {
                                 <div className="text-sm text-slate-500">Stock: {product.stock}</div>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold text-primary-600">{formatCurrency(product.sellingPrice)}</div>
+                                <div className="font-semibold text-primary-600">{formatCurrency(product.selling_price ?? product.sellingPrice)}</div>
                               </div>
                             </button>
                           ))

@@ -67,9 +67,10 @@ export const usersStorage = {
   },
 
   // Obtenir l'utilisateur actuel
-  getCurrentUser() {
-    const { data } = supabase.auth.getUser()
-    return data.user
+  async getCurrentUser() {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) return null
+    return data?.user || null
   },
 
   // Mettre à jour le profil utilisateur
@@ -829,6 +830,34 @@ export const appStorage = {
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde du code secret:', error)
+      throw error
+    }
+  },
+
+  // Supprimer toutes les données de l'utilisateur connecté (Supabase)
+  async clearAllUserData() {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const tables = [
+        'sales',
+        'products',
+        'expenses',
+        'customers',
+        'shop_info',
+        'user_preferences',
+        'user_secret_code'
+      ]
+
+      for (const table of tables) {
+        const { error } = await supabase.from(table).delete().eq('user_id', userId)
+        if (error) throw error
+      }
+
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la suppression des données:', error)
       throw error
     }
   }
