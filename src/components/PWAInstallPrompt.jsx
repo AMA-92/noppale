@@ -79,7 +79,7 @@ export default function PWAInstallPrompt() {
   if (!showBanner) return null
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50">
+    <div className="pwa-install-banner fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-40">
       <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl shadow-2xl p-4">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">

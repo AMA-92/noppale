@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { flushSync } from 'react-dom'
+import { flushSync, createPortal } from 'react-dom'
 import { appStorage } from '../utils/storage'
 import { formatDate, getPaymentMethod, formatCurrency, getProductSellingPrice } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
@@ -179,6 +179,17 @@ export default function Sales() {
     setShowProductDropdown(true)
     setShowModal(true) 
   }
+
+  useEffect(() => {
+    if (!showModal) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.body.classList.add('sale-modal-open')
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.body.classList.remove('sale-modal-open')
+    }
+  }, [showModal])
 
   const filteredProducts = products.filter(p => {
     const q = productSearch.toLowerCase()
@@ -722,224 +733,226 @@ export default function Sales() {
         </div>
       )}
 
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content sale-modal-content max-w-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800">{t('newSale')}</h2>
-              <button onClick={() => setShowModal(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
-                <X size={20} />
+      {showModal && createPortal(
+        <div
+          className="sale-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sale-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowModal(false)
+          }}
+        >
+          <div className="sale-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="sale-modal-header">
+              <h2 id="sale-modal-title" className="text-xl font-bold text-slate-800">{t('newSale')}</h2>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg touch-manipulation"
+                aria-label="Fermer"
+              >
+                <X size={22} />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
-              <div className="sale-modal-scroll space-y-4">
-              <div className="sale-product-section">
-                <label htmlFor="sale-product-search" className="label-field">Choisir un produit</label>
-                
-                <div className="relative product-dropdown-container">
-                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
-                  <input
-                    id="sale-product-search"
-                    name="productSearch"
-                    type="search"
-                    inputMode="search"
-                    autoComplete="off"
-                    value={productSearch}
-                    onChange={e => setProductSearch(e.target.value)}
-                    placeholder="Rechercher un produit..."
-                    className="input-field pl-10 w-full"
-                  />
-                </div>
+            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="sale-modal-body space-y-4">
+                <section className="sale-product-section">
+                  <label htmlFor="sale-product-search" className="label-field">Choisir un produit</label>
+                  <div className="relative">
+                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <input
+                      id="sale-product-search"
+                      name="productSearch"
+                      type="search"
+                      inputMode="search"
+                      autoComplete="off"
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="Rechercher un produit..."
+                      className="input-field pl-10 w-full"
+                    />
+                  </div>
 
-                  <div className="sale-product-list mt-2 bg-white border border-slate-200 rounded-lg shadow-sm">
-                      {filteredProducts.length > 0 ? (
-                          filteredProducts.map(product => (
-                            <button
-                              key={product.id}
-                              type="button"
-                              onClick={(e) => addProductToCart(product, e)}
-                              className="w-full text-left px-4 py-3 min-h-[52px] hover:bg-slate-50 active:bg-primary-50 border-b border-slate-100 last:border-b-0 flex items-center justify-between touch-manipulation cursor-pointer"
-                            >
-                              <div>
-                                <div className="font-medium text-slate-800">{product.name}</div>
-                                <div className="text-sm text-slate-500">Stock: {product.stock}</div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-semibold text-primary-600">{formatCurrency(getProductSellingPrice(product))}</div>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="p-4 text-center text-slate-500">
-                            {productSearch 
-                              ? (products.some(p => p.name.toLowerCase().includes(productSearch.toLowerCase())) 
-                                  ? 'Produit trouvé mais en rupture de stock' 
-                                  : 'Aucun produit trouvé')
-                              : 'Tous les produits sont en rupture de stock'
-                            }
+                  <div className="sale-product-list">
+                    {filteredProducts.length > 0 ? (
+                      filteredProducts.map((product) => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={(e) => addProductToCart(product, e)}
+                          className="sale-product-row"
+                        >
+                          <div className="min-w-0 pr-3">
+                            <div className="font-medium text-slate-800 truncate">{product.name}</div>
+                            <div className="text-sm text-slate-500">Stock: {product.stock}</div>
                           </div>
-                        )}
-                  </div>
-              </div>
-
-              {cartItems.length > 0 && (
-                <div className="p-3 bg-primary-50 border border-primary-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-primary-800">Panier ({cartItems.length})</span>
-                    <span className="text-sm font-bold text-primary-600">
-                      {formatCurrency(cartItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0))}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {cartItems.map((item) => (
-                      <div key={item.productId} className="flex items-center justify-between gap-2 bg-white rounded-lg p-2 border border-primary-100">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-slate-800 truncate">{item.productName}</p>
-                          <p className="text-xs text-slate-500">{formatCurrency(item.unitPrice)}</p>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <input
-                            type="number"
-                            min="1"
-                            max={getAvailableStock(item.productId)}
-                            value={item.quantity}
-                            onChange={e => updateItemQuantity(item.productId, parseInt(e.target.value, 10) || 1)}
-                            className="w-14 px-1 py-1 border border-slate-200 rounded text-center text-sm"
-                            aria-label={`Quantité ${item.productName}`}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeItemFromSale(item.productId)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded touch-manipulation"
-                            aria-label="Retirer"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label htmlFor="sale-customer-name" className="label-field">Nom du client</label>
-                <input
-                  id="sale-customer-name"
-                  name="customerName"
-                  type="text"
-                  autoComplete="name"
-                  value={form.customerName}
-                  onChange={e => setForm({...form, customerName: e.target.value})}
-                  className="input-field w-full"
-                  placeholder="Client (optionnel)"
-                />
-              </div>
-
-              {/* Total */}
-              <div className="border-t pt-4">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg font-semibold text-slate-800">Total:</span>
-                  <span className="text-xl font-bold text-green-600">{formatCurrency(form.total || 0)}</span>
-                </div>
-
-                {/* Montant reçu et monnaie */}
-                {form.paymentMethod === 'especes' && (
-                  <div className="space-y-3">
-                    <div>
-                      <label htmlFor="sale-amount-received" className="label-field">Montant reçu</label>
-                      <input
-                        id="sale-amount-received"
-                        name="amountReceived"
-                        type="number"
-                        value={form.amountReceived || ''}
-                        onChange={e => updateAmountReceived(e.target.value)}
-                        className="input-field"
-                        placeholder="Entrez le montant reçu"
-                        min="0"
-                        step="100"
-                      />
-                    </div>
-
-                    {form.amountReceived > 0 && (
-                      <div className={`p-4 rounded-lg border ${
-                        form.change >= 0 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-red-50 border-red-200'
-                      }`}>
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold text-slate-800">Monnaie à rendre:</span>
-                          <span className={`text-xl font-bold ${
-                            form.change >= 0 ? 'text-green-600' : 'text-red-600'
-                          }`}>
-                            {formatCurrency(Math.abs(form.change || 0))}
-                          </span>
-                        </div>
-                        {form.change >= 0 ? (
-                          <p className="text-sm text-green-700 mt-1">✅ Montant suffisant</p>
-                        ) : (
-                          <p className="text-sm text-red-700 mt-1">❌ Montant insuffisant</p>
-                        )}
-                      </div>
+                          <div className="font-semibold text-primary-600 flex-shrink-0">
+                            {formatCurrency(getProductSellingPrice(product))}
+                          </div>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="p-4 text-center text-slate-500 text-sm">
+                        {productSearch
+                          ? products.some((p) => p.name?.toLowerCase().includes(productSearch.toLowerCase()))
+                            ? 'Produit trouvé mais en rupture de stock'
+                            : 'Aucun produit trouvé'
+                          : 'Aucun produit en stock'}
+                      </p>
                     )}
                   </div>
+                </section>
+
+                {cartItems.length > 0 && (
+                  <section className="p-3 bg-primary-50 border border-primary-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-primary-800">Panier ({cartItems.length})</span>
+                      <span className="text-sm font-bold text-primary-600">
+                        {formatCurrency(cartItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0))}
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {cartItems.map((item) => (
+                        <div
+                          key={item.productId}
+                          className="flex items-center justify-between gap-2 bg-white rounded-lg p-2 border border-primary-100"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800 truncate">{item.productName}</p>
+                            <p className="text-xs text-slate-500">{formatCurrency(item.unitPrice)}</p>
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <input
+                              type="number"
+                              min="1"
+                              max={getAvailableStock(item.productId)}
+                              value={item.quantity}
+                              onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value, 10) || 1)}
+                              className="w-14 px-1 py-1 border border-slate-200 rounded text-center text-sm"
+                              aria-label={`Quantité ${item.productName}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeItemFromSale(item.productId)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded touch-manipulation"
+                              aria-label="Retirer"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 )}
+
+                <section>
+                  <label htmlFor="sale-customer-name" className="label-field">Nom du client</label>
+                  <input
+                    id="sale-customer-name"
+                    name="customerName"
+                    type="text"
+                    autoComplete="name"
+                    value={form.customerName}
+                    onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Client (optionnel)"
+                  />
+                </section>
+
+                <section className="border-t pt-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-lg font-semibold text-slate-800">Total:</span>
+                    <span className="text-xl font-bold text-green-600">{formatCurrency(form.total || 0)}</span>
+                  </div>
+
+                  {form.paymentMethod === 'especes' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label htmlFor="sale-amount-received" className="label-field">Montant reçu</label>
+                        <input
+                          id="sale-amount-received"
+                          name="amountReceived"
+                          type="number"
+                          inputMode="numeric"
+                          value={form.amountReceived || ''}
+                          onChange={(e) => updateAmountReceived(e.target.value)}
+                          className="input-field w-full"
+                          placeholder="Montant reçu"
+                          min="0"
+                          step="100"
+                        />
+                      </div>
+
+                      {form.amountReceived > 0 && (
+                        <div
+                          className={`p-4 rounded-lg border ${
+                            form.change >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-slate-800">Monnaie à rendre:</span>
+                            <span className={`text-xl font-bold ${form.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatCurrency(Math.abs(form.change || 0))}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                <section>
+                  <label htmlFor="sale-payment-method" className="label-field">Mode de paiement</label>
+                  <select
+                    id="sale-payment-method"
+                    name="paymentMethod"
+                    value={form.paymentMethod}
+                    onChange={(e) => {
+                      const newPaymentMethod = e.target.value
+                      const newChange =
+                        newPaymentMethod === 'especes' ? calculateChange(form.total, form.amountReceived) : 0
+                      setForm({ ...form, paymentMethod: newPaymentMethod, change: newChange })
+                    }}
+                    className="input-field w-full"
+                  >
+                    <option value="especes">Espèces</option>
+                    <option value="mobile_money">Mobile Money</option>
+                    <option value="carte_bancaire">Carte Bancaire</option>
+                    <option value="credit">À Crédit</option>
+                  </select>
+                </section>
+
+                <section>
+                  <label htmlFor="sale-notes" className="label-field">Notes</label>
+                  <textarea
+                    id="sale-notes"
+                    name="notes"
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    className="input-field w-full"
+                    rows={2}
+                  />
+                </section>
               </div>
 
-              <div>
-                <label htmlFor="sale-payment-method" className="label-field">Mode de paiement</label>
-                <select
-                  id="sale-payment-method"
-                  name="paymentMethod"
-                  value={form.paymentMethod}
-                  onChange={e => {
-                    const newPaymentMethod = e.target.value
-                    const newChange = newPaymentMethod === 'especes' ? calculateChange(form.total, form.amountReceived) : 0
-                    setForm({
-                      ...form,
-                      paymentMethod: newPaymentMethod,
-                      change: newChange
-                    })
-                  }}
-                  className="input-field"
-                >
-                  <option value="especes">Espèces</option>
-                  <option value="mobile_money">Mobile Money</option>
-                  <option value="carte_bancaire">Carte Bancaire</option>
-                  <option value="credit">À Crédit</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="sale-notes" className="label-field">Notes</label>
-                <textarea
-                  id="sale-notes"
-                  name="notes"
-                  value={form.notes}
-                  onChange={e => setForm({...form, notes: e.target.value})}
-                  className="input-field"
-                  rows={3}
-                />
-              </div>
-
-              </div>
-
-              <div className="sale-modal-footer flex-shrink-0 border-t border-slate-200 pt-4 mt-2 flex gap-3">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">
+              <div className="sale-modal-footer">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary">
                   Annuler
                 </button>
-                <button type="submit" disabled={saving} className="btn-primary flex-1">
+                <button type="submit" disabled={saving || !cartItems.length} className="btn-primary">
                   {saving ? 'Enregistrement...' : 'Enregistrer la vente'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Modal Détails Vente */}
+      {/* Modal D├®tails Vente */}
       {showDetailsModal && selectedSale && (
         <div className="modal-overlay">
           <div className="modal-content max-w-sm">
@@ -971,12 +984,12 @@ export default function Sales() {
         </div>
       )}
 
-      {/* Modal Édition Vente */}
+      {/* Modal ├ëdition Vente */}
       {isEditingSale && editingSaleData && (
         <div className="modal-overlay">
           <div className="modal-content max-w-4xl">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800">Modifier la Vente N°{editingSaleData.id}</h2>
+              <h2 className="text-xl font-bold text-slate-800">Modifier la Vente N┬░{editingSaleData.id}</h2>
               <div className="flex items-center gap-2">
                 <button 
                   onClick={saveEditedSale}
@@ -1020,10 +1033,10 @@ export default function Sales() {
                   })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="especes">Espèces</option>
+                  <option value="especes">Esp├¿ces</option>
                   <option value="carte">Carte</option>
                   <option value="mobile">Mobile Money</option>
-                  <option value="cheque">Chèque</option>
+                  <option value="cheque">Ch├¿que</option>
                 </select>
               </div>
             </div>
@@ -1045,7 +1058,7 @@ export default function Sales() {
                   <thead className="bg-slate-50">
                     <tr>
                       <th className="text-left p-3 border-b">Article</th>
-                      <th className="text-center p-3 border-b">Quantité</th>
+                      <th className="text-center p-3 border-b">Quantit├®</th>
                       <th className="text-right p-3 border-b">Prix Unitaire</th>
                       <th className="text-right p-3 border-b">Total</th>
                       <th className="text-center p-3 border-b">Actions</th>
@@ -1117,7 +1130,7 @@ export default function Sales() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Montant Reçu</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Montant Re├ºu</label>
                 <input
                   type="number"
                   value={editingSaleData.amountReceived || ''}
@@ -1131,20 +1144,20 @@ export default function Sales() {
                     })
                   }}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Montant reçu"
+                  placeholder="Montant re├ºu"
                   min="0"
                   step="0.01"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Monnaie à Rendre</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Monnaie ├á Rendre</label>
                 <input
                   type="number"
                   value={editingSaleData.change || ''}
                   readOnly
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50"
-                  placeholder="Monnaie à rendre"
+                  placeholder="Monnaie ├á rendre"
                 />
               </div>
             </div>
@@ -1159,7 +1172,7 @@ export default function Sales() {
                 })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows="3"
-                placeholder="Notes supplémentaires..."
+                placeholder="Notes suppl├®mentaires..."
               />
             </div>
           </div>

@@ -203,7 +203,7 @@ export default function Layout({ user }) {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className={`${isMobile ? 'p-4' : 'p-6'} animate-fade-in`}>
+        <div className={`${isMobile ? 'p-4' : 'p-6'} animate-page-enter`}>
           <Outlet />
         </div>
       </main>
