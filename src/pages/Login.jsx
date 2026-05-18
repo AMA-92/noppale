@@ -213,7 +213,20 @@ export default function Login() {
             </button>
           </div>
 
-          <p className="mt-8 text-center text-xs text-slate-400">
+          <div className="mt-6 p-3 bg-slate-50 border border-slate-200 rounded-lg text-center">
+            <p className="text-xs font-medium text-slate-600 mb-1">📱 Sur téléphone</p>
+            <p className="text-xs text-slate-500 mb-2">
+              Ouvrez dans Chrome ou Safari (pas en localhost) :
+            </p>
+            <a
+              href="https://noppale.vercel.app"
+              className="text-xs font-semibold text-primary-600 break-all hover:underline"
+            >
+              https://noppale.vercel.app
+            </a>
+          </div>
+
+          <p className="mt-4 text-center text-xs text-slate-400">
             Conçu pour les commerçants d'Afrique de l'Ouest 🌍
           </p>
         </div>
