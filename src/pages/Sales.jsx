@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { appStorage } from '../utils/storage'
 import { formatDate, getPaymentMethod, formatCurrency, getProductSellingPrice } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
@@ -52,6 +52,32 @@ export default function Sales() {
   })
   const [isEditingSale, setIsEditingSale] = useState(false)
   const [editingSaleData, setEditingSaleData] = useState(null)
+  const cartItemsRef = useRef([])
+
+  const syncCartWithForm = useCallback((items, prevForm) => {
+    const newTotal = items.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0)
+    return {
+      ...prevForm,
+      items,
+      total: newTotal,
+      change: (parseFloat(prevForm.amountReceived) || 0) - newTotal
+    }
+  }, [])
+
+  const updateCart = useCallback((updater) => {
+    setForm((prev) => {
+      const currentItems = prev.items || []
+      const newItems = typeof updater === 'function' ? updater(currentItems) : updater
+      cartItemsRef.current = newItems
+      return syncCartWithForm(newItems, prev)
+    })
+  }, [syncCartWithForm])
+
+  const getCartItems = useCallback(() => {
+    const fromRef = cartItemsRef.current
+    if (fromRef && fromRef.length > 0) return fromRef
+    return form.items || []
+  }, [form.items])
 
   // Charger les informations de la boutique
   useEffect(() => {
@@ -142,10 +168,11 @@ export default function Sales() {
   }
 
   const openAdd = () => { 
+    cartItemsRef.current = []
     setForm(emptySale)
     setCurrentItem(emptyItem)
     setProductSearch('')
-    setShowProductDropdown(false)
+    setShowProductDropdown(true)
     setShowModal(true) 
   }
 
@@ -166,71 +193,53 @@ export default function Sales() {
         return
       }
 
-      // Vérifier si le produit est déjà dans le panier
-      const existingItem = form.items.find(item => item.productId === product.id)
-      const currentQuantity = existingItem ? parseInt(existingItem.quantity || 0) : 0
-      const availableStock = parseInt(product.stock || 0)
-
-      // Validation du stock disponible
-      if (currentQuantity >= availableStock) {
-        toast.error(`Stock insuffisant ! Il ne reste que ${availableStock} unité(s) de ${product.name}`)
-        return
-      }
+      const availableStock = parseInt(product.stock || 0, 10)
 
       const unitPrice = getProductSellingPrice(product)
       const quantity = 1
 
-      // Validation du prix
       if (unitPrice <= 0) {
-        console.error('Prix invalide:', unitPrice)
-        toast.error('Prix du produit invalide')
+        toast.error('Prix du produit invalide — définissez un prix de vente dans Produits')
         return
       }
 
-      // Créer l'item pour le panier
       const newItem = {
         productId: product.id,
-        quantity: quantity,
-        unitPrice: unitPrice,
+        quantity,
+        unitPrice,
         costPrice: parseFloat(product.buying_price || 0),
         totalPrice: calculateItemTotal(quantity, unitPrice),
         productName: product.name || 'Produit sans nom',
         productUnit: product.barcode || 'unité'
       }
 
-      // Ajouter directement au panier
-      const currentItems = form.items || []
-      const existingItemIndex = currentItems.findIndex(item => item.productId === product.id)
-
-      let updatedItems
-      if (existingItemIndex >= 0) {
-        // Si le produit existe déjà, augmenter la quantité
-        updatedItems = [...currentItems]
-        updatedItems[existingItemIndex].quantity += quantity
-        updatedItems[existingItemIndex].totalPrice = calculateItemTotal(
-          updatedItems[existingItemIndex].quantity,
-          updatedItems[existingItemIndex].unitPrice
-        )
-      } else {
-        // Sinon ajouter le nouveau produit
-        updatedItems = [...currentItems, newItem]
-      }
-
-      // Calculer le nouveau total
-      const newTotal = calculateTotal(updatedItems)
-      const newChange = calculateChange(newTotal, form.amountReceived || 0)
-
-      // Mettre à jour le formulaire
-      setForm({
-        ...form,
-        items: updatedItems,
-        total: newTotal,
-        change: newChange
+      updateCart((currentItems) => {
+        const existingItem = currentItems.find((item) => item.productId === product.id)
+        if (existingItem) {
+          const currentQty = parseInt(existingItem.quantity || 0, 10)
+          if (currentQty >= availableStock) {
+            toast.error(`Stock insuffisant ! Il ne reste que ${availableStock} unité(s) de ${product.name}`)
+            return currentItems
+          }
+          return currentItems.map((item) =>
+            item.productId === product.id
+              ? {
+                  ...item,
+                  quantity: currentQty + quantity,
+                  totalPrice: calculateItemTotal(currentQty + quantity, item.unitPrice)
+                }
+              : item
+          )
+        }
+        if (availableStock < 1) {
+          toast.error(`${product.name} est en rupture de stock`)
+          return currentItems
+        }
+        return [...currentItems, newItem]
       })
 
-      // Réinitialiser la recherche
       setProductSearch('')
-      setShowProductDropdown(false)
+      setShowProductDropdown(true)
 
       // Mettre à jour currentItem pour l'affichage
       setCurrentItem(emptyItem)
@@ -242,17 +251,19 @@ export default function Sales() {
     }
   }
 
-  // Fermer le dropdown lorsqu'on clique en dehors
+  // Fermer la liste produits au clic extérieur (click, pas mousedown — meilleur sur mobile)
   useEffect(() => {
+    if (!showModal) return
+
     const handleClickOutside = (event) => {
-      if (showProductDropdown && !event.target.closest('.product-dropdown-container')) {
+      if (!event.target.closest('.product-dropdown-container')) {
         setShowProductDropdown(false)
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showProductDropdown])
+    document.addEventListener('click', handleClickOutside, true)
+    return () => document.removeEventListener('click', handleClickOutside, true)
+  }, [showModal])
 
   const addItemToSale = () => {
     if (!currentItem.productId) {
@@ -260,54 +271,29 @@ export default function Sales() {
       return
     }
     
-    const existingItemIndex = form.items.findIndex(item => item.productId === currentItem.productId)
-    
-    if (existingItemIndex >= 0) {
-      const updatedItems = [...form.items]
-      const existingQuantity = parseFloat(updatedItems[existingItemIndex].quantity) || 0
-      const currentQuantity = parseFloat(currentItem.quantity) || 0
-      const unitPrice = parseFloat(updatedItems[existingItemIndex].unitPrice) || 0
-      
-      updatedItems[existingItemIndex].quantity = existingQuantity + currentQuantity
-      updatedItems[existingItemIndex].totalPrice = calculateItemTotal(updatedItems[existingItemIndex].quantity, unitPrice)
-      
-      const newTotal = calculateTotal(updatedItems)
-      const newChange = calculateChange(newTotal, form.amountReceived)
-      
-      setForm({
-        ...form,
-        items: updatedItems,
-        total: newTotal,
-        change: newChange
-      })
-    } else {
-      const newItems = [...form.items, currentItem]
-      const newTotal = calculateTotal(newItems)
-      const newChange = calculateChange(newTotal, form.amountReceived)
-      
-      setForm({
-        ...form,
-        items: newItems,
-        total: newTotal,
-        change: newChange
-      })
-    }
+    updateCart((currentItems) => {
+      const existingItemIndex = currentItems.findIndex((item) => item.productId === currentItem.productId)
+      if (existingItemIndex >= 0) {
+        const updatedItems = [...currentItems]
+        const existingQuantity = parseFloat(updatedItems[existingItemIndex].quantity) || 0
+        const addQuantity = parseFloat(currentItem.quantity) || 0
+        const unitPrice = parseFloat(updatedItems[existingItemIndex].unitPrice) || 0
+        updatedItems[existingItemIndex].quantity = existingQuantity + addQuantity
+        updatedItems[existingItemIndex].totalPrice = calculateItemTotal(
+          updatedItems[existingItemIndex].quantity,
+          unitPrice
+        )
+        return updatedItems
+      }
+      return [...currentItems, currentItem]
+    })
     
     setCurrentItem(emptyItem)
     setProductSearch('')
   }
 
   const removeItemFromSale = (productId) => {
-    const updatedItems = form.items.filter(item => item.productId !== productId)
-    const newTotal = calculateTotal(updatedItems)
-    const newChange = calculateChange(newTotal, form.amountReceived)
-    
-    setForm({
-      ...form,
-      items: updatedItems,
-      total: newTotal,
-      change: newChange
-    })
+    updateCart((currentItems) => currentItems.filter((item) => item.productId !== productId))
   }
 
   const getAvailableStock = (productId) => {
@@ -333,26 +319,17 @@ export default function Sales() {
       return
     }
 
-    const updatedItems = form.items.map(item => {
-      if (item.productId === productId) {
-        const unitPrice = parseFloat(item.unitPrice) || 0
-        return {
-          ...item,
-          quantity: newQuantity,
-          totalPrice: calculateItemTotal(newQuantity, unitPrice)
-        }
-      }
-      return item
-    })
-    const newTotal = calculateTotal(updatedItems)
-    const newChange = calculateChange(newTotal, form.amountReceived)
-
-    setForm({
-      ...form,
-      items: updatedItems,
-      total: newTotal,
-      change: newChange
-    })
+    updateCart((currentItems) =>
+      currentItems.map((item) =>
+        item.productId === productId
+          ? {
+              ...item,
+              quantity: newQuantity,
+              totalPrice: calculateItemTotal(newQuantity, parseFloat(item.unitPrice) || 0)
+            }
+          : item
+      )
+    )
   }
 
   const updateAmountReceived = (amount) => {
@@ -365,14 +342,15 @@ export default function Sales() {
   }
 
   const handleSave = async (e) => {
-    if (e) e.preventDefault()
+    if (e?.preventDefault) e.preventDefault()
 
-    if (!form.items || form.items.length === 0) {
+    const cartItems = getCartItems()
+    if (!cartItems.length) {
       toast.error('Ajoutez au moins un produit au panier')
       return
     }
 
-    const normalizedItems = normalizeSaleItems(form.items)
+    const normalizedItems = normalizeSaleItems(cartItems)
     const invalidItem = normalizedItems.find((item) => item.unitPrice <= 0)
     if (invalidItem) {
       toast.error(`Prix manquant pour « ${invalidItem.productName} ». Définissez un prix de vente dans Produits.`)
@@ -423,6 +401,7 @@ export default function Sales() {
       await loadProducts()
 
       toast.success('Vente enregistrée et stock mis à jour')
+      cartItemsRef.current = []
       setShowModal(false)
       setForm(emptySale)
       setCurrentItem(emptyItem)
@@ -817,7 +796,10 @@ export default function Sales() {
                   </div>
                 )}
                 
-                <div className="relative product-dropdown-container">
+                <div
+                  className="relative product-dropdown-container"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex gap-2">
                     <div className="flex-1 relative">
                       <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -838,46 +820,31 @@ export default function Sales() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        // Si le panier n'est pas vide, finaliser la vente
-                        if (form.items && form.items.length > 0) {
-                          // Empêcher la soumission automatique du formulaire
-                          const event = new Event('submit')
-                          event.preventDefault()
-                          handleSave(event)
-                        } else {
-                          toast.error('Ajoutez des produits au panier d\'abord')
-                        }
-                      }}
-                      className={`btn-primary flex items-center gap-2 px-4`}
-                      disabled={!form.items || form.items.length === 0}
+                      onClick={() => handleSave()}
+                      className="btn-primary flex items-center gap-2 px-4 shrink-0"
+                      disabled={!form.items?.length || saving}
                     >
-                      {form.items && form.items.length > 0 ? (
-                        <>
-                          <ShoppingCart size={18} />
-                          <span>Finaliser ({form.items.length})</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart size={18} />
-                          <span>Panier vide</span>
-                        </>
-                      )}
+                      <ShoppingCart size={18} />
+                      <span>
+                        {form.items?.length
+                          ? `Panier (${form.items.length})`
+                          : 'Panier vide'}
+                      </span>
                     </button>
                   </div>
 
-                  {/* Product Dropdown */}
-                  {showProductDropdown && (
-                    <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto z-50">
-                      {productSearch ? (
-                        // Afficher les produits filtrés si recherche
-                        filteredProducts.length > 0 ? (
+                  <div className="mt-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                      {filteredProducts.length > 0 ? (
                           filteredProducts.map(product => (
                             <button
                               key={product.id}
                               type="button"
-                              onClick={() => selectProduct(product)}
-                              className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 flex items-center justify-between"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                selectProduct(product)
+                              }}
+                              className="w-full text-left px-4 py-3 hover:bg-slate-50 active:bg-primary-50 border-b border-slate-100 flex items-center justify-between touch-manipulation"
                             >
                               <div>
                                 <div className="font-medium text-slate-800">{product.name}</div>
@@ -897,34 +864,8 @@ export default function Sales() {
                               : 'Tous les produits sont en rupture de stock'
                             }
                           </div>
-                        )
-                      ) : (
-                        // Afficher tous les produits disponibles si pas de recherche
-                        filteredProducts.length > 0 ? (
-                          filteredProducts.map(product => (
-                            <button
-                              key={product.id}
-                              type="button"
-                              onClick={() => selectProduct(product)}
-                              className="w-full text-left px-4 py-3 hover:bg-slate-50 border-b border-slate-100 flex items-center justify-between"
-                            >
-                              <div>
-                                <div className="font-medium text-slate-800">{product.name}</div>
-                                <div className="text-sm text-slate-500">Stock: {product.stock}</div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-semibold text-primary-600">{formatCurrency(getProductSellingPrice(product))}</div>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="p-4 text-center text-slate-500">
-                            Aucun produit enregistré
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
+                        )}
+                  </div>
                 </div>
               </div>
 
