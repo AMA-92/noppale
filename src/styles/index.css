@@ -385,6 +385,9 @@ tbody td {
 
 .modal-content {
   @apply bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: manipulation;
 }
 
 /* Stat card */

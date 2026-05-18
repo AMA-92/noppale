@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { flushSync } from 'react-dom'
 import { appStorage } from '../utils/storage'
 import { formatDate, getPaymentMethod, formatCurrency, getProductSellingPrice } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
@@ -52,7 +53,9 @@ export default function Sales() {
   })
   const [isEditingSale, setIsEditingSale] = useState(false)
   const [editingSaleData, setEditingSaleData] = useState(null)
+  const [cartItems, setCartItems] = useState([])
   const cartItemsRef = useRef([])
+  const lastProductTapRef = useRef(0)
 
   const syncCartWithForm = useCallback((items, prevForm) => {
     const newTotal = items.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0)
@@ -65,19 +68,19 @@ export default function Sales() {
   }, [])
 
   const updateCart = useCallback((updater) => {
-    setForm((prev) => {
-      const currentItems = prev.items || []
-      const newItems = typeof updater === 'function' ? updater(currentItems) : updater
+    setCartItems((prev) => {
+      const newItems = typeof updater === 'function' ? updater(prev) : updater
       cartItemsRef.current = newItems
-      return syncCartWithForm(newItems, prev)
+      setForm((formPrev) => syncCartWithForm(newItems, formPrev))
+      return newItems
     })
   }, [syncCartWithForm])
 
   const getCartItems = useCallback(() => {
-    const fromRef = cartItemsRef.current
-    if (fromRef && fromRef.length > 0) return fromRef
+    if (cartItemsRef.current?.length) return cartItemsRef.current
+    if (cartItems.length) return cartItems
     return form.items || []
-  }, [form.items])
+  }, [cartItems, form.items])
 
   // Charger les informations de la boutique
   useEffect(() => {
@@ -169,6 +172,7 @@ export default function Sales() {
 
   const openAdd = () => { 
     cartItemsRef.current = []
+    setCartItems([])
     setForm(emptySale)
     setCurrentItem(emptyItem)
     setProductSearch('')
@@ -213,57 +217,52 @@ export default function Sales() {
         productUnit: product.barcode || 'unité'
       }
 
-      updateCart((currentItems) => {
-        const existingItem = currentItems.find((item) => item.productId === product.id)
-        if (existingItem) {
-          const currentQty = parseInt(existingItem.quantity || 0, 10)
-          if (currentQty >= availableStock) {
-            toast.error(`Stock insuffisant ! Il ne reste que ${availableStock} unité(s) de ${product.name}`)
+      flushSync(() => {
+        updateCart((currentItems) => {
+          const existingItem = currentItems.find((item) => item.productId === product.id)
+          if (existingItem) {
+            const currentQty = parseInt(existingItem.quantity || 0, 10)
+            if (currentQty >= availableStock) {
+              toast.error(`Stock insuffisant ! Il ne reste que ${availableStock} unité(s) de ${product.name}`)
+              return currentItems
+            }
+            return currentItems.map((item) =>
+              item.productId === product.id
+                ? {
+                    ...item,
+                    quantity: currentQty + quantity,
+                    totalPrice: calculateItemTotal(currentQty + quantity, item.unitPrice)
+                  }
+                : item
+            )
+          }
+          if (availableStock < 1) {
+            toast.error(`${product.name} est en rupture de stock`)
             return currentItems
           }
-          return currentItems.map((item) =>
-            item.productId === product.id
-              ? {
-                  ...item,
-                  quantity: currentQty + quantity,
-                  totalPrice: calculateItemTotal(currentQty + quantity, item.unitPrice)
-                }
-              : item
-          )
-        }
-        if (availableStock < 1) {
-          toast.error(`${product.name} est en rupture de stock`)
-          return currentItems
-        }
-        return [...currentItems, newItem]
+          return [...currentItems, newItem]
+        })
       })
 
       setProductSearch('')
-      setShowProductDropdown(true)
-
-      // Mettre à jour currentItem pour l'affichage
       setCurrentItem(emptyItem)
-
       toast.success(`${product.name || 'Produit'} ajouté au panier`)
     } catch (error) {
       console.error('Erreur dans selectProduct:', error)
-      toast.error('Erreur lors de l\'ajout du produit')
+      toast.error(error?.message || 'Erreur lors de l\'ajout du produit')
     }
   }
 
-  // Fermer la liste produits au clic extérieur (click, pas mousedown — meilleur sur mobile)
-  useEffect(() => {
-    if (!showModal) return
-
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.product-dropdown-container')) {
-        setShowProductDropdown(false)
-      }
+  const addProductToCart = (product, event) => {
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
     }
-
-    document.addEventListener('click', handleClickOutside, true)
-    return () => document.removeEventListener('click', handleClickOutside, true)
-  }, [showModal])
+    const now = Date.now()
+    if (now - lastProductTapRef.current < 350) return
+    lastProductTapRef.current = now
+    selectProduct(product)
+  }
 
   const addItemToSale = () => {
     if (!currentItem.productId) {
@@ -402,6 +401,7 @@ export default function Sales() {
 
       toast.success('Vente enregistrée et stock mis à jour')
       cartItemsRef.current = []
+      setCartItems([])
       setShowModal(false)
       setForm(emptySale)
       setCurrentItem(emptyItem)
@@ -753,16 +753,16 @@ export default function Sales() {
                 <label htmlFor="sale-product-search" className="label-field">Article</label>
                 
                 {/* Panier en temps réel */}
-                {form.items && form.items.length > 0 && (
+                {cartItems.length > 0 && (
                   <div className="mb-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-semibold text-primary-800">
-                        🛒 Panier ({form.items.length} article{form.items.length > 1 ? 's' : ''})
+                        🛒 Panier ({cartItems.length} article{cartItems.length > 1 ? 's' : ''})
                       </span>
                       <span className="text-sm font-bold text-primary-600">
                         {(() => {
                           try {
-                            const total = form.items.reduce((sum, item) => {
+                            const total = cartItems.reduce((sum, item) => {
                               const itemTotal = parseFloat(item.totalPrice) || 0
                               return sum + itemTotal
                             }, 0)
@@ -775,7 +775,7 @@ export default function Sales() {
                       </span>
                     </div>
                     <div className="space-y-1">
-                      {form.items.map((item, index) => (
+                      {cartItems.map((item, index) => (
                         <div key={item.productId || index} className="flex justify-between items-center text-xs">
                           <span className="text-slate-700">
                             {item.productName || 'Produit'} x{item.quantity || 1}
@@ -822,12 +822,12 @@ export default function Sales() {
                       type="button"
                       onClick={() => handleSave()}
                       className="btn-primary flex items-center gap-2 px-4 shrink-0"
-                      disabled={!form.items?.length || saving}
+                      disabled={!cartItems.length || saving}
                     >
                       <ShoppingCart size={18} />
                       <span>
-                        {form.items?.length
-                          ? `Panier (${form.items.length})`
+                        {cartItems.length
+                          ? `Panier (${cartItems.length})`
                           : 'Panier vide'}
                       </span>
                     </button>
@@ -839,12 +839,8 @@ export default function Sales() {
                             <button
                               key={product.id}
                               type="button"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                selectProduct(product)
-                              }}
-                              className="w-full text-left px-4 py-3 hover:bg-slate-50 active:bg-primary-50 border-b border-slate-100 flex items-center justify-between touch-manipulation"
+                              onClick={(e) => addProductToCart(product, e)}
+                              className="w-full text-left px-4 py-3 min-h-[48px] hover:bg-slate-50 active:bg-primary-50 border-b border-slate-100 flex items-center justify-between touch-manipulation select-none cursor-pointer"
                             >
                               <div>
                                 <div className="font-medium text-slate-800">{product.name}</div>
@@ -870,11 +866,11 @@ export default function Sales() {
               </div>
 
               {/* Selected Items */}
-              {form.items.length > 0 && (
+              {cartItems.length > 0 && (
                 <div>
                   <p className="label-field" id="sale-items-label">Articles sélectionnés</p>
                   <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
-                    {form.items.map((item, index) => (
+                    {cartItems.map((item) => (
                       <div key={item.productId} className="p-3">
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
