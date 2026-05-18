@@ -509,7 +509,7 @@ export default function Dashboard() {
                           >
                             {barWidth > 15 && (
                               <span className="text-white text-xs font-semibold drop-shadow">
-                                {product.percentage}%
+                                {formatCurrency(product.revenue)}
                               </span>
                             )}
                           </div>
@@ -517,7 +517,7 @@ export default function Dashboard() {
                         {barWidth <= 15 && (
                           <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-2">
                             <span className="text-xs font-semibold text-slate-600 bg-white px-2 py-1 rounded shadow">
-                              {product.percentage}%
+                              {formatCurrency(product.revenue)}
                             </span>
                           </div>
                         )}
