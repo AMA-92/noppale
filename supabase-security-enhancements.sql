@@ -214,16 +214,16 @@ RETURNS TEXT
 LANGUAGE SQL
 SECURITY DEFINER
 AS $$
-  SELECT 
-    regexp_replace(
-      regexp_replace(
-        regexp_replace(
-          regexp_replace(input_text, ';', '', 'g'),
-          '--', '', 'g'
+  SELECT
+    replace(
+      replace(
+        replace(
+          replace(COALESCE(input_text, ''), ';', ''),
+          '--', ''
         ),
-        '/*', '', 'g'
+        '/*', ''
       ),
-      '*/', '', 'g'
+      '*/', ''
     );
 $$;
 
