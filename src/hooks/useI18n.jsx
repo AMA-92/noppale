@@ -1,35 +1,38 @@
-import { useState, useEffect, useContext, createContext, useCallback, useRef } from 'react'
+import { useState, useEffect, useContext, createContext, useCallback } from 'react'
 import { translations, currencies } from '../utils/i18n'
 import { appStorage } from '../utils/storage'
+import { supabase } from '../supabase/config.js'
 import { useUserPreferencesRealtime } from './useRealtime.jsx'
 
 const I18nContext = createContext()
 
-const readLocalPreferences = () => {
+const PREFERENCES_KEY = 'noppale_preferences'
+
+const loadFromLocalStorage = () => {
   if (typeof window === 'undefined' || !window.localStorage) return null
   try {
-    const saved = localStorage.getItem('noppale_preferences')
+    const saved = localStorage.getItem(PREFERENCES_KEY)
     return saved ? JSON.parse(saved) : null
   } catch {
     return null
   }
 }
 
-const writeLocalPreferences = (partial) => {
+const saveToLocalStorage = (prefs) => {
   if (typeof window === 'undefined' || !window.localStorage) return
   try {
-    const current = JSON.parse(localStorage.getItem('noppale_preferences') || '{}')
-    localStorage.setItem('noppale_preferences', JSON.stringify({ ...current, ...partial }))
+    const existing = JSON.parse(localStorage.getItem(PREFERENCES_KEY) || '{}')
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ ...existing, ...prefs }))
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde locale des préférences:', error)
+    console.error('Erreur lors de la sauvegarde des préférences:', error)
   }
 }
 
-const applyDocumentPreferences = (lang, isDark) => {
+const applyDocumentPreferences = (language, darkMode) => {
   if (typeof document === 'undefined') return
-  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
-  document.documentElement.lang = lang
-  if (isDark) {
+  document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'
+  document.documentElement.lang = language
+  if (darkMode) {
     document.documentElement.classList.add('dark')
   } else {
     document.documentElement.classList.remove('dark')
@@ -54,7 +57,7 @@ export const useI18n = () => {
       updateLanguage: () => {},
       updateCurrency: () => {},
       updateDarkMode: () => {},
-      applyRemotePreferences: () => {},
+      applyPreferences: () => {},
       currencies: [],
       availableLanguages: []
     }
@@ -65,86 +68,55 @@ export const useI18n = () => {
 export const I18nProvider = ({ children }) => {
   const [language, setLanguage] = useState('fr')
   const [currency, setCurrency] = useState('FCFA')
-  const [preferencesLoaded, setPreferencesLoaded] = useState(false)
-  const skipNextPersist = useRef(false)
+  const [preferencesReady, setPreferencesReady] = useState(false)
 
-  const applyPreferences = useCallback((prefs, { persistLocal = true } = {}) => {
-    if (!prefs) return
-
+  const applyPreferences = useCallback((prefs = {}) => {
     const lang = prefs.language || 'fr'
-    const cur = prefs.currency || 'FCFA'
-    const isDark = prefs.dark_mode ?? prefs.darkMode ?? false
+    const curr = prefs.currency || 'FCFA'
+    const dark = prefs.darkMode ?? prefs.dark_mode ?? false
 
     setLanguage(lang)
-    setCurrency(cur)
-    applyDocumentPreferences(lang, isDark)
-
-    if (persistLocal) {
-      writeLocalPreferences({ language: lang, currency: cur, darkMode: isDark })
-    }
+    setCurrency(curr)
+    applyDocumentPreferences(lang, dark)
+    saveToLocalStorage({ language: lang, currency: curr, darkMode: dark })
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-
-    const loadPreferences = async () => {
-      try {
-        const remote = await appStorage.getUserPreferences()
-        if (cancelled) return
-
-        if (remote) {
-          applyPreferences(remote)
-          setPreferencesLoaded(true)
-          return
-        }
-      } catch (error) {
-        console.error('Erreur chargement préférences Supabase:', error)
+  const syncFromSupabase = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        const local = loadFromLocalStorage()
+        if (local) applyPreferences(local)
+        return
       }
 
-      const local = readLocalPreferences()
-      if (local && !cancelled) {
+      const saved = await appStorage.getUserPreferences()
+      if (saved) {
         applyPreferences({
-          language: local.language,
-          currency: local.currency,
-          dark_mode: local.darkMode
+          language: saved.language,
+          currency: saved.currency,
+          darkMode: saved.dark_mode
         })
+      } else {
+        const local = loadFromLocalStorage()
+        if (local) applyPreferences(local)
       }
-
-      if (!cancelled) setPreferencesLoaded(true)
-    }
-
-    loadPreferences()
-
-    return () => {
-      cancelled = true
+    } catch (error) {
+      console.error('Erreur lors du chargement des préférences Supabase:', error)
+      const local = loadFromLocalStorage()
+      if (local) applyPreferences(local)
+    } finally {
+      setPreferencesReady(true)
     }
   }, [applyPreferences])
 
-  useUserPreferencesRealtime((payload) => {
-    const record = payload?.new || payload?.old
-    if (record) {
-      skipNextPersist.current = true
-      applyPreferences(record)
-    }
-  })
+  useEffect(() => {
+    syncFromSupabase()
+  }, [syncFromSupabase])
 
-  const persistToSupabase = useCallback(async (partial) => {
-    if (skipNextPersist.current) {
-      skipNextPersist.current = false
-      return
-    }
-    try {
-      const current = await appStorage.getUserPreferences()
-      await appStorage.setUserPreferences({
-        language: partial.language ?? current?.language ?? language,
-        currency: partial.currency ?? current?.currency ?? currency,
-        darkMode: partial.darkMode ?? current?.dark_mode ?? false,
-        notifications: current?.notifications !== false
-      })
-    } catch (error) {
-      console.error('Erreur synchronisation préférences Supabase:', error)
-    }
-  }, [language, currency])
+  useUserPreferencesRealtime(() => {
+    syncFromSupabase()
+  })
 
   const t = (key) => translations[language]?.[key] || key
 
@@ -166,38 +138,30 @@ export const I18nProvider = ({ children }) => {
   const getCurrentCurrency = () => currencies.find(c => c.code === currency) || currencies[0]
 
   const getCurrencyName = (currencyCode) => {
-    const info = currencies.find(c => c.code === currencyCode)
-    return info?.name[language] || currencyCode
+    const curr = currencies.find(c => c.code === currencyCode)
+    return curr?.name[language] || currencyCode
   }
 
-  const updateLanguage = useCallback((newLanguage, { persist = true } = {}) => {
+  const updateLanguage = (newLanguage) => {
     setLanguage(newLanguage)
-    writeLocalPreferences({ language: newLanguage })
+    saveToLocalStorage({ language: newLanguage })
     applyDocumentPreferences(newLanguage, document.documentElement.classList.contains('dark'))
-    if (persist) persistToSupabase({ language: newLanguage })
-  }, [persistToSupabase])
+  }
 
-  const updateCurrency = useCallback((newCurrency, { persist = true } = {}) => {
+  const updateCurrency = (newCurrency) => {
     setCurrency(newCurrency)
-    writeLocalPreferences({ currency: newCurrency })
-    if (persist) persistToSupabase({ currency: newCurrency })
-  }, [persistToSupabase])
+    saveToLocalStorage({ currency: newCurrency })
+  }
 
-  const updateDarkMode = useCallback((isDark, { persist = true } = {}) => {
-    writeLocalPreferences({ darkMode: isDark })
+  const updateDarkMode = (isDark) => {
+    saveToLocalStorage({ darkMode: isDark })
     applyDocumentPreferences(language, isDark)
-    if (persist) persistToSupabase({ darkMode: isDark })
-  }, [language, persistToSupabase])
-
-  const applyRemotePreferences = useCallback((prefs) => {
-    skipNextPersist.current = true
-    applyPreferences(prefs)
-  }, [applyPreferences])
+  }
 
   const value = {
     language,
     currency,
-    preferencesLoaded,
+    preferencesReady,
     t,
     formatCurrency,
     getCurrentCurrency,
@@ -205,7 +169,7 @@ export const I18nProvider = ({ children }) => {
     updateLanguage,
     updateCurrency,
     updateDarkMode,
-    applyRemotePreferences,
+    applyPreferences,
     currencies,
     availableLanguages: [
       { code: 'fr', name: 'Français', flag: '🇫🇷' },

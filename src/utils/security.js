@@ -119,17 +119,28 @@ export function validateSaleData(sale) {
         errors.push(`L'article ${index + 1} doit avoir un nom`)
       }
       
-      if (!isPositiveNumber(item.quantity)) {
+      const quantity = parseFloat(item.quantity)
+      if (!quantity || quantity <= 0) {
         errors.push(`La quantité de l'article ${index + 1} doit être positive`)
       }
-      
-      if (!isPositiveNumber(item.price)) {
-        errors.push(`Le prix de l'article ${index + 1} doit être positif`)
+
+      const unitPrice = parseFloat(item.unitPrice ?? item.unit_price ?? item.price) || 0
+      const lineTotal = parseFloat(item.totalPrice ?? item.total_price) || 0
+      const effectiveUnitPrice = unitPrice > 0
+        ? unitPrice
+        : (lineTotal > 0 && quantity > 0 ? lineTotal / quantity : 0)
+
+      if (effectiveUnitPrice <= 0) {
+        errors.push(`Le prix de l'article ${index + 1} doit être positif (vérifiez le prix de vente du produit)`)
       }
     })
   }
-  
-  if (sale.paymentMethod && !['especes', 'mobile', 'carte', 'credit'].includes(sale.paymentMethod)) {
+
+  const validPaymentMethods = [
+    'especes', 'mobile_money', 'carte_bancaire', 'credit',
+    'mobile', 'carte', 'cash', 'wave', 'orange_money'
+  ]
+  if (sale.paymentMethod && !validPaymentMethods.includes(sale.paymentMethod)) {
     errors.push('Méthode de paiement invalide')
   }
   

@@ -66,32 +66,31 @@ export const usersStorage = {
     }
   },
 
-  // Obtenir l'utilisateur actuel
-  async getCurrentUser() {
-    const { data, error } = await supabase.auth.getUser()
-    if (error) return null
-    return data?.user || null
+  // Vérifier le mot de passe (ré-authentification)
+  async verifyPassword(email, password) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      return !error
+    } catch {
+      return false
+    }
   },
 
-  // Mettre à jour le profil utilisateur
-  async updateUser(updates) {
-    try {
-      const userId = await getCurrentUserId()
-      if (!userId) throw new Error('Utilisateur non connecté')
+  // Changer le mot de passe
+  async updatePassword(newPassword) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw error
+    return true
+  },
 
-      const { data, error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', userId)
-        .select()
-        .single()
+  // Mettre à jour le profil (nom dans les métadonnées)
+  async updateProfile({ name, email }) {
+    const updates = { data: { name } }
+    if (email) updates.email = email
 
-      if (error) throw error
-      return data
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error)
-      throw error
-    }
+    const { data, error } = await supabase.auth.updateUser(updates)
+    if (error) throw error
+    return data.user
   }
 }
 
@@ -159,7 +158,12 @@ export const appStorage = {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data || []
+      return (data || []).map((p) => ({
+        ...p,
+        selling_price: parseFloat(p.selling_price) || 0,
+        buying_price: parseFloat(p.buying_price) || 0,
+        stock: parseInt(p.stock, 10) || 0
+      }))
     } catch (error) {
       console.error('Erreur lors de la récupération des produits:', error)
       return []
@@ -182,9 +186,9 @@ export const appStorage = {
           user_id: userId,
           name: product.name,
           category: product.category || '',
-          buying_price: product.buyingPrice || 0,
-          selling_price: product.sellingPrice || 0,
-          stock: product.stock || 0,
+          buying_price: parseFloat(product.buyingPrice) || 0,
+          selling_price: parseFloat(product.sellingPrice) || 0,
+          stock: parseInt(product.stock, 10) || 0,
           min_stock: product.minStock || 0,
           barcode: product.barcode || '',
           image: product.image || ''
@@ -205,19 +209,25 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
+      const productUpdate = {
+        name: updates.name,
+        category: updates.category,
+        stock: updates.stock,
+        min_stock: updates.minStock,
+        barcode: updates.barcode,
+        image: updates.image || '',
+        updated_at: new Date().toISOString()
+      }
+      if (updates.buyingPrice !== undefined && updates.buyingPrice !== '') {
+        productUpdate.buying_price = updates.buyingPrice
+      }
+      if (updates.sellingPrice !== undefined && updates.sellingPrice !== '') {
+        productUpdate.selling_price = updates.sellingPrice
+      }
+
       const { data, error } = await supabase
         .from('products')
-        .update({
-          name: updates.name,
-          category: updates.category,
-          buying_price: updates.buyingPrice,
-          selling_price: updates.sellingPrice,
-          stock: updates.stock,
-          min_stock: updates.minStock,
-          barcode: updates.barcode,
-          image: updates.image || '',
-          updated_at: new Date().toISOString()
-        })
+        .update(productUpdate)
         .eq('id', id)
         .eq('user_id', userId)
         .select()
@@ -430,7 +440,9 @@ export const appStorage = {
               .single()
 
             if (product) {
-              const newStock = Math.max(0, product.stock - item.quantity)
+              const currentStock = parseInt(product.stock, 10) || 0
+              const qty = parseInt(item.quantity, 10) || 0
+              const newStock = Math.max(0, currentStock - qty)
               await supabase
                 .from('products')
                 .update({ stock: newStock })
@@ -834,32 +846,27 @@ export const appStorage = {
     }
   },
 
-  // Supprimer toutes les données de l'utilisateur connecté (Supabase)
+  // Supprimer toutes les données de l'utilisateur connecté
   async clearAllUserData() {
-    try {
-      const userId = await getCurrentUserId()
-      if (!userId) throw new Error('Utilisateur non connecté')
+    const userId = await getCurrentUserId()
+    if (!userId) throw new Error('Utilisateur non connecté')
 
-      const tables = [
-        'sales',
-        'products',
-        'expenses',
-        'customers',
-        'shop_info',
-        'user_preferences',
-        'user_secret_code'
-      ]
+    const tables = [
+      'products',
+      'sales',
+      'expenses',
+      'customers',
+      'shop_info',
+      'user_preferences',
+      'user_secret_code'
+    ]
 
-      for (const table of tables) {
-        const { error } = await supabase.from(table).delete().eq('user_id', userId)
-        if (error) throw error
-      }
-
-      return true
-    } catch (error) {
-      console.error('Erreur lors de la suppression des données:', error)
-      throw error
+    for (const table of tables) {
+      const { error } = await supabase.from(table).delete().eq('user_id', userId)
+      if (error) throw error
     }
+
+    return true
   }
 }
 

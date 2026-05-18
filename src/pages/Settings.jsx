@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { authStorage, appStorage } from '../utils/storage'
-import { supabase } from '../supabase/config.js'
+import { authStorage, usersStorage, appStorage } from '../utils/storage'
 import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useI18n } from '../hooks/useI18n.jsx'
@@ -9,7 +8,7 @@ import { currencies } from '../utils/i18n'
 import { useNavigate } from 'react-router-dom'
 
 export default function Settings() {
-  const { updateLanguage, updateCurrency, updateDarkMode, applyRemotePreferences, language, currency, t, availableLanguages } = useI18n()
+  const { updateLanguage, updateCurrency, updateDarkMode, applyPreferences, language, currency, t, availableLanguages } = useI18n()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('personal')
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -64,13 +63,13 @@ export default function Settings() {
       const currentUser = await authStorage.getCurrentUser()
       if (currentUser) {
         setProfileForm({
-          name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || '',
+          name: currentUser.user_metadata?.name || '',
           email: currentUser.email || ''
         })
       }
-      loadPreferences()
-      loadShopInfo()
-      loadSecretCode()
+      await loadPreferences()
+      await loadShopInfo()
+      await loadSecretCode()
     }
     init()
   }, [])
@@ -110,7 +109,7 @@ export default function Settings() {
           currency: savedPreferences.currency || 'FCFA'
         }
         setPreferences(prefs)
-        applyRemotePreferences(savedPreferences)
+        applyPreferences(prefs)
       } else {
         setPreferences({
           darkMode: document.documentElement.classList.contains('dark'),
@@ -134,12 +133,6 @@ export default function Settings() {
     }
   }
 
-  // Synchroniser le mode sombre avec l'état actuel du document
-  useEffect(() => {
-    const isDark = document.documentElement.classList.contains('dark')
-    setPreferences(prev => ({ ...prev, darkMode: isDark }))
-  }, [])
-
   // Gestion du changement de mot de passe
   const handlePasswordChange = async (e) => {
     e.preventDefault()
@@ -161,27 +154,18 @@ export default function Settings() {
 
     try {
       const currentUser = await authStorage.getCurrentUser()
-      if (!currentUser?.email) {
+      if (!currentUser) {
         toast.error('Aucun utilisateur connecté')
         return
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: currentUser.email,
-        password: passwordForm.currentPassword
-      })
-
-      if (signInError) {
+      const isValid = await usersStorage.verifyPassword(currentUser.email, passwordForm.currentPassword)
+      if (!isValid) {
         toast.error('Mot de passe actuel incorrect')
         return
       }
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: passwordForm.newPassword
-      })
-
-      if (updateError) throw updateError
-
+      await usersStorage.updatePassword(passwordForm.newPassword)
       toast.success('Mot de passe changé avec succès')
       setShowPasswordModal(false)
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
@@ -207,12 +191,10 @@ export default function Settings() {
         return
       }
 
-      const { error } = await supabase.auth.updateUser({
-        email: profileForm.email,
-        data: { name: profileForm.name }
+      await usersStorage.updateProfile({
+        name: profileForm.name,
+        email: profileForm.email
       })
-
-      if (error) throw error
 
       toast.success('Informations mises à jour avec succès')
       setShowProfileModal(false)
@@ -228,10 +210,10 @@ export default function Settings() {
       // Sauvegarder dans Supabase
       await appStorage.setUserPreferences(preferences)
 
-      // Appliquer les changements localement (déjà sauvegardés dans Supabase)
-      updateLanguage(preferences.language, { persist: false })
-      updateCurrency(preferences.currency, { persist: false })
-      updateDarkMode(preferences.darkMode, { persist: false })
+      // Appliquer les changements localement
+      updateLanguage(preferences.language)
+      updateCurrency(preferences.currency)
+      updateDarkMode(preferences.darkMode)
 
       toast.success('Préférences sauvegardées avec succès')
       setShowPreferencesModal(false)
@@ -289,17 +271,13 @@ export default function Settings() {
 
     try {
       const currentUser = await authStorage.getCurrentUser()
-      if (!currentUser?.email) {
+      if (!currentUser) {
         toast.error('Aucun utilisateur connecté')
         return
       }
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: currentUser.email,
-        password: dataDeletePassword
-      })
-
-      if (signInError) {
+      const isValid = await usersStorage.verifyPassword(currentUser.email, dataDeletePassword)
+      if (!isValid) {
         toast.error('Mot de passe incorrect')
         return
       }
@@ -333,27 +311,26 @@ export default function Settings() {
       }, 1500)
     } catch (error) {
       console.error('Erreur lors de la suppression:', error)
-      toast.error(error.message || 'Erreur lors de la suppression des données')
+      toast.error(`Erreur lors de la suppression: ${error.message}`, { duration: 4000 })
     }
   }
 
   // Gestion du code secret
   const handleSecretCodeSubmit = async () => {
-    try {
-      const savedSecretCode = await appStorage.getSecretCode()
+    const savedSecretCode = await appStorage.getSecretCode()
 
-      if (secretCode === savedSecretCode) {
-        toast.loading('Suppression de toutes les données en cours...')
-        await handleClearData()
+    if (secretCode === savedSecretCode) {
+      // Code correct - supprimer toutes les données
+      toast.loading('Suppression de toutes les données en cours...', { duration: 1000 })
+      
+      setTimeout(() => {
+        handleClearData()
         setShowSecretCodeModal(false)
         setSecretCode('')
-      } else {
-        toast.error('Code secret incorrect')
-        setSecretCode('')
-      }
-    } catch (error) {
-      console.error('Erreur vérification code secret:', error)
-      toast.error('Erreur lors de la vérification du code secret')
+      }, 1000)
+    } else {
+      toast.error('❌ Code secret incorrect - Veuillez réessayer', { duration: 3000 })
+      setSecretCode('')
     }
   }
 
@@ -1080,7 +1057,7 @@ export default function Settings() {
                 className="btn-danger flex-1"
                 type="button"
               >
-                Supprimer tout
+                Continuer
               </button>
             </div>
           </div>

@@ -1,3 +1,11 @@
+/** Prix de vente d'un produit (tous formats de champs supportés) */
+export const getProductSellingPrice = (product) => {
+  if (!product) return 0
+  const raw = product.selling_price ?? product.sellingPrice ?? product.price ?? product.unit_price
+  const parsed = parseFloat(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
 // Formatage FCFA (gardé pour compatibilité)
 export const formatCFA = (amount) => {
   if (amount === null || amount === undefined) return '0 FCFA'

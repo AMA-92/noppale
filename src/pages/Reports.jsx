@@ -18,7 +18,7 @@ import {
   Filler,
 } from 'chart.js'
 import { appStorage } from '../utils/storage'
-import { useProductsRealtime, useSalesRealtime, useExpensesRealtime } from '../hooks/useRealtime.jsx'
+import { useProductsRealtime, useSalesRealtime, useExpensesRealtime, useShopInfoRealtime } from '../hooks/useRealtime.jsx'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -100,21 +100,23 @@ export default function Reports() {
 
   useEffect(() => { loadData() }, [period, currency, language])
 
+  const loadShopInfo = async () => {
+    try {
+      const savedShopInfo = await appStorage.getShopInfo()
+      setShopInfo(savedShopInfo || {})
+    } catch (error) {
+      console.error('Erreur de chargement des informations de la boutique:', error)
+    }
+  }
+
+  useEffect(() => {
+    loadShopInfo()
+  }, [])
+
   useProductsRealtime(() => loadData())
   useSalesRealtime(() => loadData())
   useExpensesRealtime(() => loadData())
-
-  useEffect(() => {
-    const loadShopInfo = async () => {
-      try {
-        const savedShopInfo = await appStorage.getShopInfo()
-        setShopInfo(savedShopInfo || {})
-      } catch (error) {
-        console.error('Erreur de chargement des informations de la boutique:', error)
-      }
-    }
-    loadShopInfo()
-  }, [])
+  useShopInfoRealtime(() => loadShopInfo())
 
   const loadData = async () => {
     try {

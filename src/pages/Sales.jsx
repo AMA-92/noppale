@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { appStorage } from '../utils/storage'
-import { formatDate, getPaymentMethod, formatCurrency } from '../utils/helpers'
+import { formatDate, getPaymentMethod, formatCurrency, getProductSellingPrice } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useSalesRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, ShoppingCart, X, DollarSign, Calendar, User, Package, Printer, Eye, Edit } from 'lucide-react'
@@ -102,6 +102,36 @@ export default function Sales() {
     return receivedNum - totalNum
   }
 
+  /** Complète les prix manquants depuis le catalogue produits */
+  const normalizeSaleItems = (items) => {
+    return items.map((item) => {
+      const product = products.find((p) => p.id === item.productId)
+      const qty = parseFloat(item.quantity) || 1
+      let unitPrice = parseFloat(item.unitPrice ?? item.unit_price) || 0
+
+      if (unitPrice <= 0 && product) {
+        unitPrice = getProductSellingPrice(product)
+      }
+
+      let totalPrice = parseFloat(item.totalPrice ?? item.total_price) || 0
+      if (totalPrice <= 0 && unitPrice > 0) {
+        totalPrice = calculateItemTotal(qty, unitPrice)
+      }
+      if (unitPrice <= 0 && totalPrice > 0 && qty > 0) {
+        unitPrice = totalPrice / qty
+      }
+
+      return {
+        ...item,
+        productId: item.productId,
+        productName: item.productName || product?.name || 'Produit',
+        quantity: qty,
+        unitPrice,
+        totalPrice
+      }
+    })
+  }
+
   const loadSales = async () => {
     setLoading(true)
     try {
@@ -119,11 +149,13 @@ export default function Sales() {
     setShowModal(true) 
   }
 
-  const filteredProducts = products.filter(p => 
-    (p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.category.toLowerCase().includes(productSearch.toLowerCase())) &&
-    parseInt(p.stock || 0) > 0 // Ne montrer que les produits avec stock > 0
-  )
+  const filteredProducts = products.filter(p => {
+    const q = productSearch.toLowerCase()
+    const matchesSearch = !q ||
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q))
+    return matchesSearch && parseInt(p.stock || 0, 10) > 0
+  })
 
   const selectProduct = (product) => {
     try {
@@ -145,7 +177,7 @@ export default function Sales() {
         return
       }
 
-      const unitPrice = parseFloat(product.selling_price) || 0
+      const unitPrice = getProductSellingPrice(product)
       const quantity = 1
 
       // Validation du prix
@@ -335,13 +367,27 @@ export default function Sales() {
   const handleSave = async (e) => {
     if (e) e.preventDefault()
 
+    if (!form.items || form.items.length === 0) {
+      toast.error('Ajoutez au moins un produit au panier')
+      return
+    }
+
+    const normalizedItems = normalizeSaleItems(form.items)
+    const invalidItem = normalizedItems.find((item) => item.unitPrice <= 0)
+    if (invalidItem) {
+      toast.error(`Prix manquant pour « ${invalidItem.productName} ». Définissez un prix de vente dans Produits.`)
+      return
+    }
+
+    const saleTotal = parseFloat(form.total) || calculateTotal(normalizedItems)
+
     // Sanitize and validate input
     const sanitizedSale = {
-      customerName: sanitizeString(truncateString(form.customerName || '', 200)),
-      total: form.total,
+      customerName: sanitizeString(truncateString(form.customerName?.trim() || 'Client', 200)),
+      total: saleTotal,
       paymentMethod: form.paymentMethod,
       notes: sanitizeString(truncateString(form.notes || '', 500)),
-      items: form.items.map(item => ({
+      items: normalizedItems.map(item => ({
         ...item,
         productName: sanitizeString(truncateString(item.productName || '', 200))
       }))
@@ -354,15 +400,18 @@ export default function Sales() {
       return
     }
 
-    if (sanitizedSale.paymentMethod === 'especes' && (form.amountReceived || 0) < (sanitizedSale.total || 0)) {
-      toast.error('Le montant reçu est insuffisant')
-      return
+    if (sanitizedSale.paymentMethod === 'especes') {
+      const received = parseFloat(form.amountReceived) || 0
+      if (received > 0 && received < saleTotal) {
+        toast.error('Le montant reçu est insuffisant')
+        return
+      }
     }
 
     setSaving(true)
     try {
       // Enregistrer la vente avec Supabase (gère automatiquement le stock)
-      const newSale = await appStorage.addSale({
+      await appStorage.addSale({
         customerName: sanitizedSale.customerName,
         total: sanitizedSale.total,
         paymentMethod: sanitizedSale.paymentMethod,
@@ -370,9 +419,7 @@ export default function Sales() {
         items: sanitizedSale.items
       })
 
-      setSales(prev => [...prev, newSale])
-
-      // Recharger les produits pour mettre à jour le stock affiché
+      await loadSales()
       await loadProducts()
 
       toast.success('Vente enregistrée et stock mis à jour')
@@ -621,11 +668,14 @@ export default function Sales() {
       <div className="relative max-w-md">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
-          type="text"
+          id="sales-list-search"
+          name="salesSearch"
+          type="search"
           placeholder={t('searchSales')}
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="input-field pl-10"
+          aria-label={t('searchSales')}
         />
       </div>
 
@@ -706,20 +756,22 @@ export default function Sales() {
 
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="label-field">Nom du client *</label>
+                <label htmlFor="sale-customer-name" className="label-field">Nom du client</label>
                 <input
+                  id="sale-customer-name"
+                  name="customerName"
                   type="text"
+                  autoComplete="name"
                   value={form.customerName}
                   onChange={e => setForm({...form, customerName: e.target.value})}
                   className="input-field"
-                  placeholder="Entrez le nom du client"
-                  required
+                  placeholder="Client (optionnel)"
                 />
               </div>
 
               {/* Product Selection */}
               <div>
-                <label className="label-field">Article</label>
+                <label htmlFor="sale-product-search" className="label-field">Article</label>
                 
                 {/* Panier en temps réel */}
                 {form.items && form.items.length > 0 && (
@@ -770,7 +822,10 @@ export default function Sales() {
                     <div className="flex-1 relative">
                       <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
-                        type="text"
+                        id="sale-product-search"
+                        name="productSearch"
+                        type="search"
+                        autoComplete="off"
                         value={productSearch}
                         onChange={e => {
                           setProductSearch(e.target.value)
@@ -829,7 +884,7 @@ export default function Sales() {
                                 <div className="text-sm text-slate-500">Stock: {product.stock}</div>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold text-primary-600">{formatCurrency(product.selling_price ?? product.sellingPrice)}</div>
+                                <div className="font-semibold text-primary-600">{formatCurrency(getProductSellingPrice(product))}</div>
                               </div>
                             </button>
                           ))
@@ -858,7 +913,7 @@ export default function Sales() {
                                 <div className="text-sm text-slate-500">Stock: {product.stock}</div>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold text-primary-600">{formatCurrency(product.selling_price ?? product.sellingPrice)}</div>
+                                <div className="font-semibold text-primary-600">{formatCurrency(getProductSellingPrice(product))}</div>
                               </div>
                             </button>
                           ))
@@ -876,7 +931,7 @@ export default function Sales() {
               {/* Selected Items */}
               {form.items.length > 0 && (
                 <div>
-                  <label className="label-field">Articles sélectionnés</label>
+                  <p className="label-field" id="sale-items-label">Articles sélectionnés</p>
                   <div className="border border-slate-200 rounded-lg divide-y divide-slate-200">
                     {form.items.map((item, index) => (
                       <div key={item.productId} className="p-3">
@@ -887,12 +942,15 @@ export default function Sales() {
                           </div>
                           <div className="flex items-center gap-2">
                             <input
+                              id={`sale-qty-${item.productId}`}
+                              name={`quantity-${item.productId}`}
                               type="number"
                               min="1"
                               max={getAvailableStock(item.productId)}
                               value={item.quantity}
                               onChange={e => updateItemQuantity(item.productId, parseInt(e.target.value) || 1)}
                               className="w-20 px-2 py-1 border border-slate-200 rounded text-center"
+                              aria-label={`Quantité pour ${item.productName}`}
                             />
                             <button
                               type="button"
@@ -925,8 +983,10 @@ export default function Sales() {
                 {form.paymentMethod === 'especes' && (
                   <div className="space-y-3">
                     <div>
-                      <label className="label-field">Montant reçu</label>
+                      <label htmlFor="sale-amount-received" className="label-field">Montant reçu</label>
                       <input
+                        id="sale-amount-received"
+                        name="amountReceived"
                         type="number"
                         value={form.amountReceived || ''}
                         onChange={e => updateAmountReceived(e.target.value)}
@@ -963,8 +1023,10 @@ export default function Sales() {
               </div>
 
               <div>
-                <label className="label-field">Mode de paiement</label>
+                <label htmlFor="sale-payment-method" className="label-field">Mode de paiement</label>
                 <select
+                  id="sale-payment-method"
+                  name="paymentMethod"
                   value={form.paymentMethod}
                   onChange={e => {
                     const newPaymentMethod = e.target.value
@@ -985,8 +1047,10 @@ export default function Sales() {
               </div>
 
               <div>
-                <label className="label-field">Notes</label>
+                <label htmlFor="sale-notes" className="label-field">Notes</label>
                 <textarea
+                  id="sale-notes"
+                  name="notes"
                   value={form.notes}
                   onChange={e => setForm({...form, notes: e.target.value})}
                   className="input-field"

@@ -31,7 +31,7 @@ function App() {
     // Écouter les changements d'état d'authentification
     const { data: { subscription } } = authStorage.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setUser(session.user)
+        setUser(session?.user ?? null)
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
       }

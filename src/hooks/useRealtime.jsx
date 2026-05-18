@@ -1,112 +1,82 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { supabase } from '../supabase/config.js'
 
 /**
  * Hook pour écouter les changements en temps réel sur une table Supabase
+ * @param {string} tableName - Nom de la table à écouter
+ * @param {Function} onUpdate - Callback appelé quand des données sont mises à jour
  */
-export function useRealtimeSubscription(tableName, onUpdate, filter = '', enabled = true) {
+export function useRealtimeSubscription(tableName, onUpdate) {
   const onUpdateRef = useRef(onUpdate)
   onUpdateRef.current = onUpdate
 
   useEffect(() => {
-    if (!tableName || !enabled) return undefined
-
     let channel
+    let cancelled = false
 
     const setupSubscription = async () => {
       try {
-        const channelId = `realtime:${tableName}:${filter || 'all'}`
-        channel = supabase.channel(channelId)
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (cancelled || error || !user?.id) return
 
-        const config = {
-          event: '*',
-          schema: 'public',
-          table: tableName,
-          ...(filter ? { filter } : {})
-        }
+        const filter = `user_id=eq.${user.id}`
 
-        channel.on('postgres_changes', config, (payload) => {
-          onUpdateRef.current?.(payload)
-        })
+        channel = supabase
+          .channel(`realtime:${tableName}:${user.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: tableName,
+              filter
+            },
+            (payload) => {
+              onUpdateRef.current?.(payload)
+            }
+          )
 
         await channel.subscribe()
-      } catch (error) {
-        console.error(`Error setting up realtime subscription for ${tableName}:`, error)
+      } catch (err) {
+        console.error(`Error setting up realtime subscription for ${tableName}:`, err)
       }
     }
 
     setupSubscription()
 
     return () => {
+      cancelled = true
       if (channel) {
         supabase.removeChannel(channel)
       }
     }
-  }, [tableName, filter, enabled])
-}
-
-/**
- * Résout le filtre user_id de manière asynchrone puis s'abonne aux changements
- */
-function useUserRealtime(tableName, onUpdate) {
-  const [filter, setFilter] = useState(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    const resolveUserFilter = async () => {
-      try {
-        const { data, error } = await supabase.auth.getUser()
-        if (cancelled) return
-        if (error) {
-          console.error('Erreur auth pour realtime:', error)
-          setFilter('')
-          return
-        }
-        const userId = data?.user?.id
-        setFilter(userId ? `user_id=eq.${userId}` : '')
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Erreur lors de la résolution du filtre realtime:', error)
-          setFilter('')
-        }
-      }
-    }
-
-    resolveUserFilter()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useRealtimeSubscription(tableName, onUpdate, filter ?? '', filter !== null)
+  }, [tableName])
 }
 
 export function useProductsRealtime(onUpdate) {
-  return useUserRealtime('products', onUpdate)
+  return useRealtimeSubscription('products', onUpdate)
 }
 
 export function useSalesRealtime(onUpdate) {
-  return useUserRealtime('sales', onUpdate)
+  return useRealtimeSubscription('sales', onUpdate)
 }
 
 export function useExpensesRealtime(onUpdate) {
-  return useUserRealtime('expenses', onUpdate)
+  return useRealtimeSubscription('expenses', onUpdate)
 }
 
 export function useCustomersRealtime(onUpdate) {
-  return useUserRealtime('customers', onUpdate)
+  return useRealtimeSubscription('customers', onUpdate)
 }
 
 export function useShopInfoRealtime(onUpdate) {
-  return useUserRealtime('shop_info', onUpdate)
+  return useRealtimeSubscription('shop_info', onUpdate)
 }
 
 export function useUserPreferencesRealtime(onUpdate) {
-  return useUserRealtime('user_preferences', onUpdate)
+  return useRealtimeSubscription('user_preferences', onUpdate)
 }
 
 export function useSecretCodeRealtime(onUpdate) {
-  return useUserRealtime('user_secret_code', onUpdate)
+  return useRealtimeSubscription('user_secret_code', onUpdate)
 }
