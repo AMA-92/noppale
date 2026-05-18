@@ -641,9 +641,14 @@ export default function Dashboard() {
                         {/* Bâton */}
                         <div className="flex justify-center items-end w-full" style={{ height: '140px' }}>
                           <div 
-                            className={`w-12 bg-gradient-to-t ${barColor} transition-all duration-1500 ease-out rounded-t-lg shadow-lg`}
+                            className={`w-12 bg-gradient-to-t ${barColor} transition-all duration-1500 ease-out rounded-t-lg shadow-lg flex items-center justify-center pt-2`}
                             style={{ height: `${barHeight}%`, minHeight: '4px' }}
                           >
+                            {barHeight > 15 && (
+                              <span className="text-white text-xs font-bold drop-shadow-lg">
+                                {formatCurrency(day.total)}
+                              </span>
+                            )}
                           </div>
                         </div>
                         
