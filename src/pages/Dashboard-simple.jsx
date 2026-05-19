@@ -76,7 +76,9 @@ export default function Dashboard() {
   const [salesPeriod, setSalesPeriod] = useState('all')
   const [expensesPeriod, setExpensesPeriod] = useState('all')
   const [customersPeriod, setCustomersPeriod] = useState('all')
+  const [debtPeriod, setDebtPeriod] = useState('all')
   const [salesExpensesMode, setSalesExpensesMode] = useState('sales')
+  const [customersDebtMode, setCustomersDebtMode] = useState('customers')
   const [showOutOfStockDropdown, setShowOutOfStockDropdown] = useState(false)
   const [topProducts, setTopProducts] = useState([])
   const [salesEvolution, setSalesEvolution] = useState([])
@@ -98,7 +100,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadStats()
-  }, [salesPeriod, expensesPeriod, customersPeriod, salesExpensesMode, currency, language, selectedWeek])
+  }, [salesPeriod, expensesPeriod, customersPeriod, debtPeriod, salesExpensesMode, customersDebtMode, currency, language, selectedWeek])
 
   // Écouter les changements en temps réel sur les produits, ventes et dépenses
   useProductsRealtime(() => loadStats())
@@ -131,6 +133,12 @@ export default function Dashboard() {
       // Filtrer les dépenses selon la période
       const filteredExpenses = expensesPeriod === 'all' ? expenses : filterByPeriod(expenses, 'createdAt', expensesPeriod)
       const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
+
+      // Calculer le total des dettes en cours (ventes à crédit non remboursées)
+      const filteredDebtSales = debtPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', debtPeriod)
+      const totalDebt = filteredDebtSales
+        .filter(sale => sale.paymentMethod === 'credit' && sale.creditStatus === 'pending')
+        .reduce((sum, sale) => sum + (sale.total || 0), 0)
 
       // Filtrer les ventes selon la période pour le calcul des clients uniques
       const filteredSalesForCustomers = customersPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', customersPeriod)
@@ -249,6 +257,7 @@ export default function Dashboard() {
       setStats({
         totalSales,
         totalExpenses,
+        totalDebt,
         totalProducts: products.length,
         totalCustomers: customers.length,
         uniqueCustomers,
@@ -308,17 +317,22 @@ export default function Dashboard() {
       outOfStockProducts: stats.outOfStockProducts
     },
     {
-      title: t('customersCard'),
-      value: stats.uniqueCustomers.toString(),
-      subtitle: stats.totalCustomers > 0 ? `${stats.totalCustomers} au total` : null,
-      icon: Users,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      change: '+5',
-      changePositive: true,
+      title: customersDebtMode === 'customers' ? t('customersCard') : 'Dette en cours',
+      value: customersDebtMode === 'customers'
+        ? stats.uniqueCustomers.toString()
+        : formatCurrency(stats.totalDebt || 0),
+      subtitle: customersDebtMode === 'customers' && stats.totalCustomers > 0 ? `${stats.totalCustomers} au total` : null,
+      icon: customersDebtMode === 'customers' ? Users : DollarSign,
+      color: customersDebtMode === 'customers' ? 'text-purple-600' : 'text-orange-600',
+      bgColor: customersDebtMode === 'customers' ? 'bg-purple-50' : 'bg-orange-50',
+      change: customersDebtMode === 'customers' ? '+5' : '-5%',
+      changePositive: customersDebtMode === 'customers',
       hasFilter: true,
-      filter: customersPeriod,
-      setFilter: setCustomersPeriod
+      filter: customersDebtMode === 'customers' ? customersPeriod : debtPeriod,
+      setFilter: customersDebtMode === 'customers' ? setCustomersPeriod : setDebtPeriod,
+      hasModeToggle: true,
+      mode: customersDebtMode,
+      setMode: setCustomersDebtMode
     }
   ]
 
@@ -347,9 +361,19 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 {stat.hasModeToggle && (
                   <button
-                    onClick={() => stat.setMode(stat.mode === 'sales' ? 'expenses' : 'sales')}
+                    onClick={() => {
+                      if (stat.mode === 'sales' || stat.mode === 'expenses') {
+                        stat.setMode(stat.mode === 'sales' ? 'expenses' : 'sales')
+                      } else if (stat.mode === 'customers' || stat.mode === 'debt') {
+                        stat.setMode(stat.mode === 'customers' ? 'debt' : 'customers')
+                      }
+                    }}
                     className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-                    title={`Basculer vers ${stat.mode === 'sales' ? 'Dépenses' : 'Ventes'}`}
+                    title={`Basculer vers ${
+                      stat.mode === 'sales' ? 'Dépenses' :
+                      stat.mode === 'expenses' ? 'Ventes' :
+                      stat.mode === 'customers' ? 'Dette en cours' : 'Clients'
+                    }`}
                   >
                     <RefreshCw className="w-4 h-4 text-slate-600" />
                   </button>
