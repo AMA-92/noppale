@@ -818,7 +818,7 @@ export const appStorage = {
         throw error
       }
 
-      return data.secret_code
+      return data?.secret_code || '1234'
     } catch (error) {
       console.error('Erreur lors de la récupération du code secret:', error)
       return '1234'

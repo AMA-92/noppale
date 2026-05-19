@@ -20,9 +20,12 @@ export function useRealtimeSubscription(tableName, onUpdate) {
         if (cancelled || error || !user?.id) return
 
         const filter = `user_id=eq.${user.id}`
+        // Use unique channel name with random suffix to avoid conflicts
+        const channelSuffix = Math.random().toString(36).substring(2, 9)
+        const channelName = `realtime:${tableName}:${user.id}:${channelSuffix}`
 
         channel = supabase
-          .channel(`realtime:${tableName}:${user.id}`)
+          .channel(channelName)
           .on(
             'postgres_changes',
             {
