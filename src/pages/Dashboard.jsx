@@ -251,8 +251,8 @@ export default function Dashboard() {
       title: 'Chiffre d\'affaires',
       value: formatCurrency(stats.totalSales || 0),
       icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      gradient: 'from-emerald-500 to-teal-400',
+      shadowColor: 'shadow-emerald-500/30',
       change: '+12%',
       changePositive: true,
       hasFilter: false
@@ -263,8 +263,8 @@ export default function Dashboard() {
         ? formatCurrency(stats.totalSales || 0)
         : formatCurrency(stats.totalExpenses || 0),
       icon: salesExpensesMode === 'sales' ? DollarSign : ShoppingCart,
-      color: salesExpensesMode === 'sales' ? 'text-green-600' : 'text-red-600',
-      bgColor: salesExpensesMode === 'sales' ? 'bg-green-50' : 'bg-red-50',
+      gradient: salesExpensesMode === 'sales' ? 'from-green-500 to-emerald-400' : 'from-red-500 to-rose-400',
+      shadowColor: salesExpensesMode === 'sales' ? 'shadow-green-500/30' : 'shadow-red-500/30',
       change: salesExpensesMode === 'sales' ? '+12%' : '+8%',
       changePositive: salesExpensesMode === 'sales',
       hasFilter: true,
@@ -281,8 +281,8 @@ export default function Dashboard() {
         : formatCurrency(stats.totalDebt || 0),
       subtitle: customersDebtMode === 'customers' && stats.totalCustomers > 0 ? `${stats.totalCustomers} au total` : null,
       icon: customersDebtMode === 'customers' ? Users : DollarSign,
-      color: customersDebtMode === 'customers' ? 'text-purple-600' : 'text-orange-600',
-      bgColor: customersDebtMode === 'customers' ? 'bg-purple-50' : 'bg-orange-50',
+      gradient: customersDebtMode === 'customers' ? 'from-violet-500 to-purple-400' : 'from-orange-500 to-amber-400',
+      shadowColor: customersDebtMode === 'customers' ? 'shadow-violet-500/30' : 'shadow-orange-500/30',
       change: customersDebtMode === 'customers' ? '+5' : '-5%',
       changePositive: customersDebtMode === 'customers',
       hasFilter: true,
@@ -298,8 +298,8 @@ export default function Dashboard() {
       subtitle: `${stats.totalStock} produits`,
       outOfStockCount: stats.outOfStockCount,
       icon: Package,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      gradient: 'from-blue-500 to-indigo-400',
+      shadowColor: 'shadow-blue-500/30',
       change: '+3',
       changePositive: true,
       hasFilter: false
@@ -324,12 +324,11 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <h1 className="text-4xl text-red-600 font-bold col-span-full">TEST - MODIFICATION VISIBLE?</h1>
         {statCards.map((stat, index) => (
-          <div key={index} className={`card p-6 ${stat.outOfStockCount !== undefined ? 'relative' : ''}`}>
+          <div key={index} className={`relative group bg-white rounded-2xl p-6 shadow-lg ${stat.shadowColor} hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-slate-100 ${stat.outOfStockCount !== undefined ? 'relative' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <div className={`p-4 rounded-2xl bg-gradient-to-br ${stat.gradient} shadow-lg ${stat.shadowColor}`}>
+                <stat.icon className="w-7 h-7 text-white" />
               </div>
               <div className="flex items-center gap-2">
                 {/* Bouton de bascule pour Ventes/Dépenses ou Clients/Dette */}
@@ -342,7 +341,7 @@ export default function Dashboard() {
                         stat.setMode(stat.mode === 'customers' ? 'debt' : 'customers')
                       }
                     }}
-                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-all duration-200 shadow-sm"
                     title={`Basculer vers ${
                       stat.mode === 'sales' ? 'Dépenses' :
                       stat.mode === 'expenses' ? 'Ventes' :
@@ -352,16 +351,16 @@ export default function Dashboard() {
                     <RefreshCw className="w-4 h-4 text-slate-600" />
                   </button>
                 )}
-                <div className={`flex items-center gap-1 text-sm font-medium ${
-                  stat.changePositive ? 'text-green-600' : 'text-red-600'
+                <div className={`flex items-center gap-1 text-sm font-bold px-3 py-1.5 rounded-full ${
+                  stat.changePositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
                   {stat.changePositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                   {stat.change}
                 </div>
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-slate-800">{stat.value}</h3>
-            <p className="text-sm text-slate-500">{stat.title}</p>
+            <h3 className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</h3>
+            <p className="text-sm font-medium text-slate-500">{stat.title}</p>
             {stat.subtitle && <p className="text-xs text-slate-400 mt-1">{stat.subtitle}</p>}
             
             {/* Indicateur de rupture de stock pour les produits */}
@@ -369,27 +368,27 @@ export default function Dashboard() {
               <div>
                 <button
                   onClick={() => setShowOutOfStockList(!showOutOfStockList)}
-                  className="mt-2 px-2 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 transition-colors"
+                  className="mt-3 px-3 py-1.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-xs font-medium rounded-xl hover:from-red-600 hover:to-rose-600 transition-all duration-200 shadow-md shadow-red-500/30"
                 >
                   ⚠️ {stat.outOfStockCount} en rupture
                 </button>
                 
                 {/* Liste déroulante des produits en rupture */}
                 {showOutOfStockList && stat.outOfStockCount > 0 && (
-                  <div className="absolute z-10 mt-1 w-64 bg-white border border-red-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                    <div className="p-2">
-                      <div className="text-xs font-semibold text-red-700 mb-2 px-2">
+                  <div className="absolute z-10 mt-2 w-72 bg-white border border-red-200 rounded-2xl shadow-2xl max-h-64 overflow-y-auto">
+                    <div className="p-3">
+                      <div className="text-xs font-bold text-red-700 mb-3 px-2 bg-red-50 rounded-lg py-2">
                         Produits à approvisionner ({stat.outOfStockCount}) :
                       </div>
                       {stats.outOfStockProducts.map((product) => {
                         const stock = parseInt(product.stock) || 0
                         const minStock = parseInt(product.minStock) || 0
                         return (
-                          <div key={product.id} className="px-2 py-1 hover:bg-red-50 rounded cursor-pointer">
+                          <div key={product.id} className="px-3 py-2 hover:bg-red-50 rounded-xl cursor-pointer transition-colors">
                             <div className="flex justify-between items-center">
                               <div>
-                                <div className="text-xs font-medium text-slate-800">{product.name}</div>
-                                <div className={`text-xs ${stock === 0 ? 'text-red-700 font-bold' : 'text-orange-600'}`}>
+                                <div className="text-sm font-semibold text-slate-800">{product.name}</div>
+                                <div className={`text-xs font-medium ${stock === 0 ? 'text-red-700' : 'text-orange-600'}`}>
                                   Stock: {stock} {product.unit || 'unités'}
                                   {minStock > 0 && ` (Min: ${minStock})`}
                                 </div>
@@ -397,7 +396,7 @@ export default function Dashboard() {
                               <Link
                                 to="/products"
                                 onClick={() => setShowOutOfStockList(false)}
-                                className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700"
+                                className="text-xs bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-3 py-1.5 rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 shadow-md"
                               >
                                 Modifier
                               </Link>
@@ -413,12 +412,12 @@ export default function Dashboard() {
             
             {/* Filtre de période pour ventes et dépenses */}
             {stat.hasFilter && (
-              <div className="mt-3 flex gap-1">
+              <div className="mt-4 flex gap-1.5 flex-wrap">
                 <button
                   onClick={() => stat.setFilter('all')}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${
                     stat.filter === 'all' 
-                      ? 'bg-slate-800 text-white' 
+                      ? 'bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md' 
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -426,9 +425,9 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => stat.setFilter('day')}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${
                     stat.filter === 'day' 
-                      ? 'bg-slate-800 text-white' 
+                      ? 'bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md' 
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -436,9 +435,9 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => stat.setFilter('week')}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${
                     stat.filter === 'week' 
-                      ? 'bg-slate-800 text-white' 
+                      ? 'bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md' 
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -446,9 +445,9 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => stat.setFilter('month')}
-                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${
                     stat.filter === 'month' 
-                      ? 'bg-slate-800 text-white' 
+                      ? 'bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md' 
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >

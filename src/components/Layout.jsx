@@ -120,42 +120,53 @@ export default function Layout({ user }) {
         )}
         
         {/* Sidebar */}
-        <aside className={`${sidebarOpen ? 'translate-x-0' : isMobile ? '-translate-x-full' : 'w-16'} ${isMobile ? 'fixed inset-y-0 left-0 z-40 w-64' : 'relative'} bg-white border-r border-slate-100 flex flex-col transition-all duration-200 shadow-sm flex-shrink-0`}>
+        <aside className={`${sidebarOpen ? 'translate-x-0' : isMobile ? '-translate-x-full' : 'w-16'} ${isMobile ? 'fixed inset-y-0 left-0 z-40 w-64' : 'relative'} bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 flex flex-col transition-all duration-300 shadow-xl flex-shrink-0`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-4 py-5 border-b border-slate-200/50 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg">
           {!isMobile && sidebarOpen && (
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-primary-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-black text-sm">N</span>
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
+                <span className="text-white font-black text-lg">N</span>
               </div>
               <div>
-                <span className="font-black text-slate-800 text-base">Noppalé</span>
-                <p className="text-xs text-slate-400 -mt-0.5">Gestion Com.</p>
+                <span className="font-black text-white text-lg drop-shadow-md">Noppalé</span>
+                <p className="text-xs text-white/80 -mt-0.5 font-medium">Gestion Com.</p>
               </div>
             </div>
           )}
           {!isMobile && (
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 shadow-md backdrop-blur-sm"
             >
-              {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
+              {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           )}
           {isMobile && (
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"
+              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 shadow-md backdrop-blur-sm"
             >
-              <X size={20} />
+              <X size={22} />
             </button>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.map(({ path, label, icon: Icon }) => {
+        <nav className="flex-1 px-3 py-5 space-y-2 overflow-y-auto">
+          {navItems.map(({ path, label, icon: Icon }, index) => {
             const isActive = location.pathname === path
+            const gradients = [
+              'from-blue-500 to-cyan-400',
+              'from-emerald-500 to-teal-400',
+              'from-violet-500 to-purple-400',
+              'from-orange-500 to-amber-400',
+              'from-pink-500 to-rose-400',
+              'from-slate-600 to-slate-500',
+              'from-indigo-500 to-blue-400'
+            ]
+            const gradient = gradients[index % gradients.length]
+            
             return (
               <button
                 key={path}
@@ -163,41 +174,56 @@ export default function Layout({ user }) {
                   navigate(path)
                   if (isMobile) setSidebarOpen(false)
                 }}
-                className={`sidebar-item w-full ${isActive ? 'active' : ''} ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
+                className={`group w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-gradient-to-r ' + gradient + ' text-white shadow-lg shadow-' + gradient.split('-')[1] + '-500/30 transform scale-[1.02]' 
+                    : 'text-slate-600 hover:bg-gradient-to-r hover:from-slate-100 hover:to-slate-50 hover:shadow-md'
+                } ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
                 title={(!sidebarOpen && !isMobile) ? label : ''}
               >
-                <Icon size={18} className="flex-shrink-0" />
-                {(sidebarOpen || isMobile) && <span className="truncate">{label}</span>}
-                {(sidebarOpen || isMobile) && isActive && <ChevronRight size={14} className="ml-auto text-primary-400" />}
+                <div className={`relative ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'} transition-colors duration-200`}>
+                  <Icon size={20} className="flex-shrink-0" />
+                  {isActive && (
+                    <div className="absolute -inset-1 bg-white/30 rounded-lg blur-sm -z-10"></div>
+                  )}
+                </div>
+                {(sidebarOpen || isMobile) && (
+                  <span className={`font-medium truncate ${isActive ? 'text-white' : 'text-slate-700 group-hover:text-slate-900'}`}>
+                    {label}
+                  </span>
+                )}
+                {(sidebarOpen || isMobile) && isActive && (
+                  <ChevronRight size={16} className="ml-auto text-white/80" />
+                )}
               </button>
             )
           })}
         </nav>
 
         {/* User section */}
-        <div className="border-t border-slate-100 p-3">
+        <div className="border-t border-slate-200/50 p-4 bg-gradient-to-t from-slate-100/50 to-transparent">
           {(sidebarOpen || isMobile) && (
-            <div className="flex items-center gap-3 px-2 py-2 mb-2">
-              <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-primary-700 font-bold text-xs">
+            <div className="flex items-center gap-3 px-3 py-3 mb-3 bg-white rounded-xl shadow-md border border-slate-200">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg">
+                <span className="text-white font-bold text-sm">
                   {currentUser?.email?.slice(0, 2).toUpperCase() || 'US'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-700 truncate">
+                <p className="text-sm font-bold text-slate-800 truncate">
                   {currentUser?.name || currentUser?.email?.split('@')[0] || 'Utilisateur'}
                 </p>
-                <p className="text-xs text-slate-400 truncate">{currentUser?.email}</p>
+                <p className="text-xs text-slate-500 truncate">{currentUser?.email}</p>
               </div>
             </div>
           )}
           <button
             onClick={handleLogout}
-            className={`sidebar-item w-full text-red-500 hover:bg-red-50 hover:text-red-600 ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
+            className={`group w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 bg-gradient-to-r from-red-500 to-rose-500 text-white shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:scale-[1.02] ${(!sidebarOpen && !isMobile) ? 'justify-center px-3' : ''}`}
             title={(!sidebarOpen && !isMobile) ? 'Déconnexion' : ''}
           >
-            <LogOut size={18} className="flex-shrink-0" />
-            {(sidebarOpen || isMobile) && <span>Déconnexion</span>}
+            <LogOut size={20} className="flex-shrink-0" />
+            {(sidebarOpen || isMobile) && <span className="font-medium">Déconnexion</span>}
           </button>
         </div>
       </aside>
