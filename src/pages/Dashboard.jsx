@@ -75,8 +75,10 @@ export default function Dashboard() {
   const [salesPeriod, setSalesPeriod] = useState('all')
   const [expensesPeriod, setExpensesPeriod] = useState('all')
   const [customersPeriod, setCustomersPeriod] = useState('all')
+  const [debtPeriod, setDebtPeriod] = useState('all')
   const [showOutOfStockList, setShowOutOfStockList] = useState(false)
   const [salesExpensesMode, setSalesExpensesMode] = useState('sales') // 'sales' ou 'expenses'
+  const [customersDebtMode, setCustomersDebtMode] = useState('customers') // 'customers' ou 'debt'
   const [topProducts, setTopProducts] = useState([
     { name: 'Produit test 1', quantity: 100, revenue: 50000, rank: 1, percentage: '45.5' },
     { name: 'Produit test 2', quantity: 80, revenue: 40000, rank: 2, percentage: '36.4' },
@@ -85,6 +87,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     totalSales: 0,
     totalExpenses: 0,
+    totalDebt: 0,
     totalProducts: 0,
     totalCustomers: 0,
     uniqueCustomers: 0,
@@ -99,7 +102,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadStats()
-  }, [salesPeriod, expensesPeriod, customersPeriod, salesExpensesMode])
+  }, [salesPeriod, expensesPeriod, customersPeriod, debtPeriod, salesExpensesMode, customersDebtMode])
 
   const loadStats = () => {
     try {
@@ -119,6 +122,12 @@ export default function Dashboard() {
       // Filtrer les dépenses selon la période
       const filteredExpenses = expensesPeriod === 'all' ? expenses : filterByPeriod(expenses, 'createdAt', expensesPeriod)
       const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
+
+      // Calculer le total des dettes en cours (ventes à crédit non remboursées)
+      const filteredDebtSales = debtPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', debtPeriod)
+      const totalDebt = filteredDebtSales
+        .filter(sale => sale.paymentMethod === 'credit' && sale.creditStatus === 'pending')
+        .reduce((sum, sale) => sum + (sale.total || 0), 0)
 
       // Filtrer les ventes selon la période pour le calcul des clients uniques
       const filteredSalesForCustomers = customersPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', customersPeriod)
@@ -219,6 +228,7 @@ export default function Dashboard() {
       setStats({
         totalSales,
         totalExpenses,
+        totalDebt,
         totalProducts: products.length,
         totalCustomers: customers.length,
         uniqueCustomers,
@@ -249,7 +259,7 @@ export default function Dashboard() {
     },
     {
       title: salesExpensesMode === 'sales' ? 'Ventes' : 'Dépenses',
-      value: salesExpensesMode === 'sales' 
+      value: salesExpensesMode === 'sales'
         ? formatCurrency(stats.totalSales || 0)
         : formatCurrency(stats.totalExpenses || 0),
       icon: salesExpensesMode === 'sales' ? DollarSign : ShoppingCart,
@@ -265,6 +275,24 @@ export default function Dashboard() {
       setMode: setSalesExpensesMode
     },
     {
+      title: customersDebtMode === 'customers' ? 'Clients' : 'Dette en cours',
+      value: customersDebtMode === 'customers'
+        ? stats.uniqueCustomers.toString()
+        : formatCurrency(stats.totalDebt || 0),
+      subtitle: customersDebtMode === 'customers' && stats.totalCustomers > 0 ? `${stats.totalCustomers} au total` : null,
+      icon: customersDebtMode === 'customers' ? Users : DollarSign,
+      color: customersDebtMode === 'customers' ? 'text-purple-600' : 'text-orange-600',
+      bgColor: customersDebtMode === 'customers' ? 'bg-purple-50' : 'bg-orange-50',
+      change: customersDebtMode === 'customers' ? '+5' : '-5%',
+      changePositive: customersDebtMode === 'customers',
+      hasFilter: true,
+      filter: customersDebtMode === 'customers' ? customersPeriod : debtPeriod,
+      setFilter: customersDebtMode === 'customers' ? setCustomersPeriod : setDebtPeriod,
+      hasModeToggle: true,
+      mode: customersDebtMode,
+      setMode: setCustomersDebtMode
+    },
+    {
       title: 'Produits',
       value: formatCurrency(stats.totalStockValue || 0),
       subtitle: `${stats.totalStock} produits`,
@@ -275,19 +303,6 @@ export default function Dashboard() {
       change: '+3',
       changePositive: true,
       hasFilter: false
-    },
-    {
-      title: 'Clients',
-      value: stats.uniqueCustomers.toString(),
-      subtitle: stats.totalCustomers > 0 ? `${stats.totalCustomers} au total` : null,
-      icon: Users,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      change: '+5',
-      changePositive: true,
-      hasFilter: true,
-      filter: customersPeriod,
-      setFilter: setCustomersPeriod
     }
   ]
 

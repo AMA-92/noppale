@@ -637,6 +637,39 @@ export default function Sales() {
     setShowDetailsModal(true)
   }
 
+  const markAsRepaid = async (sale) => {
+    try {
+      await appStorage.updateSaleCreditStatus(sale.id, 'repaid')
+      toast.success('Vente marquée comme remboursée')
+      await loadSales()
+    } catch (error) {
+      console.error('Erreur lors du marquage comme remboursé:', error)
+      toast.error('Erreur lors du marquage comme remboursé')
+    }
+  }
+
+  const getCreditStatusBadge = (sale) => {
+    if (sale.paymentMethod !== 'credit') return null
+    
+    if (sale.creditStatus === 'repaid') {
+      return (
+        <span className="badge badge-green">
+          Remboursé
+        </span>
+      )
+    }
+    
+    return (
+      <button
+        onClick={() => markAsRepaid(sale)}
+        className="badge badge-orange hover:bg-orange-600 cursor-pointer transition-colors"
+        title="Marquer comme remboursé"
+      >
+        À crédit
+      </button>
+    )
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-64"><div className="spinner"></div></div>
   }
@@ -679,6 +712,7 @@ export default function Sales() {
                 <th>Date</th>
                 <th>Montant</th>
                 <th>Paiement</th>
+                <th>Statut crédit</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -706,7 +740,10 @@ export default function Sales() {
                     </span>
                   </td>
                   <td>
-                    <button 
+                    {getCreditStatusBadge(sale)}
+                  </td>
+                  <td>
+                    <button
                       onClick={() => openSaleDetails(sale)}
                       className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1"
                     >

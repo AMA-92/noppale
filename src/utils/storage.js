@@ -373,6 +373,8 @@ export const appStorage = {
         total: sale.total,
         paymentMethod: sale.payment_method,
         payment_method: sale.payment_method,
+        creditStatus: sale.credit_status || 'pending',
+        credit_status: sale.credit_status || 'pending',
         notes: sale.notes,
         createdAt: sale.created_at,
         created_at: sale.created_at,
@@ -474,6 +476,30 @@ export const appStorage = {
       return true
     } catch (error) {
       console.error('Erreur lors de la suppression de la vente:', error)
+      throw error
+    }
+  },
+
+  async updateSaleCreditStatus(id, creditStatus) {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('sales')
+        .update({
+          credit_status: creditStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut de crédit:', error)
       throw error
     }
   },

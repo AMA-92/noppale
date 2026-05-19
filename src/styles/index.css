@@ -549,6 +549,10 @@ body.sale-modal-open .pwa-install-banner {
 .payment-carte { @apply bg-purple-100 text-purple-700; }
 .payment-credit { @apply bg-red-500 text-white font-bold; }
 
+/* Credit status badges */
+.badge-orange { @apply bg-orange-100 text-orange-700; }
+.badge-green { @apply bg-green-100 text-green-700; }
+
 /* Dark mode styles */
 .dark {
   color-scheme: dark;
