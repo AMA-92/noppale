@@ -280,8 +280,8 @@ export default function Dashboard() {
       title: t('revenue'),
       value: formatCurrency(stats.totalSales || 0),
       icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      gradient: 'from-emerald-500 to-teal-400',
+      shadowColor: 'shadow-emerald-500/30',
       change: '+12%',
       changePositive: true,
       hasFilter: false
@@ -292,8 +292,8 @@ export default function Dashboard() {
         ? formatCurrency(stats.totalSales || 0)
         : formatCurrency(stats.totalExpenses || 0),
       icon: salesExpensesMode === 'sales' ? TrendingUp : TrendingDown,
-      color: salesExpensesMode === 'sales' ? 'text-green-600' : 'text-red-600',
-      bgColor: salesExpensesMode === 'sales' ? 'bg-green-50' : 'bg-red-50',
+      gradient: salesExpensesMode === 'sales' ? 'from-green-500 to-emerald-400' : 'from-red-500 to-rose-400',
+      shadowColor: salesExpensesMode === 'sales' ? 'shadow-green-500/30' : 'shadow-red-500/30',
       change: salesExpensesMode === 'sales' ? '+12%' : '-8%',
       changePositive: salesExpensesMode === 'sales',
       hasFilter: true,
@@ -308,8 +308,8 @@ export default function Dashboard() {
       value: stats.totalProducts.toString(),
       subtitle: `${t('stockValue')}: ${formatCurrency(stats.totalStockValue)}`,
       icon: Package,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      gradient: 'from-blue-500 to-indigo-400',
+      shadowColor: 'shadow-blue-500/30',
       change: '+3',
       changePositive: true,
       hasFilter: false,
@@ -323,8 +323,8 @@ export default function Dashboard() {
         : formatCurrency(stats.totalDebt || 0),
       subtitle: customersDebtMode === 'customers' && stats.totalCustomers > 0 ? `${stats.totalCustomers} au total` : null,
       icon: customersDebtMode === 'customers' ? Users : DollarSign,
-      color: customersDebtMode === 'customers' ? 'text-purple-600' : 'text-orange-600',
-      bgColor: customersDebtMode === 'customers' ? 'bg-purple-50' : 'bg-orange-50',
+      gradient: customersDebtMode === 'customers' ? 'from-violet-500 to-purple-400' : 'from-orange-500 to-amber-400',
+      shadowColor: customersDebtMode === 'customers' ? 'shadow-violet-500/30' : 'shadow-orange-500/30',
       change: customersDebtMode === 'customers' ? '+5' : '-5%',
       changePositive: customersDebtMode === 'customers',
       hasFilter: true,
@@ -353,10 +353,10 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cards.map((stat, index) => (
-          <div key={index} className={`card p-6 ${stat.outOfStockCount !== undefined ? 'relative out-of-stock-dropdown' : ''}`}>
+          <div key={index} className={`relative group bg-white rounded-2xl p-6 shadow-lg ${stat.shadowColor} hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-slate-100 ${stat.outOfStockCount !== undefined ? 'relative out-of-stock-dropdown' : ''}`}>
             <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <div className={`p-4 rounded-2xl bg-gradient-to-br ${stat.gradient} shadow-lg ${stat.shadowColor}`}>
+                <stat.icon className="w-7 h-7 text-white" />
               </div>
               <div className="flex items-center gap-2">
                 {stat.hasModeToggle && (
@@ -368,7 +368,7 @@ export default function Dashboard() {
                         stat.setMode(stat.mode === 'customers' ? 'debt' : 'customers')
                       }
                     }}
-                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
+                    className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 transition-all duration-200 shadow-sm"
                     title={`Basculer vers ${
                       stat.mode === 'sales' ? 'Dépenses' :
                       stat.mode === 'expenses' ? 'Ventes' :
@@ -378,62 +378,62 @@ export default function Dashboard() {
                     <RefreshCw className="w-4 h-4 text-slate-600" />
                   </button>
                 )}
-                <div className={`flex items-center gap-1 text-sm font-medium ${
-                  stat.changePositive ? 'text-green-600' : 'text-red-600'
+                <div className={`flex items-center gap-1 text-sm font-bold px-3 py-1.5 rounded-full ${
+                  stat.changePositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                 }`}>
-                  <ArrowUpRight size={16} />
+                  {stat.changePositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                   {stat.change}
                 </div>
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-slate-800">{stat.value}</h3>
-            <p className="text-sm text-slate-500">{stat.title}</p>
+            <h3 className="text-3xl font-bold text-slate-800 mb-1">{stat.value}</h3>
+            <p className="text-sm font-medium text-slate-500">{stat.title}</p>
             {stat.subtitle && <p className="text-xs text-slate-400 mt-1">{stat.subtitle}</p>}
             
             {stat.outOfStockCount !== undefined && stat.outOfStockCount > 0 && (
               <div className="relative">
                 <button 
                   onClick={() => setShowOutOfStockDropdown(!showOutOfStockDropdown)}
-                  className="mt-2 px-2 py-1 bg-red-100 text-red-700 text-xs rounded hover:bg-red-200 transition-colors"
+                  className="mt-3 px-3 py-1.5 bg-gradient-to-r from-red-500 to-rose-500 text-white text-xs font-medium rounded-xl hover:from-red-600 hover:to-rose-600 transition-all duration-200 shadow-md shadow-red-500/30"
                 >
                   ⚠️ {stat.outOfStockCount} {t('outOfStock')}
                 </button>
                 
                 {showOutOfStockDropdown && (
-                  <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                    <div className="p-3 border-b border-slate-100">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-slate-800">{t('outOfStockProducts')}</h4>
+                  <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-red-200 rounded-2xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-bold text-red-700">{t('outOfStockProducts')}</h4>
                         <button 
                           onClick={() => setShowOutOfStockDropdown(false)}
-                          className="p-1 hover:bg-slate-100 rounded"
+                          className="p-1.5 hover:bg-red-50 rounded-lg transition-colors"
                         >
-                          <X size={14} />
+                          <X size={16} />
                         </button>
                       </div>
-                    </div>
-                    <div className="max-h-32 overflow-y-auto">
-                      {stats.outOfStockProducts.length > 0 ? (
-                        stats.outOfStockProducts.map((product, index) => (
-                          <div key={index} className="px-3 py-2 hover:bg-slate-50 border-b border-slate-50 last:border-b-0">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-slate-800 text-sm">{product.name}</div>
-                                <div className="text-xs text-slate-500">
-                                  Stock: {product.stock || 0} | Min: {product.minStock || 0}
+                      <div className="max-h-48 overflow-y-auto">
+                        {stats.outOfStockProducts.length > 0 ? (
+                          stats.outOfStockProducts.map((product, index) => (
+                            <div key={index} className="px-3 py-2 hover:bg-red-50 border-b border-red-50 last:border-b-0 rounded-xl transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-semibold text-slate-800 text-sm">{product.name}</div>
+                                  <div className="text-xs text-slate-500">
+                                    Stock: {product.stock || 0} | Min: {product.minStock || 0}
+                                  </div>
+                                </div>
+                                <div className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">
+                                  {product.stock === 0 ? 'Rupture' : 'Stock faible'}
                                 </div>
                               </div>
-                              <div className="text-xs text-red-600 font-medium">
-                                {product.stock === 0 ? 'Rupture' : 'Stock faible'}
-                              </div>
                             </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-4 text-center text-slate-500 text-sm">
+                            {t('noOutOfStock')}
                           </div>
-                        ))
-                      ) : (
-                        <div className="px-3 py-4 text-center text-slate-500 text-sm">
-                          {t('noOutOfStock')}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -441,14 +441,14 @@ export default function Dashboard() {
             )}
             
             {stat.hasFilter && (
-              <div className="mt-3 flex gap-1">
+              <div className="mt-4 flex gap-1.5 flex-wrap">
                 {['all', 'day', 'week', 'month'].map(period => (
                   <button
                     key={period}
                     onClick={() => stat.setFilter(period)}
-                    className={`px-2 py-1 text-xs rounded transition-colors ${
+                    className={`px-3 py-1.5 text-xs font-medium rounded-xl transition-all duration-200 ${
                       stat.filter === period
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-md'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
