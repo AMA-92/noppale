@@ -332,12 +332,22 @@ export default function Dashboard() {
                 <stat.icon className={`w-6 h-6 ${stat.color}`} />
               </div>
               <div className="flex items-center gap-2">
-                {/* Bouton de bascule pour Ventes/Dépenses */}
+                {/* Bouton de bascule pour Ventes/Dépenses ou Clients/Dette */}
                 {stat.hasModeToggle && (
                   <button
-                    onClick={() => stat.setMode(stat.mode === 'sales' ? 'expenses' : 'sales')}
+                    onClick={() => {
+                      if (stat.mode === 'sales' || stat.mode === 'expenses') {
+                        stat.setMode(stat.mode === 'sales' ? 'expenses' : 'sales')
+                      } else if (stat.mode === 'customers' || stat.mode === 'debt') {
+                        stat.setMode(stat.mode === 'customers' ? 'debt' : 'customers')
+                      }
+                    }}
                     className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors"
-                    title={`Basculer vers ${stat.mode === 'sales' ? 'Dépenses' : 'Ventes'}`}
+                    title={`Basculer vers ${
+                      stat.mode === 'sales' ? 'Dépenses' :
+                      stat.mode === 'expenses' ? 'Ventes' :
+                      stat.mode === 'customers' ? 'Dette en cours' : 'Clients'
+                    }`}
                   >
                     <RefreshCw className="w-4 h-4 text-slate-600" />
                   </button>

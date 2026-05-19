@@ -6,7 +6,7 @@ import { useShopInfoRealtime } from '../hooks/useRealtime.jsx'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   BarChart3, LogOut, Settings, Wallet, Menu, X,
-  TrendingUp, ChevronRight, Store
+  TrendingUp, ChevronRight, Store, Mail
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -38,6 +38,7 @@ export default function Layout({ user }) {
     { path: '/expenses', label: t('expenses'), icon: Wallet },
     { path: '/reports', label: t('reports'), icon: BarChart3 },
     { path: '/settings', label: t('settings'), icon: Settings },
+    { path: '/contact', label: 'Contacter nous', icon: Mail },
   ]
 
   const loadShopInfo = async () => {

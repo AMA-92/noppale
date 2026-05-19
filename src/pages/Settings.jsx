@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { authStorage, usersStorage, appStorage } from '../utils/storage'
-import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload } from 'lucide-react'
+import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload, Mail, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime, useUserPreferencesRealtime, useSecretCodeRealtime } from '../hooks/useRealtime.jsx'
@@ -459,33 +459,60 @@ export default function Settings() {
             
             <div className="space-y-3">
               {section.items.map((item, itemIndex) => (
-                <div
-                  key={itemIndex}
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
-                    item.danger 
-                      ? 'border-red-200 bg-red-50 hover:bg-red-100' 
-                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
-                  } transition-colors cursor-pointer`}
-                  onClick={item.action}
-                >
-                  <div>
-                    <h3 className={`font-medium ${
-                      item.danger ? 'text-red-700' : 'text-slate-800'
-                    }`}>
-                      {item.label}
-                    </h3>
-                    <p className={`text-sm ${
-                      item.danger ? 'text-red-600' : 'text-slate-500'
-                    }`}>
-                      {item.description}
-                    </p>
+                item.noAction ? (
+                  <div
+                    key={itemIndex}
+                    className="p-4 rounded-lg border border-slate-200 bg-slate-50"
+                  >
+                    <div>
+                      <h3 className="font-medium text-slate-800 mb-3">
+                        {item.label}
+                      </h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Mail size={16} className="text-primary-600" />
+                          <a href="mailto:medconnect092@gmail.com" className="text-primary-600 hover:underline">
+                            medconnect092@gmail.com
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Phone size={16} className="text-primary-600" />
+                          <a href="tel:+221778762082" className="text-primary-600 hover:underline">
+                            +221 77 876 20 82
+                          </a>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-slate-400">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
+                ) : (
+                  <div
+                    key={itemIndex}
+                    className={`flex items-center justify-between p-4 rounded-lg border ${
+                      item.danger 
+                        ? 'border-red-200 bg-red-50 hover:bg-red-100' 
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100'
+                    } transition-colors cursor-pointer`}
+                    onClick={item.action}
+                  >
+                    <div>
+                      <h3 className={`font-medium ${
+                        item.danger ? 'text-red-700' : 'text-slate-800'
+                      }`}>
+                        {item.label}
+                      </h3>
+                      <p className={`text-sm ${
+                        item.danger ? 'text-red-600' : 'text-slate-500'
+                      }`}>
+                        {item.description}
+                      </p>
+                    </div>
+                    <div className="text-slate-400">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
+                )
               ))}
             </div>
           </div>

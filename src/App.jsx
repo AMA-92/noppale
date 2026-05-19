@@ -11,6 +11,7 @@ import Sales from './pages/Sales'
 import Reports from './pages/Reports'
 import Expenses from './pages/Expenses-minimal'
 import Settings from './pages/Settings'
+import Contact from './pages/Contact'
 import LoadingScreen from './components/LoadingScreen'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 
@@ -61,6 +62,7 @@ function App() {
             <Route path="reports" element={<Reports />} />
             <Route path="expenses" element={<Expenses />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="contact" element={<Contact />} />
           </Route>
         </Routes>
       </Router>
