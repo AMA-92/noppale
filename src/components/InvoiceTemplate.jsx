@@ -278,7 +278,6 @@ const InvoiceTemplate = ({
           </div>
         </div>
       </div>
-    </div>
   );
 };
 
