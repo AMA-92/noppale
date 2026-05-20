@@ -267,37 +267,38 @@ const InvoiceTemplate = ({
 
         {/* FOOTER */}
         <div className="bg-white border-t-2 border-green-100 p-6">
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-3 gap-4 mb-4 items-center">
             {/* Address */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
                 <MapPin size={16} className="text-white" />
               </div>
-              <p className="text-gray-700 text-sm">{address}</p>
+              <p className="text-gray-700 text-sm truncate min-w-0">{address}</p>
             </div>
 
             {/* Phone */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Phone size={16} className="text-white" />
               </div>
-              <p className="text-gray-700 text-sm">{phone}</p>
+              <p className="text-gray-700 text-sm truncate min-w-0">{phone}</p>
             </div>
 
             {/* Email */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Mail size={16} className="text-white" />
               </div>
-              <p className="text-gray-700 text-sm">{email}</p>
+              <p className="text-gray-700 text-sm truncate min-w-0">{email}</p>
             </div>
           </div>
 
           {/* Thank you message */}
-          <div className="text-center">
+          <div className="text-center space-y-2">
             <p className="text-base font-bold text-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
               Merci pour votre confiance !
             </p>
+            <p className="text-green-600 text-sm">Nous restons à votre disposition pour toute question.</p>
           </div>
         </div>
       </div>
