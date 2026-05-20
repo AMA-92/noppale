@@ -237,11 +237,18 @@ export default function Dashboard() {
 
         // Filtrer les ventes pour cette journée
         const daySales = sales.filter(sale => {
+          // Normaliser pour éviter les décalages de timezone (ex: 19/05 non compté)
           const saleDate = new Date(sale.created_at)
-          return saleDate >= date && saleDate <= nextDate
+          if (Number.isNaN(saleDate.getTime())) return false
+
+          return saleDate.getFullYear() === date.getFullYear() &&
+            saleDate.getMonth() === date.getMonth() &&
+            saleDate.getDate() === date.getDate()
         })
 
+
         const dayTotal = daySales.reduce((sum, sale) => sum + (sale.total || 0), 0)
+
 
         evolutionData.push({
           date: date,

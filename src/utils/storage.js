@@ -21,13 +21,16 @@ const getCurrentUserId = async () => {
 // Gestion des utilisateurs avec Supabase Auth
 export const usersStorage = {
   // Inscription d'un utilisateur
-  async signUp(email, password, name) {
+  async signUp(email, password, name, phone = null) {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name },
+          data: { 
+            name,
+            phone: phone || null
+          },
           emailConfirmTo: false // Désactiver la confirmation par email
         }
       })
@@ -84,9 +87,10 @@ export const usersStorage = {
   },
 
   // Mettre à jour le profil (nom dans les métadonnées)
-  async updateProfile({ name, email }) {
+  async updateProfile({ name, email, phone }) {
     const updates = { data: { name } }
     if (email) updates.email = email
+    if (phone) updates.data.phone = phone
 
     const { data, error } = await supabase.auth.updateUser(updates)
     if (error) throw error

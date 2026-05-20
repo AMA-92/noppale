@@ -619,44 +619,44 @@ export default function Sales() {
       {/* Sales Table */}
       <div className="card">
         <div className="table-container">
-          <table>
+          <table className="w-full border-collapse border border-slate-300">
             <thead>
-              <tr>
-                <th>Client</th>
-                <th>Date</th>
-                <th>Montant</th>
-                <th>Paiement</th>
-                <th>Statut crédit</th>
-                <th>Actions</th>
+              <tr className="bg-gradient-to-r from-blue-100 to-blue-200">
+                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Client</th>
+                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Date</th>
+                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Montant</th>
+                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Paiement</th>
+                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Statut crédit</th>
+                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map(sale => (
-                <tr key={sale.id}>
-                  <td>
+                <tr key={sale.id} className="border-b border-slate-300 hover:bg-slate-50">
+                  <td className="border border-slate-300 px-4 py-3">
                     <div className="flex items-center gap-2">
                       <User size={16} className="text-slate-400" />
                       {sale.customerName}
                     </div>
                   </td>
-                  <td>
+                  <td className="border border-slate-300 px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Calendar size={16} className="text-slate-400" />
                       {formatDate(sale.createdAt || new Date())}
                     </div>
                   </td>
-                  <td className="font-semibold text-green-600">
+                  <td className="border border-slate-300 px-4 py-3 font-semibold text-green-600">
                     {formatCurrency(sale.total || 0)}
                   </td>
-                  <td>
+                  <td className="border border-slate-300 px-4 py-3">
                     <span className={`badge ${getPaymentMethod(sale.paymentMethod)?.color ? getPaymentMethod(sale.paymentMethod).color : 'badge-gray'}`}>
                       {getPaymentMethod(sale.paymentMethod)?.label || sale.paymentMethod}
                     </span>
                   </td>
-                  <td>
+                  <td className="border border-slate-300 px-4 py-3">
                     {getCreditStatusBadge(sale)}
                   </td>
-                  <td>
+                  <td className="border border-slate-300 px-4 py-3">
                     <button
                       onClick={() => openSaleDetails(sale)}
                       className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1"
