@@ -91,10 +91,10 @@ const InvoiceTemplate = ({
     const imgX = (pdfWidth - imgWidth * ratio) / 2;
     const imgY = 0;
     
-    // Format filename: facture-{client}-{date}
+    // Format filename: facture de (nom du client - date)
     const formattedDate = formatDateForFilename(date);
     const sanitizedCustomerName = customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    const filename = `facture-${sanitizedCustomerName}-${formattedDate}.pdf`;
+    const filename = `facture de (${sanitizedCustomerName}-${formattedDate}).pdf`;
     
     pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
     pdf.save(filename);
@@ -199,27 +199,25 @@ const InvoiceTemplate = ({
 
           {/* ITEMS TABLE */}
           <div className="mb-6">
-            <div className="bg-gradient-to-r from-green-200 via-green-100 to-emerald-100 rounded-xl overflow-hidden shadow-lg">
+            <div className="rounded-xl overflow-hidden shadow-lg border border-green-200">
               <table className="w-full">
                 <thead>
-                  <tr className="text-green-800">
-                    <th className="px-4 py-3 text-left font-bold text-xs uppercase tracking-wider">Article</th>
-                    <th className="px-4 py-3 text-center font-bold text-xs uppercase tracking-wider">Quantité</th>
-                    <th className="px-4 py-3 text-right font-bold text-xs uppercase tracking-wider">Prix Unitaire</th>
-                    <th className="px-4 py-3 text-right font-bold text-xs uppercase tracking-wider">Total</th>
+                  <tr className="bg-gradient-to-r from-green-200 via-green-100 to-emerald-100 text-green-800">
+                    <th className="px-4 py-3 text-left font-bold text-xs uppercase tracking-wider border-b border-green-300">Article</th>
+                    <th className="px-4 py-3 text-center font-bold text-xs uppercase tracking-wider border-b border-green-300">Quantité</th>
+                    <th className="px-4 py-3 text-right font-bold text-xs uppercase tracking-wider border-b border-green-300">Prix Unitaire</th>
+                    <th className="px-4 py-3 text-right font-bold text-xs uppercase tracking-wider border-b border-green-300">Total</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
                   {items.map((item, index) => (
                     <tr 
                       key={index} 
-                      className={`border-b border-green-100 hover:bg-green-50 transition-colors duration-200 ${
-                        index === items.length - 1 ? 'border-b-0' : ''
-                      }`}
+                      className="border-b border-green-200"
                     >
-                      <td className="px-4 py-3 text-gray-800 font-medium text-sm">{item.name}</td>
-                      <td className="px-4 py-3 text-center text-gray-600 text-sm">{item.quantity}</td>
-                      <td className="px-4 py-3 text-right text-gray-600 text-sm">{formatCurrency(item.price)}</td>
+                      <td className="px-4 py-3 text-gray-800 font-medium text-sm border-r border-green-200">{item.name}</td>
+                      <td className="px-4 py-3 text-center text-gray-600 text-sm border-r border-green-200">{item.quantity}</td>
+                      <td className="px-4 py-3 text-right text-gray-600 text-sm border-r border-green-200">{formatCurrency(item.price)}</td>
                       <td className="px-4 py-3 text-right text-gray-800 font-semibold text-sm">{formatCurrency(item.total)}</td>
                     </tr>
                   ))}
