@@ -516,6 +516,7 @@ export default function Sales() {
     const root = createRoot(tempDiv)
     
     const invoiceData = {
+      shopLogo: shopInfo.logo || '',
       shopName: shopInfo.name || 'MA BOUTIQUE',
       customerName: selectedSale.customerName || 'Client',
       invoiceNumber: selectedSale.id,
