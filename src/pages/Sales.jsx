@@ -522,100 +522,74 @@ export default function Sales() {
         const clientName = selectedSale.customerName.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '') // Nettoyer le nom
         const fileName = `Facture_${clientName}_${formattedDate}.pdf`
         
-        // Générer le HTML de la facture avec le nouveau design professionnel
+        // Générer le HTML de la facture avec le modèle exact de référence
         tempDiv.innerHTML = `
           <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto;">
             <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
               <div style="flex: 1;">
-                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 80px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
-                <h1 style="color: #0066cc; font-size: 28px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
+                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 60px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 15px; text-align: center; color: #999; font-size: 11px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
+                <h1 style="color: #0066cc; font-size: 20px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
               </div>
               <div style="text-align: right; flex: 1;">
-                <h2 style="color: #333; font-size: 32px; margin: 0; font-weight: bold; letter-spacing: 2px;">FACTURE</h2>
-                <p style="color: #666; font-size: 14px; margin: 5px 0;">N°${selectedSale.id}</p>
-                <p style="color: #666; font-size: 14px; margin: 5px 0;">${formatDate(new Date(selectedSale.createdAt))}</p>
+                <h2 style="color: #333; font-size: 24px; margin: 0; font-weight: bold;">FACTURE</h2>
+                <p style="color: #666; font-size: 12px; margin: 3px 0;">N°${selectedSale.id}</p>
+                <p style="color: #666; font-size: 12px; margin: 3px 0;">${formatDate(new Date(selectedSale.createdAt))}</p>
               </div>
             </div>
 
             <!-- Client Information -->
-            <div style="background: #f8f9fa; border-left: 4px solid #0066cc; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-              <h3 style="color: #0066cc; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Informations Client</h3>
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div>
-                  <span style="color: #666; font-size: 12px;">Nom:</span>
-                  <p style="color: #333; font-size: 14px; margin: 2px 0 0 0; font-weight: 500;">${selectedSale.customerName || 'Client'}</p>
-                </div>
-                <div>
-                  <span style="color: #666; font-size: 12px;">Date:</span>
-                  <p style="color: #333; font-size: 14px; margin: 2px 0 0 0; font-weight: 500;">${formatDate(new Date(selectedSale.createdAt))}</p>
-                </div>
-              </div>
+            <div style="margin-bottom: 15px;">
+              <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Nom:</strong> ${selectedSale.customerName || 'Client'}</p>
+              <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Date:</strong> ${formatDate(new Date(selectedSale.createdAt))}</p>
             </div>
 
             <!-- Payment Information -->
-            <div style="background: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-              <h3 style="color: #28a745; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Informations de Paiement</h3>
-              <div>
-                <span style="color: #666; font-size: 12px;">Mode:</span>
-                <p style="color: #333; font-size: 14px; margin: 2px 0 0 0; font-weight: 500;">${getPaymentMethod(selectedSale.paymentMethod)?.label || selectedSale.paymentMethod}</p>
-              </div>
-              ${selectedSale.amountReceived > 0 ? `
-                <div style="margin-top: 10px;">
-                  <span style="color: #666; font-size: 12px;">Montant reçu:</span>
-                  <p style="color: #333; font-size: 14px; margin: 2px 0 0 0; font-weight: 500;">${formatCurrency(selectedSale.amountReceived)}</p>
-                  ${selectedSale.change > 0 ? `
-                    <div style="margin-top: 5px;">
-                      <span style="color: #666; font-size: 12px;">Monnaie rendue:</span>
-                      <p style="color: #28a745; font-size: 14px; margin: 2px 0 0 0; font-weight: 500;">${formatCurrency(selectedSale.change)}</p>
-                    </div>
-                  ` : ''}
-                </div>
-              ` : ''}
+            <div style="margin-bottom: 15px;">
+              <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Mode:</strong> ${getPaymentMethod(selectedSale.paymentMethod)?.label || selectedSale.paymentMethod}</p>
             </div>
 
             <!-- Items Table -->
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
               <thead>
-                <tr style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white;">
-                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">ARTICLE</th>
-                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: center; font-weight: 600; font-size: 13px;">QUANTITÉ</th>
-                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">PRIX UNITAIRE</th>
-                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">TOTAL</th>
+                <tr style="background: #0066cc; color: white;">
+                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: left; font-weight: 600; font-size: 12px;">ARTICLE</th>
+                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: center; font-weight: 600; font-size: 12px;">QUANTITÉ</th>
+                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: right; font-weight: 600; font-size: 12px;">PRIX UNITAIRE</th>
+                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: right; font-weight: 600; font-size: 12px;">TOTAL</th>
                 </tr>
               </thead>
               <tbody>
-                ${selectedSale.items && selectedSale.items.length > 0 ? selectedSale.items.map((item, index) => `
-                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
-                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${item.productName}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: center; font-size: 13px;">${item.quantity}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px;">${formatCurrency(item.unitPrice)}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px; font-weight: 500;">${formatCurrency(item.totalPrice)}</td>
+                ${selectedSale.items && selectedSale.items.length > 0 ? selectedSale.items.map(item => `
+                  <tr>
+                    <td style="border: 1px solid #dee2e6; padding: 8px; font-size: 12px;">${item.productName}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px; text-align: center; font-size: 12px;">${item.quantity}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-size: 12px;">${formatCurrency(item.unitPrice)}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-size: 12px;">${formatCurrency(item.totalPrice)}</td>
                   </tr>
-                `).join('') : '<tr><td colspan="4" style="border: 1px solid #dee2e6; padding: 12px; text-align: center; color: #666;">Aucun article détaillé</td></tr>'}
+                `).join('') : '<tr><td colspan="4" style="border: 1px solid #dee2e6; padding: 8px; text-align: center; color: #666; font-size: 12px;">Aucun article détaillé</td></tr>'}
               </tbody>
               <tfoot>
-                <tr style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; font-weight: bold;">
-                  <td colspan="3" style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 16px;">TOTAL:</td>
-                  <td style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 18px;">${formatCurrency(selectedSale.total)}</td>
+                <tr style="background: #28a745; color: white; font-weight: bold;">
+                  <td colspan="3" style="border: 1px solid #218838; padding: 10px; text-align: right; font-size: 13px;">TOTAL:</td>
+                  <td style="border: 1px solid #218838; padding: 10px; text-align: right; font-size: 14px;">${formatCurrency(selectedSale.total)}</td>
                 </tr>
               </tfoot>
             </table>
 
             ${selectedSale.notes ? `
-              <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                <h3 style="color: #856404; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Notes</h3>
-                <p style="color: #333; font-size: 13px; margin: 0; line-height: 1.5;">${selectedSale.notes}</p>
+              <div style="margin: 15px 0;">
+                <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Notes:</strong> ${selectedSale.notes}</p>
               </div>
             ` : ''}
 
             <!-- Footer -->
-            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #0066cc;">
-              <p style="color: #0066cc; font-size: 18px; margin: 0 0 15px 0; font-weight: bold;">Merci pour votre confiance!</p>
-              <div style="color: #666; font-size: 12px; line-height: 1.8;">
-                ${shopInfo.address ? `<p style="margin: 5px 0;">📍 ${shopInfo.address}</p>` : ''}
-                ${shopInfo.phone ? `<p style="margin: 5px 0;">📞 ${shopInfo.phone}</p>` : ''}
-                ${shopInfo.email ? `<p style="margin: 5px 0;">✉️ ${shopInfo.email}</p>` : ''}
+            <div style="text-align: center; margin-top: 30px; padding-top: 15px; border-top: 2px solid #0066cc;">
+              <p style="color: #0066cc; font-size: 16px; margin: 0 0 10px 0; font-weight: bold;">Merci pour votre confiance!</p>
+              <div style="color: #666; font-size: 11px; line-height: 1.6;">
+                ${shopInfo.address ? `<p style="margin: 3px 0;">📍 ${shopInfo.address}</p>` : ''}
+                ${shopInfo.phone ? `<p style="margin: 3px 0;">📞 ${shopInfo.phone}</p>` : ''}
+                ${shopInfo.email ? `<p style="margin: 3px 0;">✉️ ${shopInfo.email}</p>` : ''}
               </div>
             </div>
           </div>
