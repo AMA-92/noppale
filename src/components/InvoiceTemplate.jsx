@@ -192,9 +192,9 @@ const InvoiceTemplate = ({
 
         {/* INFORMATION SECTION */}
         <div className="p-6">
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="flex flex-row gap-4 mb-6 flex-nowrap overflow-x-auto">
             {/* Client Information Card */}
-            <div className="bg-white border-2 border-green-200 rounded-xl p-4 shadow-md">
+            <div className="flex-none w-1/2 min-w-[45%] bg-white border-2 border-green-200 rounded-xl p-4 shadow-md">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center">
                   <User size={20} className="text-white" />
@@ -202,13 +202,13 @@ const InvoiceTemplate = ({
                 <h3 className="text-sm font-bold text-gray-800">INFORMATIONS CLIENT</h3>
               </div>
               <div className="space-y-1">
-                <p className="text-gray-700 font-semibold text-base">{customerName}</p>
+                <p className="text-gray-700 font-semibold text-base break-words">{customerName}</p>
                 <p className="text-gray-500 text-xs">{date}</p>
               </div>
             </div>
 
             {/* Payment Information Card */}
-            <div className="bg-white border-2 border-green-200 rounded-xl p-4 shadow-md">
+            <div className="flex-none w-1/2 min-w-[45%] bg-white border-2 border-green-200 rounded-xl p-4 shadow-md">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center">
                   <CreditCard size={20} className="text-white" />
@@ -216,7 +216,7 @@ const InvoiceTemplate = ({
                 <h3 className="text-sm font-bold text-gray-800">INFORMATIONS DE PAIEMENT</h3>
               </div>
               <div className="space-y-1">
-                <p className="text-gray-700 font-semibold text-base">{paymentMethod}</p>
+                <p className="text-gray-700 font-semibold text-base break-words">{paymentMethod}</p>
                 <p className="text-gray-500 text-xs">Mode de paiement</p>
               </div>
             </div>
