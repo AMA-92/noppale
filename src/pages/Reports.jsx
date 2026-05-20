@@ -208,8 +208,8 @@ export default function Reports() {
 
               <div style="position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 28px;">
                 <div style="display: flex; flex-direction: column; align-items: center; min-width: 180px;">
-                  <div style="width: 78px; height: 78px; border-radius: 22px; border: 1px solid #d1fae5; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(16, 185, 129, 0.14);">
-                    ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="width: 62px; height: 62px; object-fit: cover; border-radius: 18px;" />` : `<div style="width: 40px; height: 40px; border-radius: 999px; background: #22c55e; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">↗</div>`}
+                  <div style="width: 92px; height: 92px; border-radius: 24px; border: 1px solid #d1fae5; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(16, 185, 129, 0.14);">
+                    ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="width: 72px; height: 72px; object-fit: cover; border-radius: 20px;" />` : `<div style="width: 48px; height: 48px; border-radius: 999px; background: #22c55e; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 20px;">↗</div>`}
                   </div>
                   <p style="margin: 14px 0 0; color: #16a34a; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Gestion de stock</p>
                 </div>
@@ -233,19 +233,19 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div style="margin-top: 24px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 35px; padding: 20px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between;">
-                <div style="display: flex; gap: 16px; align-items: center; flex: 1 1 280px;">
-                  <div style="width: 72px; height: 72px; border-radius: 28px; background: #16a34a; display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 26px rgba(16, 185, 129, 0.3);">
-                    <span style="color: white; font-size: 26px;">↗</span>
+              <div style="margin-top: 24px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 35px; padding: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
+                <div style="display: flex; gap: 14px; align-items: center; flex: 1 1 260px;">
+                  <div style="width: 60px; height: 60px; border-radius: 26px; background: #16a34a; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 22px rgba(16, 185, 129, 0.3);">
+                    <span style="color: white; font-size: 22px;">↗</span>
                   </div>
                   <div>
-                    <p style="margin: 0; color: #334155; font-size: 18px;">Total des ventes période</p>
-                    <h2 style="margin: 8px 0 0; font-size: 34px; font-weight: 800; color: #16a34a;">${formatCurrency(totalSales)}</h2>
-                    <p style="margin: 10px 0 0; color: #16a34a; font-size: 18px; font-weight: 700;">${filteredSales.length} ventes</p>
+                    <p style="margin: 0; color: #334155; font-size: 16px;">Total des ventes période</p>
+                    <h2 style="margin: 8px 0 0; font-size: 30px; font-weight: 800; color: #16a34a;">${formatCurrency(totalSales)}</h2>
+                    <p style="margin: 8px 0 0; color: #16a34a; font-size: 16px; font-weight: 700;">${filteredSales.length} ventes</p>
                   </div>
                 </div>
-                <div style="opacity: 0.18; margin-top: 12px; flex: 1 1 180px; min-width: 180px; display: flex; justify-content: center;">
-                  <span style="font-size: 56px; color: #16a34a;">↗</span>
+                <div style="opacity: 0.18; margin-top: 10px; flex: 1 1 160px; min-width: 160px; display: flex; justify-content: center;">
+                  <span style="font-size: 52px; color: #16a34a;">↗</span>
                 </div>
               </div>
 
@@ -257,15 +257,15 @@ export default function Reports() {
                 </div>
                 ${filteredSales.map((sale, index) => `
                   <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'}; color: #0f172a; font-size: 16px;">
-                    <div style="padding: 18px 20px; border-top: 1px solid #e2e8f0;">${formatDate(new Date(sale.createdAt || sale.created_at || sale.date))}</div>
-                    <div style="padding: 18px 20px; border-top: 1px solid #e2e8f0;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</div>
-                    <div style="padding: 18px 20px; border-top: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #16a34a;">${formatCurrency(sale.total)}</div>
+                    <div style="padding: 14px 18px; border-top: 1px solid #e2e8f0;">${formatDate(new Date(sale.createdAt || sale.created_at || sale.date))}</div>
+                    <div style="padding: 14px 18px; border-top: 1px solid #e2e8f0;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</div>
+                    <div style="padding: 14px 18px; border-top: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #16a34a;">${formatCurrency(sale.total)}</div>
                   </div>
                 `).join('')}
                 <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; background: #dcfce7; color: #166534; font-size: 20px; font-weight: 700;">
-                  <div style="padding: 22px 20px; border-top: 1px solid #d1fae5; border-right: 1px solid #d1fae5;">TOTAL</div>
-                  <div style="padding: 22px 20px; border-top: 1px solid #d1fae5; border-right: 1px solid #d1fae5;"></div>
-                  <div style="padding: 22px 20px; border-top: 1px solid #d1fae5; text-align: right;">${formatCurrency(totalSales)}</div>
+                  <div style="padding: 18px 18px; border-top: 1px solid #d1fae5; border-right: 1px solid #d1fae5;">TOTAL</div>
+                  <div style="padding: 18px 18px; border-top: 1px solid #d1fae5; border-right: 1px solid #d1fae5;"></div>
+                  <div style="padding: 18px 18px; border-top: 1px solid #d1fae5; text-align: right;">${formatCurrency(totalSales)}</div>
                 </div>
               </div>
 
@@ -283,8 +283,6 @@ export default function Reports() {
                   <span style="color: #334155; font-size: 16px;">${shopInfo.email || 'mohamediadiara98@gmail.com'}</span>
                 </div>
               </div>
-
-              <p style="margin-top: 32px; text-align: center; color: #16a34a; font-size: 30px; font-style: italic; font-weight: 700;">Merci pour votre confiance !</p>
             </div>
           </div>
         `
