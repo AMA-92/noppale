@@ -362,7 +362,6 @@ export const appStorage = {
         .select('*, sale_items(*)')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-
       if (error) throw error
       return (data || []).map((sale) => ({
         id: sale.id,
@@ -397,7 +396,6 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
-      // Créer la vente
       const { data: saleData, error: saleError } = await supabase
         .from('sales')
         .insert({
@@ -413,7 +411,6 @@ export const appStorage = {
 
       if (saleError) throw saleError
 
-      // Ajouter les items de la vente
       if (sale.items && Array.isArray(sale.items)) {
         const saleItems = sale.items.map(item => ({
           sale_id: saleData.id,
@@ -431,7 +428,6 @@ export const appStorage = {
         if (itemsError) throw itemsError
       }
 
-      // Mettre à jour le stock des produits
       if (sale.items && Array.isArray(sale.items)) {
         for (const item of sale.items) {
           if (item.productId) {
@@ -515,7 +511,6 @@ export const appStorage = {
         .select('*')
         .eq('user_id', userId)
         .order('date', { ascending: false })
-
       if (error) throw error
       return Array.isArray(data) ? data : []
     } catch (error) {
