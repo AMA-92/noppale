@@ -59,7 +59,7 @@ const InvoiceTemplate = ({
           console.log('Logo found:', shopInfo.logo);
           setFetchedShopLogo(shopInfo.logo);
         } else {
-          console.log('No logo found in shop info');
+          console.log('No logo found in shop info, using prop logo if available');
         }
       } catch (error) {
         console.error('Error fetching shop logo:', error);
@@ -68,8 +68,8 @@ const InvoiceTemplate = ({
     fetchShopLogo();
   }, []);
 
-  // Use fetched logo if no logo prop is provided
-  const displayLogo = fetchedShopLogo || shopLogo;
+  // Use prop logo first, then fetched logo
+  const displayLogo = shopLogo || fetchedShopLogo;
   // Always generate automatic invoice number (10 digits)
   const displayInvoiceNumber = generateInvoiceNumber();
 
@@ -131,82 +131,82 @@ const InvoiceTemplate = ({
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-green-200 to-emerald-100 rounded-full blur-3xl opacity-30 translate-y-32 -translate-x-32" />
 
         {/* HEADER */}
-        <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-8 md:p-12">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-6 md:p-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             {/* Left side - Shop info */}
             <div className="flex items-center gap-4">
               {displayLogo ? (
                 <img 
                   src={displayLogo} 
                   alt="Logo" 
-                  className="w-16 h-16 object-contain rounded-2xl shadow-lg"
+                  className="w-24 h-24 md:w-32 md:h-32 object-contain rounded-2xl shadow-lg"
                 />
               ) : (
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 via-green-400 to-emerald-300 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Building2 size={32} className="text-white" />
+                <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-green-500 via-green-400 to-emerald-300 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Building2 size={48} className="text-white" />
                 </div>
               )}
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{shopName}</h1>
-                <p className="text-sm text-gray-600 mt-1">{slogan}</p>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-800">{shopName}</h1>
+                <p className="text-xs md:text-sm text-gray-600 mt-1">{slogan}</p>
               </div>
             </div>
 
             {/* Right side - Invoice card */}
-            <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-2xl p-6 shadow-xl">
-              <h2 className="text-white text-3xl md:text-4xl font-bold mb-3">FACTURE</h2>
-              <div className="space-y-2">
-                <p className="text-white/90 text-sm font-medium">
+            <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-2xl p-4 md:p-6 shadow-xl">
+              <h2 className="text-white text-2xl md:text-3xl font-bold mb-2">FACTURE</h2>
+              <div className="space-y-1">
+                <p className="text-white/90 text-xs md:text-sm font-medium">
                   <span className="opacity-80">N°</span> {displayInvoiceNumber}
                 </p>
-                <p className="text-white/90 text-sm font-medium">{date}</p>
+                <p className="text-white/90 text-xs md:text-sm font-medium">{date}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* INFORMATION SECTION */}
-        <div className="p-8 md:p-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {/* Client Information Card */}
-            <div className="bg-white border-2 border-green-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl flex items-center justify-center">
-                  <User size={24} className="text-white" />
+            <div className="bg-white border-2 border-green-200 rounded-xl p-4 shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center">
+                  <User size={20} className="text-white" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-800">INFORMATIONS CLIENT</h3>
+                <h3 className="text-sm font-bold text-gray-800">INFORMATIONS CLIENT</h3>
               </div>
-              <div className="space-y-2">
-                <p className="text-gray-700 font-semibold text-lg">{customerName}</p>
-                <p className="text-gray-500 text-sm">{date}</p>
+              <div className="space-y-1">
+                <p className="text-gray-700 font-semibold text-base">{customerName}</p>
+                <p className="text-gray-500 text-xs">{date}</p>
               </div>
             </div>
 
             {/* Payment Information Card */}
-            <div className="bg-white border-2 border-green-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl flex items-center justify-center">
-                  <CreditCard size={24} className="text-white" />
+            <div className="bg-white border-2 border-green-200 rounded-xl p-4 shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center">
+                  <CreditCard size={20} className="text-white" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-800">INFORMATIONS DE PAIEMENT</h3>
+                <h3 className="text-sm font-bold text-gray-800">INFORMATIONS DE PAIEMENT</h3>
               </div>
-              <div className="space-y-2">
-                <p className="text-gray-700 font-semibold text-lg">{paymentMethod}</p>
-                <p className="text-gray-500 text-sm">Mode de paiement</p>
+              <div className="space-y-1">
+                <p className="text-gray-700 font-semibold text-base">{paymentMethod}</p>
+                <p className="text-gray-500 text-xs">Mode de paiement</p>
               </div>
             </div>
           </div>
 
           {/* ITEMS TABLE */}
-          <div className="mb-8">
-            <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-2xl overflow-hidden shadow-xl">
+          <div className="mb-6">
+            <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-xl overflow-hidden shadow-lg">
               <table className="w-full">
                 <thead>
                   <tr className="text-white">
-                    <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Article</th>
-                    <th className="px-6 py-4 text-center font-bold text-sm uppercase tracking-wider">Quantité</th>
-                    <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Prix Unitaire</th>
-                    <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3 text-left font-bold text-xs uppercase tracking-wider">Article</th>
+                    <th className="px-4 py-3 text-center font-bold text-xs uppercase tracking-wider">Quantité</th>
+                    <th className="px-4 py-3 text-right font-bold text-xs uppercase tracking-wider">Prix Unitaire</th>
+                    <th className="px-4 py-3 text-right font-bold text-xs uppercase tracking-wider">Total</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white">
@@ -217,10 +217,10 @@ const InvoiceTemplate = ({
                         index === items.length - 1 ? 'border-b-0' : ''
                       }`}
                     >
-                      <td className="px-6 py-4 text-gray-800 font-medium">{item.name}</td>
-                      <td className="px-6 py-4 text-center text-gray-600">{item.quantity}</td>
-                      <td className="px-6 py-4 text-right text-gray-600">{formatCurrency(item.price)}</td>
-                      <td className="px-6 py-4 text-right text-gray-800 font-semibold">{formatCurrency(item.total)}</td>
+                      <td className="px-4 py-3 text-gray-800 font-medium text-sm">{item.name}</td>
+                      <td className="px-4 py-3 text-center text-gray-600 text-sm">{item.quantity}</td>
+                      <td className="px-4 py-3 text-right text-gray-600 text-sm">{formatCurrency(item.price)}</td>
+                      <td className="px-4 py-3 text-right text-gray-800 font-semibold text-sm">{formatCurrency(item.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -229,50 +229,50 @@ const InvoiceTemplate = ({
           </div>
 
           {/* TOTAL SECTION */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 shadow-lg">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 shadow-md">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div>
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-800">TOTAL À PAYER</h3>
-                <p className="text-gray-600 mt-2">Montant total de la facture</p>
+                <h3 className="text-lg md:text-xl font-bold text-gray-800">TOTAL À PAYER</h3>
+                <p className="text-gray-600 text-xs mt-1">Montant total de la facture</p>
               </div>
-              <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-2xl px-8 py-6 shadow-xl">
-                <p className="text-white text-3xl md:text-4xl font-bold">{total}</p>
+              <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-xl px-6 py-3 shadow-lg">
+                <p className="text-white text-xl md:text-2xl font-bold">{total}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* FOOTER */}
-        <div className="bg-white border-t-2 border-green-100 p-8 md:p-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white border-t-2 border-green-100 p-4 md:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             {/* Address */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                <MapPin size={20} className="text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                <MapPin size={16} className="text-white" />
               </div>
-              <p className="text-gray-700">{address}</p>
+              <p className="text-gray-700 text-sm">{address}</p>
             </div>
 
             {/* Phone */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Phone size={20} className="text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Phone size={16} className="text-white" />
               </div>
-              <p className="text-gray-700">{phone}</p>
+              <p className="text-gray-700 text-sm">{phone}</p>
             </div>
 
             {/* Email */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Mail size={20} className="text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Mail size={16} className="text-white" />
               </div>
-              <p className="text-gray-700">{email}</p>
+              <p className="text-gray-700 text-sm">{email}</p>
             </div>
           </div>
 
           {/* Thank you message */}
           <div className="text-center">
-            <p className="text-xl font-bold text-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
+            <p className="text-base font-bold text-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent">
               Merci pour votre confiance !
             </p>
           </div>
