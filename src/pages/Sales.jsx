@@ -57,7 +57,6 @@ export default function Sales() {
   const [cartItems, setCartItems] = useState([])
   const cartItemsRef = useRef([])
   const lastProductTapRef = useRef(0)
-  const [showInvoiceModal, setShowInvoiceModal] = useState(false)
 
   const syncCartWithForm = useCallback((items, prevForm) => {
     const newTotal = items.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0)
@@ -502,9 +501,48 @@ export default function Sales() {
     })
   }
 
-  const printAdvancedFacture = () => {
+  const printAdvancedFacture = async () => {
     if (!selectedSale) return
-    setShowInvoiceModal(true)
+    
+    // Create a temporary container for the invoice
+    const tempDiv = document.createElement('div')
+    tempDiv.style.position = 'absolute'
+    tempDiv.style.left = '-9999px'
+    tempDiv.style.top = '-9999px'
+    document.body.appendChild(tempDiv)
+    
+    // Render the InvoiceTemplate component
+    const { createRoot } = await import('react-dom/client')
+    const root = createRoot(tempDiv)
+    
+    const invoiceData = {
+      shopName: shopInfo.name || 'MA BOUTIQUE',
+      customerName: selectedSale.customerName || 'Client',
+      invoiceNumber: selectedSale.id,
+      paymentMethod: getPaymentMethod(selectedSale.paymentMethod)?.label || selectedSale.paymentMethod,
+      items: selectedSale.items?.map(item => ({
+        name: item.productName,
+        quantity: item.quantity,
+        price: item.unitPrice,
+        total: item.totalPrice
+      })) || [],
+      total: formatCurrency(selectedSale.total),
+      phone: shopInfo.phone || '',
+      email: shopInfo.email || '',
+      address: shopInfo.address || '',
+      date: formatDate(new Date(selectedSale.createdAt)),
+      autoExport: true
+    }
+    
+    root.render(
+      React.createElement(InvoiceTemplate, invoiceData)
+    )
+    
+    // Clean up after export
+    setTimeout(() => {
+      root.unmount()
+      document.body.removeChild(tempDiv)
+    }, 2000)
   }
 
   const openSaleDetails = (sale) => {
@@ -1087,40 +1125,6 @@ export default function Sales() {
                 placeholder="Notes suppl├®mentaires..."
               />
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Facture */}
-      {showInvoiceModal && selectedSale && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }}>
-          <div className="modal-content max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-800">Facture</h2>
-              <button 
-                onClick={() => setShowInvoiceModal(false)} 
-                className="p-1.5 hover:bg-slate-100 rounded-lg"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <InvoiceTemplate
-              shopName={shopInfo.name || 'MA BOUTIQUE'}
-              customerName={selectedSale.customerName || 'Client'}
-              invoiceNumber={selectedSale.id}
-              paymentMethod={getPaymentMethod(selectedSale.paymentMethod)?.label || selectedSale.paymentMethod}
-              items={selectedSale.items?.map(item => ({
-                name: item.productName,
-                quantity: item.quantity,
-                price: item.unitPrice,
-                total: item.totalPrice
-              })) || []}
-              total={`${formatCurrency(selectedSale.total)}`}
-              phone={shopInfo.phone || ''}
-              email={shopInfo.email || ''}
-              address={shopInfo.address || ''}
-              date={formatDate(new Date(selectedSale.createdAt))}
-            />
           </div>
         </div>
       )}

@@ -5,8 +5,7 @@ import {
   CreditCard, 
   MapPin, 
   Phone, 
-  Mail,
-  Download
+  Mail
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -24,7 +23,8 @@ const InvoiceTemplate = ({
   email,
   address,
   date,
-  slogan = "Solutions de gestion pour votre entreprise"
+  slogan = "Solutions de gestion pour votre entreprise",
+  autoExport = false
 }) => {
   const invoiceRef = useRef(null);
   const [fetchedShopLogo, setFetchedShopLogo] = useState(null);
@@ -100,27 +100,32 @@ const InvoiceTemplate = ({
     pdf.save(filename);
   };
 
+  // Auto-export PDF when component mounts if autoExport is true
+  useEffect(() => {
+    if (autoExport) {
+      const timer = setTimeout(() => {
+        exportToPDF();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoExport]);
+
   const formatCurrency = (amount) => {
     return `${amount.toLocaleString('fr-FR')} FCFA`;
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <div className="max-w-4xl mx-auto mb-4">
-        <button
-          onClick={exportToPDF}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
-        >
-          <Download size={20} />
-          Télécharger PDF
-        </button>
-      </div>
-
-      <div 
-        ref={invoiceRef}
-        className="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden"
-        style={{ minHeight: '1123px' }}
-      >
+    <div 
+      ref={invoiceRef}
+      className="bg-white"
+      style={{ 
+        width: '210mm',
+        minHeight: '297mm',
+        padding: '20mm',
+        margin: '0 auto',
+        position: 'relative'
+      }}
+    >
         {/* Decorative background elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-green-200 to-emerald-100 rounded-full blur-3xl opacity-30 -translate-y-32 translate-x-32" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-green-200 to-emerald-100 rounded-full blur-3xl opacity-30 translate-y-32 -translate-x-32" />
