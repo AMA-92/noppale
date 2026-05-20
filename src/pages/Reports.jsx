@@ -201,218 +201,237 @@ export default function Reports() {
       
       if (reportType === 'sales') {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
-              <div style="display: flex; align-items: center;">
-                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="height: 60px; margin-right: 20px;" alt="Logo" />` : ''}
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+              <div style="flex: 1;">
+                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 80px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
+                <h1 style="color: #0066cc; font-size: 28px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
               </div>
-              <div style="text-align: center; flex: 1;">
-                <h2 style="color: #666; margin-bottom: 5px; font-size: 18px;">${t('salesReport')}</h2>
-                <p style="color: #888; font-size: 14px;">${periodOptions.find(p => p.value === period)?.label}</p>
-                <p style="color: #888; font-size: 14px;">${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-              <div style="text-align: right;">
-                <h1 style="color: #333; margin-bottom: 10px; font-size: 24px;">${shopInfo.name || 'Boutique'}</h1>
+              <div style="text-align: right; flex: 1;">
+                <h2 style="color: #333; font-size: 32px; margin: 0; font-weight: bold; letter-spacing: 2px;">RAPPORT VENTES</h2>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${periodOptions.find(p => p.value === period)?.label}</p>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${new Date().toLocaleDateString('fr-FR')}</p>
               </div>
             </div>
-            
-            <div style="background-color: #f0fdf4; padding: 10px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #22c55e;">
-              <div style="font-size: 12px; color: #16a34a; margin-bottom: 5px;">${t('totalSales')} ${t('period')}</div>
-              <div style="font-size: 18px; font-weight: bold; color: #15803d;">${formatCurrency(totalSales)}</div>
-              <div style="font-size: 10px; color: #16a34a;">${filteredSales.length} ${t('salesCount')}${filteredSales.length > 1 ? 's' : ''}</div>
+
+            <!-- Summary Box -->
+            <div style="background: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+              <h3 style="color: #28a745; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Total des ventes ${t('period')}</h3>
+              <p style="color: #333; font-size: 24px; margin: 5px 0; font-weight: bold;">${formatCurrency(totalSales)}</p>
+              <p style="color: #666; font-size: 12px; margin: 0;">${filteredSales.length} ${t('salesCount')}${filteredSales.length > 1 ? 's' : ''}</p>
             </div>
-            
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+
+            <!-- Sales Table -->
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
               <thead>
-                <tr style="background-color: #f8fafc;">
-                  <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #475569;">${t('date')}</th>
-                  <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #475569;">${t('customer')}</th>
-                  <th style="padding: 8px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569;">${t('total')}</th>
+                <tr style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white;">
+                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
+                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">CLIENT</th>
+                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">TOTAL</th>
                 </tr>
               </thead>
               <tbody>
-                ${filteredSales.map(sale => `
-                  <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(sale.createdAt || sale.created_at))}</td>
-                    <td style="padding: 8px; color: #1e293b; font-size: 12px;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</td>
-                    <td style="padding: 8px; text-align: right; font-weight: 500; color: #059669; font-size: 12px;">${formatCurrency(sale.total)}</td>
+                ${filteredSales.map((sale, index) => `
+                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${formatDate(new Date(sale.createdAt || sale.created_at))}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px; font-weight: 500; color: #28a745;">${formatCurrency(sale.total)}</td>
                   </tr>
                 `).join('')}
               </tbody>
               <tfoot>
-                <tr style="background-color: #f8fafc; border-top: 2px solid #e2e8f0;">
-                  <td colspan="2" style="padding: 8px; font-weight: 600; color: #1e293b; font-size: 12px;">${t('total').toUpperCase()}</td>
-                  <td style="padding: 8px; text-align: right; font-weight: bold; color: #059669; font-size: 12px;">${formatCurrency(totalSales)}</td>
+                <tr style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; font-weight: bold;">
+                  <td colspan="2" style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 16px;">TOTAL:</td>
+                  <td style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 18px;">${formatCurrency(totalSales)}</td>
                 </tr>
               </tfoot>
             </table>
-            
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-              <p style="color: #64748b; font-size: 12px; text-align: center;">
-                ${shopInfo.address || ''} ${shopInfo.phone ? `- ${shopInfo.phone}` : ''} ${shopInfo.email ? `- ${shopInfo.email}` : ''}
-              </p>
-              <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 5px; font-style: italic;">
-                Merci pour votre confiance !
-              </p>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #0066cc;">
+              <p style="color: #0066cc; font-size: 18px; margin: 0 0 15px 0; font-weight: bold;">Merci pour votre confiance!</p>
+              <div style="color: #666; font-size: 12px; line-height: 1.8;">
+                ${shopInfo.address ? `<p style="margin: 5px 0;">📍 ${shopInfo.address}</p>` : ''}
+                ${shopInfo.phone ? `<p style="margin: 5px 0;">📞 ${shopInfo.phone}</p>` : ''}
+                ${shopInfo.email ? `<p style="margin: 5px 0;">✉️ ${shopInfo.email}</p>` : ''}
+              </div>
             </div>
           </div>
         `
       } else if (reportType === 'expenses') {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
-              <div style="display: flex; align-items: center;">
-                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="height: 60px; margin-right: 20px;" alt="Logo" />` : ''}
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+              <div style="flex: 1;">
+                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 80px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
+                <h1 style="color: #0066cc; font-size: 28px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
               </div>
-              <div style="text-align: center; flex: 1;">
-                <h2 style="color: #666; margin-bottom: 5px; font-size: 18px;">${t('expensesReport')}</h2>
-                <p style="color: #888; font-size: 14px;">${periodOptions.find(p => p.value === period)?.label}</p>
-                <p style="color: #888; font-size: 14px;">${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-              <div style="text-align: right;">
-                <h1 style="color: #333; margin-bottom: 10px; font-size: 24px;">${shopInfo.name || 'Boutique'}</h1>
+              <div style="text-align: right; flex: 1;">
+                <h2 style="color: #333; font-size: 32px; margin: 0; font-weight: bold; letter-spacing: 2px;">RAPPORT DÉPENSES</h2>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${periodOptions.find(p => p.value === period)?.label}</p>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${new Date().toLocaleDateString('fr-FR')}</p>
               </div>
             </div>
-            
-            <div style="background-color: #fef2f2; padding: 10px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #ef4444;">
-              <div style="font-size: 12px; color: #dc2626; margin-bottom: 5px;">${t('totalExpenses')} ${t('period')}</div>
-              <div style="font-size: 18px; font-weight: bold; color: #b91c1c;">${formatCurrency(totalExpenses)}</div>
-              <div style="font-size: 10px; color: #dc2626;">${filteredExpenses.length} ${t('expensesCount')}${filteredExpenses.length > 1 ? 's' : ''}</div>
+
+            <!-- Summary Box -->
+            <div style="background: #f8f9fa; border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+              <h3 style="color: #dc3545; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Total des dépenses ${t('period')}</h3>
+              <p style="color: #333; font-size: 24px; margin: 5px 0; font-weight: bold;">${formatCurrency(totalExpenses)}</p>
+              <p style="color: #666; font-size: 12px; margin: 0;">${filteredExpenses.length} ${t('expensesCount')}${filteredExpenses.length > 1 ? 's' : ''}</p>
             </div>
-            
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+
+            <!-- Expenses Table -->
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
               <thead>
-                <tr style="background-color: #f8fafc;">
-                  <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #475569;">${t('date')}</th>
-                  <th style="padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #475569;">${t('description')}</th>
-                  <th style="padding: 8px; text-align: right; border-bottom: 2px solid #e2e8f0; color: #475569;">${t('amount')}</th>
+                <tr style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white;">
+                  <th style="border: 1px solid #c82333; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
+                  <th style="border: 1px solid #c82333; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DESCRIPTION</th>
+                  <th style="border: 1px solid #c82333; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">MONTANT</th>
                 </tr>
               </thead>
               <tbody>
-                ${filteredExpenses.map(expense => `
-                  <tr style="border-bottom: 1px solid #f1f5f9;">
-                    <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</td>
-                    <td style="padding: 8px; color: #1e293b; font-size: 12px;">${expense.description || t('noDescription')}</td>
-                    <td style="padding: 8px; text-align: right; font-weight: 500; color: #dc2626; font-size: 12px;">${formatCurrency(expense.amount)}</td>
+                ${filteredExpenses.map((expense, index) => `
+                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${expense.description || t('noDescription')}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px; font-weight: 500; color: #dc3545;">${formatCurrency(expense.amount)}</td>
                   </tr>
                 `).join('')}
               </tbody>
               <tfoot>
-                <tr style="background-color: #f8fafc; border-top: 2px solid #e2e8f0;">
-                  <td colspan="2" style="padding: 8px; font-weight: 600; color: #1e293b; font-size: 12px;">${t('total').toUpperCase()}</td>
-                  <td style="padding: 8px; text-align: right; font-weight: bold; color: #dc2626; font-size: 12px;">${formatCurrency(totalExpenses)}</td>
+                <tr style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; font-weight: bold;">
+                  <td colspan="2" style="border: 1px solid #c82333; padding: 15px; text-align: right; font-size: 16px;">TOTAL:</td>
+                  <td style="border: 1px solid #c82333; padding: 15px; text-align: right; font-size: 18px;">${formatCurrency(totalExpenses)}</td>
                 </tr>
               </tfoot>
             </table>
-            
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-              <p style="color: #64748b; font-size: 12px; text-align: center;">
-                ${shopInfo.address || ''} ${shopInfo.phone ? `- ${shopInfo.phone}` : ''} ${shopInfo.email ? `- ${shopInfo.email}` : ''}
-              </p>
-              <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 5px; font-style: italic;">
-                Merci pour votre confiance !
-              </p>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #0066cc;">
+              <p style="color: #0066cc; font-size: 18px; margin: 0 0 15px 0; font-weight: bold;">Merci pour votre confiance!</p>
+              <div style="color: #666; font-size: 12px; line-height: 1.8;">
+                ${shopInfo.address ? `<p style="margin: 5px 0;">📍 ${shopInfo.address}</p>` : ''}
+                ${shopInfo.phone ? `<p style="margin: 5px 0;">📞 ${shopInfo.phone}</p>` : ''}
+                ${shopInfo.email ? `<p style="margin: 5px 0;">✉️ ${shopInfo.email}</p>` : ''}
+              </div>
             </div>
           </div>
         `
       } else if (reportType === 'balance') {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px;">
-              <div style="display: flex; align-items: center;">
-                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="height: 60px; margin-right: 20px;" alt="Logo" />` : ''}
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+              <div style="flex: 1;">
+                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 80px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
+                <h1 style="color: #0066cc; font-size: 28px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
               </div>
-              <div style="text-align: center; flex: 1;">
-                <h2 style="color: #666; margin-bottom: 5px; font-size: 18px;">${t('balanceReport')}</h2>
-                <p style="color: #888; font-size: 14px;">${periodOptions.find(p => p.value === period)?.label}</p>
-                <p style="color: #888; font-size: 14px;">${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-              <div style="background-color: #f0fdf4; padding: 10px; border-radius: 8px; border-left: 4px solid #22c55e;">
-                <div style="font-size: 12px; color: #16a34a; margin-bottom: 5px;">${t('totalSales')}</div>
-                <div style="font-size: 18px; font-weight: bold; color: #15803d;">${formatCurrency(totalSales)}</div>
-              </div>
-              <div style="background-color: #fef2f2; padding: 10px; border-radius: 8px; border-left: 4px solid #ef4444;">
-                <div style="font-size: 12px; color: #dc2626; margin-bottom: 5px;">${t('totalExpenses')}</div>
-                <div style="font-size: 18px; font-weight: bold; color: #b91c1c;">${formatCurrency(totalExpenses)}</div>
+              <div style="text-align: right; flex: 1;">
+                <h2 style="color: #333; font-size: 32px; margin: 0; font-weight: bold; letter-spacing: 2px;">BILAN</h2>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${periodOptions.find(p => p.value === period)?.label}</p>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${new Date().toLocaleDateString('fr-FR')}</p>
               </div>
             </div>
-            
-            <div style="background-color: #eff6ff; padding: 10px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #3b82f6;">
-              <div style="font-size: 12px; color: #1d4ed8; margin-bottom: 5px;">${t('grossProfit')} (${t('totalSales')} - ${t('totalExpenses')})</div>
-              <div style="font-size: 18px; font-weight: bold; color: ${profit >= 0 ? '#1e40af' : '#b91c1c'};">${formatCurrency(profit)}</div>
-              <div style="font-size: 10px; color: ${profit >= 0 ? '#1d4ed8' : '#dc2626'};">${profit >= 0 ? t('profit') : t('loss')}</div>
+
+            <!-- Summary Cards -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+              <div style="background: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; border-radius: 4px;">
+                <h3 style="color: #28a745; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Total des ventes</h3>
+                <p style="color: #333; font-size: 24px; margin: 5px 0; font-weight: bold;">${formatCurrency(totalSales)}</p>
+                <p style="color: #666; font-size: 12px; margin: 0;">${filteredSales.length} vente${filteredSales.length > 1 ? 's' : ''}</p>
+              </div>
+              <div style="background: #f8f9fa; border-left: 4px solid #dc3545; padding: 15px; border-radius: 4px;">
+                <h3 style="color: #dc3545; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Total des dépenses</h3>
+                <p style="color: #333; font-size: 24px; margin: 5px 0; font-weight: bold;">${formatCurrency(totalExpenses)}</p>
+                <p style="color: #666; font-size: 12px; margin: 0;">${filteredExpenses.length} dépense${filteredExpenses.length > 1 ? 's' : ''}</p>
+              </div>
             </div>
-            
-            <div style="background: linear-gradient(135deg, #9333ea 0%, #6366f1 100%); padding: 10px; border-radius: 8px; margin-bottom: 30px; color: white;">
-              <div style="font-size: 12px; opacity: 0.9; margin-bottom: 5px;">${t('realProfit')} (${t('totalSales')} - ${t('totalExpenses')} - ${t('totalPurchaseCost')})</div>
-              <div style="font-size: 18px; font-weight: bold;">${formatCurrency(realProfit)}</div>
-              <div style="font-size: 10px; opacity: 0.75;">${t('totalPurchaseCost')} : ${formatCurrency(totalPurchaseCost)}</div>
+
+            <!-- Gross Profit -->
+            <div style="background: #f8f9fa; border-left: 4px solid #0066cc; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+              <h3 style="color: #0066cc; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Bénéfice brut (Ventes - Dépenses)</h3>
+              <p style="color: #333; font-size: 24px; margin: 5px 0; font-weight: bold; color: ${profit >= 0 ? '#28a745' : '#dc3545'};">${formatCurrency(profit)}</p>
+              <p style="color: #666; font-size: 12px; margin: 0;">${profit >= 0 ? 'Bénéfice' : 'Perte'}</p>
             </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+
+            <!-- Real Profit -->
+            <div style="background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%); padding: 15px; margin-bottom: 30px; border-radius: 4px; color: white;">
+              <h3 style="font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase; opacity: 0.9;">Bénéfice réel (Ventes - Dépenses - Coût d'achat)</h3>
+              <p style="font-size: 24px; margin: 5px 0; font-weight: bold;">${formatCurrency(realProfit)}</p>
+              <p style="font-size: 12px; margin: 0; opacity: 0.75;">Coût d'achat total: ${formatCurrency(totalPurchaseCost)}</p>
+            </div>
+
+            <!-- Details Tables -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+              <!-- Sales Details -->
               <div>
-                <h3 style="color: #1e293b; margin-bottom: 15px; font-size: 16px;">${t('salesDetails')}</h3>
-                <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0;">
-                  <thead>
-                    <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                      <th style="padding: 8px; text-align: left; color: #475569; font-size: 12px; font-weight: 600;">${t('date')}</th>
-                      <th style="padding: 8px; text-align: right; color: #475569; font-size: 12px; font-weight: 600;">${t('total')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${filteredSales.slice(0, 10).map(sale => `
-                      <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(sale.createdAt || sale.created_at))}</td>
-                        <td style="padding: 8px; text-align: right; font-weight: 500; color: #059669; font-size: 12px;">${formatCurrency(sale.total)}</td>
+                <h3 style="color: #0066cc; font-size: 16px; margin: 0 0 15px 0; font-weight: bold; text-transform: uppercase;">Détails des ventes</h3>
+                <div style="border: 2px solid #0066cc; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white;">
+                        <th style="border: 1px solid #0052a3; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
+                        <th style="border: 1px solid #0052a3; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">TOTAL</th>
                       </tr>
-                    `).join('')}
-                  </tbody>
-                  <tfoot>
-                    <tr style="background-color: #f8fafc; border-top: 2px solid #e2e8f0;">
-                      <td style="padding: 8px; font-weight: 600; color: #1e293b; font-size: 12px;">${t('total').toUpperCase()}</td>
-                      <td style="padding: 8px; text-align: right; font-weight: bold; color: #059669; font-size: 12px;">${formatCurrency(totalSales)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    </thead>
+                    <tbody>
+                      ${filteredSales.slice(0, 10).map((sale, index) => `
+                        <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+                          <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${formatDate(new Date(sale.createdAt || sale.created_at))}</td>
+                          <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px; font-weight: 500; color: #28a745;">${formatCurrency(sale.total)}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                    <tfoot>
+                      <tr style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; font-weight: bold;">
+                        <td style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 16px;">TOTAL:</td>
+                        <td style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 18px;">${formatCurrency(totalSales)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
-              
+
+              <!-- Expenses Details -->
               <div>
-                <h3 style="color: #1e293b; margin-bottom: 15px; font-size: 16px;">${t('expensesDetails')}</h3>
-                <table style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0;">
-                  <thead>
-                    <tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                      <th style="padding: 8px; text-align: left; color: #475569; font-size: 12px; font-weight: 600;">${t('date')}</th>
-                      <th style="padding: 8px; text-align: right; color: #475569; font-size: 12px; font-weight: 600;">${t('amount')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${filteredExpenses.slice(0, 10).map(expense => `
-                      <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 8px; color: #64748b; font-size: 12px;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</td>
-                        <td style="padding: 8px; text-align: right; font-weight: 500; color: #dc2626; font-size: 12px;">${formatCurrency(expense.amount)}</td>
+                <h3 style="color: #dc3545; font-size: 16px; margin: 0 0 15px 0; font-weight: bold; text-transform: uppercase;">Détails des dépenses</h3>
+                <div style="border: 2px solid #dc3545; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white;">
+                        <th style="border: 1px solid #c82333; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
+                        <th style="border: 1px solid #c82333; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">MONTANT</th>
                       </tr>
-                    `).join('')}
-                  </tbody>
-                  <tfoot>
-                    <tr style="background-color: #f8fafc; border-top: 2px solid #e2e8f0;">
-                      <td style="padding: 8px; font-weight: 600; color: #1e293b; font-size: 12px;">${t('total').toUpperCase()}</td>
-                      <td style="padding: 8px; text-align: right; font-weight: bold; color: #dc2626; font-size: 12px;">${formatCurrency(totalExpenses)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+                    </thead>
+                    <tbody>
+                      ${filteredExpenses.slice(0, 10).map((expense, index) => `
+                        <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+                          <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</td>
+                          <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px; font-weight: 500; color: #dc3545;">${formatCurrency(expense.amount)}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                    <tfoot>
+                      <tr style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; font-weight: bold;">
+                        <td style="border: 1px solid #c82333; padding: 15px; text-align: right; font-size: 16px;">TOTAL:</td>
+                        <td style="border: 1px solid #c82333; padding: 15px; text-align: right; font-size: 18px;">${formatCurrency(totalExpenses)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             </div>
-            
-            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-              <p style="color: #64748b; font-size: 12px; text-align: center;">
-                ${shopInfo.address || ''} ${shopInfo.phone ? `- ${shopInfo.phone}` : ''} ${shopInfo.email ? `- ${shopInfo.email}` : ''}
-              </p>
-              <p style="color: #64748b; font-size: 12px; text-align: center; margin-top: 5px; font-style: italic;">
-                Merci pour votre confiance !
-              </p>
+
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #0066cc;">
+              <p style="color: #0066cc; font-size: 18px; margin: 0 0 15px 0; font-weight: bold;">Merci pour votre confiance!</p>
+              <div style="color: #666; font-size: 12px; line-height: 1.8;">
+                ${shopInfo.address ? `<p style="margin: 5px 0;">📍 ${shopInfo.address}</p>` : ''}
+                ${shopInfo.phone ? `<p style="margin: 5px 0;">📞 ${shopInfo.phone}</p>` : ''}
+                ${shopInfo.email ? `<p style="margin: 5px 0;">✉️ ${shopInfo.email}</p>` : ''}
+              </div>
             </div>
           </div>
         `
