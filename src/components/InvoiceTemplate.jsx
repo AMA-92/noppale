@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { 
   Building2, 
   User, 
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { appStorage } from '../utils/storage';
 
 const InvoiceTemplate = ({
   shopLogo,
@@ -26,6 +27,47 @@ const InvoiceTemplate = ({
   slogan = "Solutions de gestion pour votre entreprise"
 }) => {
   const invoiceRef = useRef(null);
+  const [fetchedShopLogo, setFetchedShopLogo] = useState(null);
+
+  // Generate automatic invoice number (10 digits)
+  const generateInvoiceNumber = () => {
+    const timestamp = Date.now().toString();
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    return (timestamp + random).slice(-10);
+  };
+
+  // Format date for filename (DD/MM/YY)
+  const formatDateForFilename = (dateStr) => {
+    try {
+      const date = new Date(dateStr);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      return `${day}/${month}/${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Fetch shop logo from settings
+  useEffect(() => {
+    const fetchShopLogo = async () => {
+      try {
+        const shopInfo = await appStorage.getShopInfo();
+        if (shopInfo && shopInfo.logo) {
+          setFetchedShopLogo(shopInfo.logo);
+        }
+      } catch (error) {
+        console.error('Error fetching shop logo:', error);
+      }
+    };
+    fetchShopLogo();
+  }, []);
+
+  // Use fetched logo if no logo prop is provided
+  const displayLogo = shopLogo || fetchedShopLogo;
+  // Use generated invoice number if not provided
+  const displayInvoiceNumber = invoiceNumber || generateInvoiceNumber();
 
   const exportToPDF = async () => {
     const element = invoiceRef.current;
@@ -45,8 +87,13 @@ const InvoiceTemplate = ({
     const imgX = (pdfWidth - imgWidth * ratio) / 2;
     const imgY = 0;
     
+    // Format filename: facture-{client}-{date}
+    const formattedDate = formatDateForFilename(date);
+    const sanitizedCustomerName = customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    const filename = `facture-${sanitizedCustomerName}-${formattedDate}.pdf`;
+    
     pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-    pdf.save(`facture-${invoiceNumber}.pdf`);
+    pdf.save(filename);
   };
 
   const formatCurrency = (amount) => {
@@ -79,9 +126,9 @@ const InvoiceTemplate = ({
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             {/* Left side - Shop info */}
             <div className="flex items-center gap-4">
-              {shopLogo ? (
+              {displayLogo ? (
                 <img 
-                  src={shopLogo} 
+                  src={displayLogo} 
                   alt="Logo" 
                   className="w-16 h-16 object-contain rounded-2xl shadow-lg"
                 />
@@ -101,7 +148,7 @@ const InvoiceTemplate = ({
               <h2 className="text-white text-3xl md:text-4xl font-bold mb-3">FACTURE</h2>
               <div className="space-y-2">
                 <p className="text-white/90 text-sm font-medium">
-                  <span className="opacity-80">N°</span> {invoiceNumber}
+                  <span className="opacity-80">N°</span> {displayInvoiceNumber}
                 </p>
                 <p className="text-white/90 text-sm font-medium">{date}</p>
               </div>
