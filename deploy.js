@@ -33,7 +33,7 @@ function deploy() {
     execSync(`git commit -m "${commitMessage}"`, { stdio: 'inherit' });
 
     console.log('\n🚀 Push vers GitHub...');
-    execSync('git push origin main', { stdio: 'inherit' });
+    execSync('git push origin master', { stdio: 'inherit' });
 
     console.log('\n✅ Déploiement lancé sur Vercel!');
     console.log('🌐 Votre app sera mise à jour dans quelques secondes...');
