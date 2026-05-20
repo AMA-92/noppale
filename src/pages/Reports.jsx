@@ -201,62 +201,61 @@ export default function Reports() {
       
       if (reportType === 'sales') {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; background: #f8fafc; padding: 16px; width: 210mm; margin: 0 auto; box-sizing: border-box;">
-            <div style="max-width: 1000px; margin: 0 auto; background: white; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(15,23,42,0.08);">
-              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: center; margin-bottom: 24px;">
-                <div style="display: flex; align-items: center; gap: 16px; min-width: 260px;">
-                  ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="width: 84px; height: 84px; object-fit: cover; border-radius: 18px; border: 1px solid #e2e8f0;" />` : `<div style="width: 84px; height: 84px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: #f1f5f9; color: #64748b; font-size: 14px; border: 1px solid #e2e8f0;">LOGO</div>`}
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto; background: #f7f7f7;">
+            <div style="background: white; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(15,23,42,0.08);">
+              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 16px; min-width: 280px;">
+                  ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="width: 88px; height: 88px; object-fit: cover; border-radius: 18px; border: 1px solid #e2e8f0;" />` : `<div style="width: 88px; height: 88px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: #f1f5f9; color: #64748b; font-size: 14px; border: 1px solid #e2e8f0;">LOGO</div>`}
                   <div>
-                    <p style="margin: 0; color: #64748b; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;">Boutique</p>
-                    <h1 style="margin: 6px 0 0 0; font-size: 32px; line-height: 1.05; color: #0f172a;">${shopInfo.name || 'Ma boutique'}</h1>
-                    <p style="margin: 6px 0 0 0; color: #475569; font-size: 12px; max-width: 320px;">${shopInfo.address || ''}</p>
+                    <p style="margin: 0; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;">Boutique</p>
+                    <h1 style="margin: 6px 0 0 0; font-size: 30px; line-height: 1.05; color: #0f172a;">${shopInfo.name || 'Ma boutique'}</h1>
+                    <p style="margin: 8px 0 0 0; color: #475569; font-size: 12px; max-width: 320px;">${shopInfo.address || ''}</p>
                   </div>
                 </div>
-
-                <div style="flex: 1 1 240px; min-width: 220px; text-align: right;">
+                <div style="min-width: 220px; text-align: right; flex: 1 1 240px;">
                   <p style="margin: 0; color: #16a34a; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;">Rapport ventes</p>
-                  <h2 style="margin: 8px 0 4px 0; font-size: 34px; color: #0f172a;">${periodOptions.find(p => p.value === period)?.label}</h2>
+                  <h2 style="margin: 8px 0 4px 0; font-size: 32px; color: #0f172a;">${periodOptions.find(p => p.value === period)?.label}</h2>
                   <p style="margin: 0; color: #64748b; font-size: 12px;">${new Date().toLocaleDateString('fr-FR')}</p>
                 </div>
               </div>
 
               <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px;">
-                <div style="background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 18px; padding: 16px;">
+                <div style="background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 16px; padding: 16px;">
                   <p style="margin: 0; color: #16a34a; font-size: 11px; font-weight: 700; text-transform: uppercase;">Total ventes</p>
-                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 24px; font-weight: 800;">${formatCurrency(pdfTotalSales)}</p>
+                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 22px; font-weight: 800;">${formatCurrency(pdfTotalSales)}</p>
                 </div>
-                <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 18px; padding: 16px;">
+                <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 16px; padding: 16px;">
                   <p style="margin: 0; color: #4338ca; font-size: 11px; font-weight: 700; text-transform: uppercase;">Ventes</p>
-                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 24px; font-weight: 800;">${filteredSales.length}</p>
+                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 22px; font-weight: 800;">${filteredSales.length}</p>
                 </div>
-                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 18px; padding: 16px;">
+                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px;">
                   <p style="margin: 0; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase;">Coût d'achat</p>
-                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 24px; font-weight: 800;">${formatCurrency(pdfPurchaseCost)}</p>
+                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 22px; font-weight: 800;">${formatCurrency(pdfPurchaseCost)}</p>
                 </div>
               </div>
 
-              <div style="overflow: hidden; border-radius: 18px; border: 1px solid #e2e8f0;">
-                <div style="display: grid; grid-template-columns: minmax(120px, 1fr) minmax(220px, 2fr) minmax(120px, 1fr); background: #0f172a; color: white; font-size: 11px; font-weight: 700;">
-                  <div style="padding: 14px 12px;">DATE</div>
-                  <div style="padding: 14px 12px;">CLIENT</div>
-                  <div style="padding: 14px 12px; text-align: right;">TOTAL</div>
+              <div style="width: 100%; overflow: hidden; border-radius: 16px; border: 1px solid #e2e8f0;">
+                <div style="display: grid; grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(110px, 1fr); background: #0f172a; color: white; font-size: 11px; font-weight: 700;">
+                  <div style="padding: 12px 10px;">DATE</div>
+                  <div style="padding: 12px 10px;">CLIENT</div>
+                  <div style="padding: 12px 10px; text-align: right;">TOTAL</div>
                 </div>
                 ${filteredSales.map((sale, index) => `
-                  <div style="display: grid; grid-template-columns: minmax(120px, 1fr) minmax(220px, 2fr) minmax(120px, 1fr); background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'}; color: #0f172a; font-size: 12px;">
-                    <div style="padding: 12px; border-top: 1px solid #e2e8f0;">${formatDate(new Date(sale.createdAt || sale.created_at || sale.date))}</div>
-                    <div style="padding: 12px; border-top: 1px solid #e2e8f0;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</div>
-                    <div style="padding: 12px; border-top: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #16a34a;">${formatCurrency(sale.total)}</div>
+                  <div style="display: grid; grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(110px, 1fr); background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'}; color: #0f172a; font-size: 12px;">
+                    <div style="padding: 10px 10px; border-top: 1px solid #e2e8f0;">${formatDate(new Date(sale.createdAt || sale.created_at || sale.date))}</div>
+                    <div style="padding: 10px 10px; border-top: 1px solid #e2e8f0;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</div>
+                    <div style="padding: 10px 10px; border-top: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #16a34a;">${formatCurrency(sale.total)}</div>
                   </div>
                 `).join('')}
-                <div style="display: grid; grid-template-columns: minmax(120px, 1fr) minmax(220px, 2fr) minmax(120px, 1fr); background: #ecfdf5; color: #0f172a; font-size: 13px; font-weight: 700;">
-                  <div style="padding: 14px 12px; border-top: 1px solid #e2e8f0;">TOTAL</div>
-                  <div style="padding: 14px 12px; border-top: 1px solid #e2e8f0;"></div>
-                  <div style="padding: 14px 12px; border-top: 1px solid #e2e8f0; text-align: right;">${formatCurrency(pdfTotalSales)}</div>
+                <div style="display: grid; grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(110px, 1fr); background: #ecfdf5; color: #0f172a; font-size: 12px; font-weight: 700;">
+                  <div style="padding: 12px 10px; border-top: 1px solid #e2e8f0;">TOTAL</div>
+                  <div style="padding: 12px 10px; border-top: 1px solid #e2e8f0;"></div>
+                  <div style="padding: 12px 10px; border-top: 1px solid #e2e8f0; text-align: right;">${formatCurrency(pdfTotalSales)}</div>
                 </div>
               </div>
 
-              <div style="margin-top: 24px; display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: center;">
-                <div style="min-width: 250px;">
+              <div style="margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;">
+                <div style="min-width: 240px;">
                   <p style="margin: 0; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;">Contact boutique</p>
                   <p style="margin: 8px 0 0 0; color: #0f172a; font-size: 12px;">${shopInfo.address || ''}</p>
                   <p style="margin: 4px 0 0 0; color: #0f172a; font-size: 12px;">${shopInfo.phone || ''}</p>
