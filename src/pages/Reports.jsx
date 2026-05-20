@@ -201,67 +201,60 @@ export default function Reports() {
       
       if (reportType === 'sales') {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto; background: #f7f7f7;">
-            <div style="background: white; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(15,23,42,0.08);">
-              <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px;">
-                <div style="display: flex; align-items: center; gap: 16px; min-width: 280px;">
-                  ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="width: 88px; height: 88px; object-fit: cover; border-radius: 18px; border: 1px solid #e2e8f0;" />` : `<div style="width: 88px; height: 88px; display: flex; align-items: center; justify-content: center; border-radius: 18px; background: #f1f5f9; color: #64748b; font-size: 14px; border: 1px solid #e2e8f0;">LOGO</div>`}
-                  <div>
-                    <p style="margin: 0; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;">Boutique</p>
-                    <h1 style="margin: 6px 0 0 0; font-size: 30px; line-height: 1.05; color: #0f172a;">${shopInfo.name || 'Ma boutique'}</h1>
-                    <p style="margin: 8px 0 0 0; color: #475569; font-size: 12px; max-width: 320px;">${shopInfo.address || ''}</p>
-                  </div>
-                </div>
-                <div style="min-width: 220px; text-align: right; flex: 1 1 240px;">
-                  <p style="margin: 0; color: #16a34a; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;">Rapport ventes</p>
-                  <h2 style="margin: 8px 0 4px 0; font-size: 32px; color: #0f172a;">${periodOptions.find(p => p.value === period)?.label}</h2>
-                  <p style="margin: 0; color: #64748b; font-size: 12px;">${new Date().toLocaleDateString('fr-FR')}</p>
-                </div>
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+              <div style="flex: 1;">
+                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 80px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
+                <h1 style="color: #0066cc; font-size: 28px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
               </div>
-
-              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px;">
-                <div style="background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 16px; padding: 16px;">
-                  <p style="margin: 0; color: #16a34a; font-size: 11px; font-weight: 700; text-transform: uppercase;">Total ventes</p>
-                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 22px; font-weight: 800;">${formatCurrency(pdfTotalSales)}</p>
-                </div>
-                <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 16px; padding: 16px;">
-                  <p style="margin: 0; color: #4338ca; font-size: 11px; font-weight: 700; text-transform: uppercase;">Ventes</p>
-                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 22px; font-weight: 800;">${filteredSales.length}</p>
-                </div>
-                <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 16px; padding: 16px;">
-                  <p style="margin: 0; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase;">Coût d'achat</p>
-                  <p style="margin: 10px 0 0 0; color: #0f172a; font-size: 22px; font-weight: 800;">${formatCurrency(pdfPurchaseCost)}</p>
-                </div>
+              <div style="text-align: right; flex: 1;">
+                <h2 style="color: #333; font-size: 32px; margin: 0; font-weight: bold; letter-spacing: 2px;">RAPPORT VENTES</h2>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${periodOptions.find(p => p.value === period)?.label}</p>
+                <p style="color: #666; font-size: 14px; margin: 5px 0;">${new Date().toLocaleDateString('fr-FR')}</p>
               </div>
+            </div>
 
-              <div style="width: 100%; overflow: hidden; border-radius: 16px; border: 1px solid #e2e8f0;">
-                <div style="display: grid; grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(110px, 1fr); background: #0f172a; color: white; font-size: 11px; font-weight: 700;">
-                  <div style="padding: 12px 10px;">DATE</div>
-                  <div style="padding: 12px 10px;">CLIENT</div>
-                  <div style="padding: 12px 10px; text-align: right;">TOTAL</div>
-                </div>
+            <!-- Summary Box -->
+            <div style="background: #f8f9fa; border-left: 4px solid #28a745; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+              <h3 style="color: #28a745; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Total des ventes ${t('period')}</h3>
+              <p style="color: #333; font-size: 24px; margin: 5px 0; font-weight: bold;">${formatCurrency(totalSales)}</p>
+              <p style="color: #666; font-size: 12px; margin: 0;">${filteredSales.length} ${t('salesCount')}${filteredSales.length > 1 ? 's' : ''}</p>
+            </div>
+
+            <!-- Sales Table -->
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <thead>
+                <tr style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white;">
+                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
+                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">CLIENT</th>
+                  <th style="border: 1px solid #0052a3; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
                 ${filteredSales.map((sale, index) => `
-                  <div style="display: grid; grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(110px, 1fr); background: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'}; color: #0f172a; font-size: 12px;">
-                    <div style="padding: 10px 10px; border-top: 1px solid #e2e8f0;">${formatDate(new Date(sale.createdAt || sale.created_at || sale.date))}</div>
-                    <div style="padding: 10px 10px; border-top: 1px solid #e2e8f0;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</div>
-                    <div style="padding: 10px 10px; border-top: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #16a34a;">${formatCurrency(sale.total)}</div>
-                  </div>
+                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
+                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${formatDate(new Date(sale.createdAt || sale.created_at))}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${sale.customerName || sale.customer_name || t('anonymousCustomer')}</td>
+                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px; font-weight: 500; color: #28a745;">${formatCurrency(sale.total)}</td>
+                  </tr>
                 `).join('')}
-                <div style="display: grid; grid-template-columns: minmax(110px, 1fr) minmax(180px, 2fr) minmax(110px, 1fr); background: #ecfdf5; color: #0f172a; font-size: 12px; font-weight: 700;">
-                  <div style="padding: 12px 10px; border-top: 1px solid #e2e8f0;">TOTAL</div>
-                  <div style="padding: 12px 10px; border-top: 1px solid #e2e8f0;"></div>
-                  <div style="padding: 12px 10px; border-top: 1px solid #e2e8f0; text-align: right;">${formatCurrency(pdfTotalSales)}</div>
-                </div>
-              </div>
+              </tbody>
+              <tfoot>
+                <tr style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; font-weight: bold;">
+                  <td colspan="2" style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 16px;">TOTAL:</td>
+                  <td style="border: 1px solid #218838; padding: 15px; text-align: right; font-size: 18px;">${formatCurrency(totalSales)}</td>
+                </tr>
+              </tfoot>
+            </table>
 
-              <div style="margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;">
-                <div style="min-width: 240px;">
-                  <p style="margin: 0; color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;">Contact boutique</p>
-                  <p style="margin: 8px 0 0 0; color: #0f172a; font-size: 12px;">${shopInfo.address || ''}</p>
-                  <p style="margin: 4px 0 0 0; color: #0f172a; font-size: 12px;">${shopInfo.phone || ''}</p>
-                  <p style="margin: 4px 0 0 0; color: #0f172a; font-size: 12px;">${shopInfo.email || ''}</p>
-                </div>
-                <p style="margin: 0; color: #16a34a; font-size: 13px; font-weight: 700;">Merci pour votre confiance !</p>
+            <!-- Footer -->
+            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #0066cc;">
+              <p style="color: #0066cc; font-size: 18px; margin: 0 0 15px 0; font-weight: bold;">Merci pour votre confiance!</p>
+              <div style="color: #666; font-size: 12px; line-height: 1.8;">
+                ${shopInfo.address ? `<p style="margin: 5px 0;">📍 ${shopInfo.address}</p>` : ''}
+                ${shopInfo.phone ? `<p style="margin: 5px 0;">📞 ${shopInfo.phone}</p>` : ''}
+                ${shopInfo.email ? `<p style="margin: 5px 0;">✉️ ${shopInfo.email}</p>` : ''}
               </div>
             </div>
           </div>
