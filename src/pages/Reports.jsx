@@ -206,46 +206,46 @@ export default function Reports() {
               <div style="position: absolute; top: -40px; right: -60px; width: 220px; height: 220px; background: rgba(16, 185, 129, 0.15); border-radius: 999px;"></div>
               <div style="position: absolute; bottom: -40px; left: -60px; width: 220px; height: 220px; background: rgba(22, 163, 74, 0.12); border-radius: 999px;"></div>
 
-              <div style="position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 32px;">
-                <div style="display: flex; flex-direction: column; align-items: center; min-width: 240px;">
-                  <div style="width: 96px; height: 96px; border-radius: 24px; border: 1px solid #d1fae5; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);">
-                    <div style="width: 40px; height: 40px; border-radius: 999px; background: #22c55e; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 24px;">↗</div>
+              <div style="position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 28px;">
+                <div style="display: flex; flex-direction: column; align-items: center; min-width: 180px;">
+                  <div style="width: 78px; height: 78px; border-radius: 22px; border: 1px solid #d1fae5; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(16, 185, 129, 0.14);">
+                    ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="width: 62px; height: 62px; object-fit: cover; border-radius: 18px;" />` : `<div style="width: 40px; height: 40px; border-radius: 999px; background: #22c55e; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">↗</div>`}
                   </div>
-                  <p style="margin: 16px 0 0; color: #16a34a; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em;">Gestion de stock</p>
+                  <p style="margin: 14px 0 0; color: #16a34a; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Gestion de stock</p>
                 </div>
 
-                <div style="position: relative; text-align: center; flex: 1 1 360px;">
-                  <h1 style="margin: 0; font-size: 44px; font-weight: 800; color: #0f172a; line-height: 1.05;">Rapport des ventes</h1>
-                  <p style="margin: 14px 0 0; color: #64748b; font-size: 18px;">${periodOptions.find(p => p.value === period)?.label || 'Ce mois'}</p>
-                  <div style="display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; color: #16a34a; font-size: 18px; font-weight: 700;">
-                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: #dcfce7; color: #16a34a; font-size: 16px;">📅</span>
+                <div style="position: relative; text-align: center; flex: 1 1 340px;">
+                  <h1 style="margin: 0; font-size: 40px; font-weight: 800; color: #0f172a; line-height: 1.05;">Rapport des ventes</h1>
+                  <p style="margin: 12px 0 0; color: #64748b; font-size: 16px;">${periodOptions.find(p => p.value === period)?.label || 'Ce mois'}</p>
+                  <div style="display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; color: #16a34a; font-size: 16px; font-weight: 700;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: #dcfce7; color: #16a34a; font-size: 14px;">📅</span>
                     <span>${new Date().toLocaleDateString('fr-FR')}</span>
                   </div>
                 </div>
 
-                <div style="background: linear-gradient(135deg, #d1fae5, #e6fffa); border-radius: 30px; padding: 28px 26px; min-width: 240px; display: flex; align-items: center; gap: 16px; box-shadow: 0 16px 35px rgba(16, 185, 129, 0.08);">
-                  <div style="width: 64px; height: 64px; border-radius: 999px; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);">
-                    <span style="color: #16a34a; font-size: 28px;">📝</span>
+                <div style="background: linear-gradient(135deg, #d1fae5, #e6fffa); border-radius: 28px; padding: 20px 20px; min-width: 200px; display: flex; align-items: center; gap: 14px; box-shadow: 0 14px 30px rgba(16, 185, 129, 0.08);">
+                  <div style="width: 50px; height: 50px; border-radius: 999px; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);">
+                    <span style="color: #16a34a; font-size: 22px;">📝</span>
                   </div>
                   <div>
-                    <h2 style="margin: 0; font-size: 32px; font-weight: 800; color: #0f172a;">${shopInfo.name || 'Ma boutique'}</h2>
+                    <h2 style="margin: 0; font-size: 26px; font-weight: 800; color: #0f172a;">${shopInfo.name || 'Ma boutique'}</h2>
                   </div>
                 </div>
               </div>
 
-              <div style="margin-top: 24px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 35px; padding: 28px; display: flex; flex-wrap: wrap; gap: 24px; align-items: center; justify-content: space-between;">
-                <div style="display: flex; gap: 20px; align-items: center; flex: 1 1 320px;">
-                  <div style="width: 96px; height: 96px; border-radius: 36px; background: #16a34a; display: flex; align-items: center; justify-content: center; box-shadow: 0 16px 30px rgba(16, 185, 129, 0.3);">
-                    <span style="color: white; font-size: 32px;">↗</span>
+              <div style="margin-top: 24px; background: #ecfdf5; border: 1px solid #d1fae5; border-radius: 35px; padding: 20px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: space-between;">
+                <div style="display: flex; gap: 16px; align-items: center; flex: 1 1 280px;">
+                  <div style="width: 72px; height: 72px; border-radius: 28px; background: #16a34a; display: flex; align-items: center; justify-content: center; box-shadow: 0 14px 26px rgba(16, 185, 129, 0.3);">
+                    <span style="color: white; font-size: 26px;">↗</span>
                   </div>
                   <div>
-                    <p style="margin: 0; color: #334155; font-size: 22px;">Total des ventes période</p>
-                    <h2 style="margin: 10px 0 0; font-size: 44px; font-weight: 800; color: #16a34a;">${formatCurrency(totalSales)}</h2>
-                    <p style="margin: 12px 0 0; color: #16a34a; font-size: 22px; font-weight: 700;">${filteredSales.length} ventes</p>
+                    <p style="margin: 0; color: #334155; font-size: 18px;">Total des ventes période</p>
+                    <h2 style="margin: 8px 0 0; font-size: 34px; font-weight: 800; color: #16a34a;">${formatCurrency(totalSales)}</h2>
+                    <p style="margin: 10px 0 0; color: #16a34a; font-size: 18px; font-weight: 700;">${filteredSales.length} ventes</p>
                   </div>
                 </div>
-                <div style="opacity: 0.18; margin-top: 16px; flex: 1 1 220px; min-width: 220px; display: flex; justify-content: center;">
-                  <span style="font-size: 72px; color: #16a34a;">↗</span>
+                <div style="opacity: 0.18; margin-top: 12px; flex: 1 1 180px; min-width: 180px; display: flex; justify-content: center;">
+                  <span style="font-size: 56px; color: #16a34a;">↗</span>
                 </div>
               </div>
 
