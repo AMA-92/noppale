@@ -36,16 +36,33 @@ const InvoiceTemplate = ({
     return (timestamp + random).slice(-10);
   };
 
-  // Format date for filename (DD-MM-YY)
+  // Format date for filename (DD-MM-YY) and keep it safe for file systems
   const formatDateForFilename = (dateStr) => {
     try {
-      const date = new Date(dateStr);
+      if (!dateStr) {
+        dateStr = new Date();
+      }
+
+      if (typeof dateStr === 'string') {
+        const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (slashMatch) {
+          const day = slashMatch[1].padStart(2, '0');
+          const month = slashMatch[2].padStart(2, '0');
+          const year = slashMatch[3].length === 4 ? slashMatch[3].slice(-2) : slashMatch[3].padStart(2, '0');
+          return `${day}-${month}-${year}`;
+        }
+      }
+
+      const date = dateStr instanceof Date ? dateStr : new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return 'date-invalide';
+      }
       const day = date.getDate().toString().padStart(2, '0');
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const year = date.getFullYear().toString().slice(-2);
       return `${day}-${month}-${year}`;
     } catch {
-      return dateStr;
+      return 'date-invalide';
     }
   };
 
@@ -91,10 +108,15 @@ const InvoiceTemplate = ({
     const imgX = (pdfWidth - imgWidth * ratio) / 2;
     const imgY = 0;
     
-    // Format filename: facture de (nom du client - date)
+    // Format filename: facture de (nom du client) du DD-MM-YY
     const formattedDate = formatDateForFilename(date);
-    const sanitizedCustomerName = customerName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    const filename = `facture de (${sanitizedCustomerName}-${formattedDate}).pdf`;
+    const sanitizedCustomerName = (customerName || 'client')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .toLowerCase();
+    const filename = `facture de (${sanitizedCustomerName}) du ${formattedDate}.pdf`;
     
     pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
     pdf.save(filename);
@@ -120,10 +142,13 @@ const InvoiceTemplate = ({
       className="bg-white"
       style={{ 
         width: '210mm',
+        maxWidth: '210mm',
         minHeight: '297mm',
         padding: '20mm',
         margin: '0 auto',
-        position: 'relative'
+        position: 'relative',
+        backgroundColor: '#ffffff',
+        boxSizing: 'border-box'
       }}
     >
         {/* Decorative background elements */}
@@ -131,43 +156,43 @@ const InvoiceTemplate = ({
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-green-200 to-emerald-100 rounded-full blur-3xl opacity-30 translate-y-32 -translate-x-32" />
 
         {/* HEADER */}
-        <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-6 md:p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-8">
+          <div className="flex flex-row justify-between items-center gap-4">
             {/* Left side - Shop info */}
             <div className="flex items-center gap-4">
               {displayLogo ? (
                 <img 
                   src={displayLogo} 
                   alt="Logo" 
-                  className="w-24 h-24 md:w-32 md:h-32 object-contain rounded-2xl shadow-lg bg-white"
+                  className="w-32 h-32 object-contain rounded-2xl shadow-lg bg-white"
                 />
               ) : (
-                <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-green-500 via-green-400 to-emerald-300 rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-32 h-32 bg-gradient-to-br from-green-500 via-green-400 to-emerald-300 rounded-2xl flex items-center justify-center shadow-lg">
                   <Building2 size={48} className="text-white" />
                 </div>
               )}
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-800">{shopName}</h1>
-                <p className="text-xs md:text-sm text-gray-600 mt-1">{slogan}</p>
+                <h1 className="text-2xl font-bold text-gray-800">{shopName}</h1>
+                <p className="text-sm text-gray-600 mt-1">{slogan}</p>
               </div>
             </div>
 
             {/* Right side - Invoice card */}
-            <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-2xl p-4 md:p-6 shadow-xl">
-              <h2 className="text-white text-2xl md:text-3xl font-bold mb-2">FACTURE</h2>
+            <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-2xl p-6 shadow-xl">
+              <h2 className="text-white text-3xl font-bold mb-2">FACTURE</h2>
               <div className="space-y-1">
-                <p className="text-white/90 text-xs md:text-sm font-medium">
+                <p className="text-white/90 text-sm font-medium">
                   <span className="opacity-80">N°</span> {displayInvoiceNumber}
                 </p>
-                <p className="text-white/90 text-xs md:text-sm font-medium">{date}</p>
+                <p className="text-white/90 text-sm font-medium">{date}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* INFORMATION SECTION */}
-        <div className="p-4 md:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="p-6">
+          <div className="grid grid-cols-2 gap-4 mb-6">
             {/* Client Information Card */}
             <div className="bg-white border-2 border-green-200 rounded-xl p-4 shadow-md">
               <div className="flex items-center gap-2 mb-3">
@@ -228,21 +253,21 @@ const InvoiceTemplate = ({
 
           {/* TOTAL SECTION */}
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 shadow-md">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex flex-row justify-between items-center gap-4">
               <div>
-                <h3 className="text-lg md:text-xl font-bold text-gray-800">TOTAL À PAYER</h3>
+                <h3 className="text-xl font-bold text-gray-800">TOTAL À PAYER</h3>
                 <p className="text-gray-600 text-xs mt-1">Montant total de la facture</p>
               </div>
               <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-xl px-6 py-3 shadow-lg">
-                <p className="text-white text-xl md:text-2xl font-bold">{total}</p>
+                <p className="text-white text-2xl font-bold">{total}</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* FOOTER */}
-        <div className="bg-white border-t-2 border-green-100 p-4 md:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white border-t-2 border-green-100 p-6">
+          <div className="grid grid-cols-3 gap-4 mb-4">
             {/* Address */}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg flex items-center justify-center flex-shrink-0">
