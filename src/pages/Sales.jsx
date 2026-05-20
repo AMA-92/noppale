@@ -524,73 +524,177 @@ export default function Sales() {
         
         // Générer le HTML de la facture avec le modèle exact de référence
         tempDiv.innerHTML = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto;">
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto; background: white;">
             <!-- Header -->
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
               <div style="flex: 1;">
-                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 60px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 15px; text-align: center; color: #999; font-size: 11px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
-                <h1 style="color: #0066cc; font-size: 20px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                  <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                      <line x1="3" y1="6" x2="21" y2="6"></line>
+                      <path d="M16 10a4 4 0 0 1-8 0"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 style="color: #1f2937; font-size: 24px; margin: 0; font-weight: bold;">${shopInfo.name || 'MA BOUTIQUE'}</h1>
+                    <p style="color: #6b7280; font-size: 13px; margin: 2px 0 0 0;">Solutions de gestion pour votre entreprise</p>
+                  </div>
+                </div>
               </div>
-              <div style="text-align: right; flex: 1;">
-                <h2 style="color: #333; font-size: 24px; margin: 0; font-weight: bold;">FACTURE</h2>
-                <p style="color: #666; font-size: 12px; margin: 3px 0;">N°${selectedSale.id}</p>
-                <p style="color: #666; font-size: 12px; margin: 3px 0;">${formatDate(new Date(selectedSale.createdAt))}</p>
+              <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 16px; padding: 20px 25px; text-align: center; min-width: 180px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  <h2 style="color: white; font-size: 22px; margin: 0; font-weight: bold;">FACTURE</h2>
+                </div>
+                <p style="color: rgba(255,255,255,0.9); font-size: 11px; margin: 5px 0;">N° ${selectedSale.id}</p>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 8px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <p style="color: rgba(255,255,255,0.9); font-size: 11px; margin: 0;">${formatDate(new Date(selectedSale.createdAt))}</p>
+                </div>
               </div>
             </div>
 
-            <!-- Client Information -->
-            <div style="margin-bottom: 15px;">
-              <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Nom:</strong> ${selectedSale.customerName || 'Client'}</p>
-              <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Date:</strong> ${formatDate(new Date(selectedSale.createdAt))}</p>
-            </div>
+            <!-- Info Cards -->
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+              <!-- Client Info Card -->
+              <div style="flex: 1; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <h3 style="color: #1f2937; font-size: 13px; margin: 0; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">INFORMATIONS CLIENT</h3>
+                </div>
+                <p style="color: #374151; font-size: 13px; margin: 6px 0;"><strong>Nom :</strong> ${selectedSale.customerName || 'Client'}</p>
+                <p style="color: #374151; font-size: 13px; margin: 6px 0;"><strong>Date :</strong> ${formatDate(new Date(selectedSale.createdAt))}</p>
+              </div>
 
-            <!-- Payment Information -->
-            <div style="margin-bottom: 15px;">
-              <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Mode:</strong> ${getPaymentMethod(selectedSale.paymentMethod)?.label || selectedSale.paymentMethod}</p>
+              <!-- Payment Info Card -->
+              <div style="flex: 1; background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
+                    <path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path>
+                    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+                  </svg>
+                  <h3 style="color: #1f2937; font-size: 13px; margin: 0; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">INFORMATIONS DE PAIEMENT</h3>
+                </div>
+                <p style="color: #374151; font-size: 13px; margin: 6px 0;"><strong>Mode :</strong> ${getPaymentMethod(selectedSale.paymentMethod)?.label || selectedSale.paymentMethod}</p>
+              </div>
             </div>
 
             <!-- Items Table -->
             <table style="width: 100%; border-collapse: collapse; margin: 15px 0;">
               <thead>
-                <tr style="background: #0066cc; color: white;">
-                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: left; font-weight: 600; font-size: 12px;">ARTICLE</th>
-                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: center; font-weight: 600; font-size: 12px;">QUANTITÉ</th>
-                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: right; font-weight: 600; font-size: 12px;">PRIX UNITAIRE</th>
-                  <th style="border: 1px solid #0052a3; padding: 8px; text-align: right; font-weight: 600; font-size: 12px;">TOTAL</th>
+                <tr style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white;">
+                  <th style="border: none; padding: 14px 12px; text-align: left; font-weight: 600; font-size: 12px; border-radius: 8px 0 0 0;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                      </svg>
+                      ARTICLE
+                    </div>
+                  </th>
+                  <th style="border: none; padding: 14px 12px; text-align: center; font-weight: 600; font-size: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <path d="M16 10a4 4 0 0 1-8 0"></path>
+                      </svg>
+                      QUANTITÉ
+                    </div>
+                  </th>
+                  <th style="border: none; padding: 14px 12px; text-align: right; font-weight: 600; font-size: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                      PRIX UNITAIRE
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M20.91 8.84 8.56 2.23a1.93 1.93 0 0 0-1.81 0L3.1 4.13a2.12 2.12 0 0 0-.05 3.69l12.22 6.93a2 2 0 0 0 1.94 0L21 12.47a2.12 2.12 0 0 0-.09-3.63z"></path>
+                        <path d="M3.1 12.47l12.22 6.93a2 2 0 0 0 1.94 0L21 12.47"></path>
+                      </svg>
+                    </div>
+                  </th>
+                  <th style="border: none; padding: 14px 12px; text-align: right; font-weight: 600; font-size: 12px; border-radius: 0 8px 0 0;">
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 6px;">
+                      TOTAL
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 ${selectedSale.items && selectedSale.items.length > 0 ? selectedSale.items.map(item => `
-                  <tr>
-                    <td style="border: 1px solid #dee2e6; padding: 8px; font-size: 12px;">${item.productName}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 8px; text-align: center; font-size: 12px;">${item.quantity}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-size: 12px;">${formatCurrency(item.unitPrice)}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-size: 12px;">${formatCurrency(item.totalPrice)}</td>
+                  <tr style="background: white; border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px; font-size: 13px; color: #374151;">${item.productName}</td>
+                    <td style="padding: 12px; text-align: center; font-size: 13px; color: #374151;">${item.quantity}</td>
+                    <td style="padding: 12px; text-align: right; font-size: 13px; color: #374151;">${formatCurrency(item.unitPrice)}</td>
+                    <td style="padding: 12px; text-align: right; font-size: 13px; font-weight: 600; color: #22c55e;">${formatCurrency(item.totalPrice)}</td>
                   </tr>
-                `).join('') : '<tr><td colspan="4" style="border: 1px solid #dee2e6; padding: 8px; text-align: center; color: #666; font-size: 12px;">Aucun article détaillé</td></tr>'}
+                `).join('') : '<tr><td colspan="4" style="padding: 12px; text-align: center; color: #6b7280; font-size: 13px; border-bottom: 1px solid #e5e7eb;">Aucun article détaillé</td></tr>'}
               </tbody>
               <tfoot>
-                <tr style="background: #28a745; color: white; font-weight: bold;">
-                  <td colspan="3" style="border: 1px solid #218838; padding: 10px; text-align: right; font-size: 13px;">TOTAL:</td>
-                  <td style="border: 1px solid #218838; padding: 10px; text-align: right; font-size: 14px;">${formatCurrency(selectedSale.total)}</td>
+                <tr>
+                  <td colspan="3" style="padding: 18px 12px; text-align: right; font-size: 14px; font-weight: bold; color: #1f2937; border-bottom: 1px solid #e5e7eb; border-radius: 0 0 0 8px;">TOTAL À PAYER</td>
+                  <td style="padding: 12px; text-align: right; font-size: 18px; font-weight: bold; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; border-radius: 0 0 8px 0; border-bottom: 1px solid #e5e7eb;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; display: inline-block;">${formatCurrency(selectedSale.total)}</div>
+                  </td>
                 </tr>
               </tfoot>
             </table>
 
             ${selectedSale.notes ? `
-              <div style="margin: 15px 0;">
-                <p style="color: #333; font-size: 13px; margin: 5px 0;"><strong>Notes:</strong> ${selectedSale.notes}</p>
+              <div style="margin: 15px 0; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 12px; padding: 15px;">
+                <p style="color: #374151; font-size: 13px; margin: 5px 0;"><strong>Notes:</strong> ${selectedSale.notes}</p>
               </div>
             ` : ''}
 
             <!-- Footer -->
-            <div style="text-align: center; margin-top: 30px; padding-top: 15px; border-top: 2px solid #0066cc;">
-              <p style="color: #0066cc; font-size: 16px; margin: 0 0 10px 0; font-weight: bold;">Merci pour votre confiance!</p>
-              <div style="color: #666; font-size: 11px; line-height: 1.6;">
-                ${shopInfo.address ? `<p style="margin: 3px 0;">📍 ${shopInfo.address}</p>` : ''}
-                ${shopInfo.phone ? `<p style="margin: 3px 0;">📞 ${shopInfo.phone}</p>` : ''}
-                ${shopInfo.email ? `<p style="margin: 3px 0;">✉️ ${shopInfo.email}</p>` : ''}
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-top: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-bottom: 15px;">
+                ${shopInfo.address ? `
+                  <div style="display: flex; align-items: center; gap: 8px; color: #374151; font-size: 13px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span>${shopInfo.address}</span>
+                  </div>
+                ` : ''}
+                ${shopInfo.phone ? `
+                  <div style="display: flex; align-items: center; gap: 8px; color: #374151; font-size: 13px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    <span>${shopInfo.phone}</span>
+                  </div>
+                ` : ''}
+                ${shopInfo.email ? `
+                  <div style="display: flex; align-items: center; gap: 8px; color: #374151; font-size: 13px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                      <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <span>${shopInfo.email}</span>
+                  </div>
+                ` : ''}
               </div>
+              <p style="color: #22c55e; font-size: 16px; margin: 0; text-align: center; font-weight: bold; font-style: italic;">Merci pour votre confiance !</p>
             </div>
           </div>
         `
