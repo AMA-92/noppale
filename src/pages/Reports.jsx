@@ -288,60 +288,87 @@ export default function Reports() {
         `
       } else if (reportType === 'expenses') {
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto;">
-            <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
-              <div style="flex: 1;">
-                ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="max-height: 80px; margin-bottom: 10px;">` : '<div style="border: 2px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin-bottom: 10px;">VOTRE LOGO ICI</div>'}
-                <h1 style="color: #0066cc; font-size: 28px; margin: 0 0 5px 0; font-weight: bold;">${shopInfo.name || 'Ma boutique'}</h1>
-              </div>
-              <div style="text-align: right; flex: 1;">
-                <h2 style="color: #333; font-size: 32px; margin: 0; font-weight: bold; letter-spacing: 2px;">RAPPORT DÉPENSES</h2>
-                <p style="color: #666; font-size: 14px; margin: 5px 0;">${periodOptions.find(p => p.value === period)?.label}</p>
-                <p style="color: #666; font-size: 14px; margin: 5px 0;">${new Date().toLocaleDateString('fr-FR')}</p>
-              </div>
-            </div>
+          <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 210mm; margin: 0 auto; background: #f7f7f7;">
+            <div style="position: relative; overflow: hidden; border-radius: 40px; background: white; padding: 32px; box-shadow: 0 35px 90px rgba(15, 23, 42, 0.15);">
+              <div style="position: absolute; top: -40px; right: -60px; width: 220px; height: 220px; background: rgba(220, 38, 38, 0.15); border-radius: 999px;"></div>
+              <div style="position: absolute; bottom: -40px; left: -60px; width: 220px; height: 220px; background: rgba(185, 28, 28, 0.12); border-radius: 999px;"></div>
 
-            <!-- Summary Box -->
-            <div style="background: #f8f9fa; border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-              <h3 style="color: #dc3545; font-size: 14px; margin: 0 0 10px 0; font-weight: bold; text-transform: uppercase;">Total des dépenses ${t('period')}</h3>
-              <p style="color: #333; font-size: 24px; margin: 5px 0; font-weight: bold;">${formatCurrency(totalExpenses)}</p>
-              <p style="color: #666; font-size: 12px; margin: 0;">${filteredExpenses.length} ${t('expensesCount')}${filteredExpenses.length > 1 ? 's' : ''}</p>
-            </div>
+              <div style="position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 28px;">
+                <div style="display: flex; flex-direction: column; align-items: center; min-width: 180px;">
+                  <div style="width: 92px; height: 92px; border-radius: 24px; border: 1px solid #fecaca; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 24px rgba(220, 38, 38, 0.14);">
+                    ${shopInfo.logo ? `<img src="${shopInfo.logo}" style="width: 72px; height: 72px; object-fit: cover; border-radius: 20px;" />` : `<div style="width: 48px; height: 48px; border-radius: 999px; background: #dc2626; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 20px;">↗</div>`}
+                  </div>
+                  <p style="margin: 14px 0 0; color: #dc2626; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Gestion de stock</p>
+                </div>
 
-            <!-- Expenses Table -->
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <thead>
-                <tr style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white;">
-                  <th style="border: 1px solid #c82333; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
-                  <th style="border: 1px solid #c82333; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DESCRIPTION</th>
-                  <th style="border: 1px solid #c82333; padding: 12px; text-align: right; font-weight: 600; font-size: 13px;">MONTANT</th>
-                </tr>
-              </thead>
-              <tbody>
+                <div style="position: relative; text-align: center; flex: 1 1 340px;">
+                  <h1 style="margin: 0; font-size: 40px; font-weight: 800; color: #0f172a; line-height: 1.05;">Rapport des dépenses</h1>
+                  <p style="margin: 12px 0 0; color: #64748b; font-size: 16px;">${periodOptions.find(p => p.value === period)?.label || 'Ce mois'}</p>
+                  <div style="display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; color: #dc2626; font-size: 16px; font-weight: 700;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: #fee2e2; color: #dc2626; font-size: 14px;">📅</span>
+                    <span>${new Date().toLocaleDateString('fr-FR')}</span>
+                  </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #fee2e2, #fecaca); border-radius: 28px; padding: 20px 20px; min-width: 200px; display: flex; align-items: center; gap: 14px; box-shadow: 0 14px 30px rgba(220, 38, 38, 0.08);">
+                  <div style="width: 50px; height: 50px; border-radius: 999px; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);">
+                    <span style="color: #dc2626; font-size: 22px;">📝</span>
+                  </div>
+                  <div>
+                    <h2 style="margin: 0; font-size: 26px; font-weight: 800; color: #0f172a;">${shopInfo.name || 'Ma boutique'}</h2>
+                  </div>
+                </div>
+              </div>
+
+              <div style="margin-top: 24px; background: #fee2e2; border: 1px solid #fecaca; border-radius: 35px; padding: 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
+                <div style="display: flex; gap: 14px; align-items: center; flex: 1 1 260px;">
+                  <div style="width: 60px; height: 60px; border-radius: 26px; background: #dc2626; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 22px rgba(220, 38, 38, 0.3);">
+                    <span style="color: white; font-size: 22px;">↗</span>
+                  </div>
+                  <div>
+                    <p style="margin: 0; color: #7f1d1d; font-size: 16px;">Total des dépenses période</p>
+                    <h2 style="margin: 8px 0 0; font-size: 30px; font-weight: 800; color: #dc2626;">${formatCurrency(totalExpenses)}</h2>
+                    <p style="margin: 8px 0 0; color: #991b1b; font-size: 16px; font-weight: 700;">${filteredExpenses.length} dépenses</p>
+                  </div>
+                </div>
+                <div style="opacity: 0.18; margin-top: 10px; flex: 1 1 160px; min-width: 160px; display: flex; justify-content: center;">
+                  <span style="font-size: 52px; color: #dc2626;">↗</span>
+                </div>
+              </div>
+
+              <div style="margin-top: 32px; overflow: hidden; border-radius: 30px; border: 1px solid #fecaca; box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);">
+                <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; font-size: 18px; font-weight: 700;">
+                  <div style="padding: 22px 20px; border-right: 1px solid rgba(255,255,255,0.2);">DATE</div>
+                  <div style="padding: 22px 20px; border-right: 1px solid rgba(255,255,255,0.2);">DESCRIPTION</div>
+                  <div style="padding: 22px 20px; text-align: right;">MONTANT</div>
+                </div>
                 ${filteredExpenses.map((expense, index) => `
-                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'};">
-                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 12px; font-size: 13px;">${expense.description || t('noDescription')}</td>
-                    <td style="border: 1px solid #dee2e6; padding: 12px; text-align: right; font-size: 13px; font-weight: 500; color: #dc3545;">${formatCurrency(expense.amount)}</td>
-                  </tr>
+                  <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; background: ${index % 2 === 0 ? '#ffffff' : '#fff1f2'}; color: #0f172a; font-size: 16px;">
+                    <div style="padding: 14px 18px; border-top: 1px solid #fde2e2;">${formatDate(new Date(expense.createdAt || expense.created_at || expense.date))}</div>
+                    <div style="padding: 14px 18px; border-top: 1px solid #fde2e2;">${expense.description || t('noDescription')}</div>
+                    <div style="padding: 14px 18px; border-top: 1px solid #fde2e2; text-align: right; font-weight: 700; color: #dc2626;">${formatCurrency(expense.amount)}</div>
+                  </div>
                 `).join('')}
-              </tbody>
-              <tfoot>
-                <tr style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; font-weight: bold;">
-                  <td colspan="2" style="border: 1px solid #c82333; padding: 15px; text-align: right; font-size: 16px;">TOTAL:</td>
-                  <td style="border: 1px solid #c82333; padding: 15px; text-align: right; font-size: 18px;">${formatCurrency(totalExpenses)}</td>
-                </tr>
-              </tfoot>
-            </table>
+                <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; background: #fee2e2; color: #7f1d1d; font-size: 20px; font-weight: 700;">
+                  <div style="padding: 18px 18px; border-top: 1px solid #fecaca; border-right: 1px solid #fecaca;">TOTAL</div>
+                  <div style="padding: 18px 18px; border-top: 1px solid #fecaca; border-right: 1px solid #fecaca;"></div>
+                  <div style="padding: 18px 18px; border-top: 1px solid #fecaca; text-align: right;">${formatCurrency(totalExpenses)}</div>
+                </div>
+              </div>
 
-            <!-- Footer -->
-            <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #0066cc;">
-              <p style="color: #0066cc; font-size: 18px; margin: 0 0 15px 0; font-weight: bold;">Merci pour votre confiance!</p>
-              <div style="color: #666; font-size: 12px; line-height: 1.8;">
-                ${shopInfo.address ? `<p style="margin: 5px 0;">📍 ${shopInfo.address}</p>` : ''}
-                ${shopInfo.phone ? `<p style="margin: 5px 0;">📞 ${shopInfo.phone}</p>` : ''}
-                ${shopInfo.email ? `<p style="margin: 5px 0;">✉️ ${shopInfo.email}</p>` : ''}
+              <div style="margin-top: 36px; border: 1px solid #fecaca; background: #fff1f2; border-radius: 30px; padding: 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; text-align: center;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                  <div style="width: 56px; height: 56px; border-radius: 999px; border: 2px solid #dc2626; display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 24px;">📍</div>
+                  <span style="color: #334155; font-size: 16px;">${shopInfo.address || 'Dakar, point E'}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                  <div style="width: 56px; height: 56px; border-radius: 999px; border: 2px solid #dc2626; display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 24px;">📞</div>
+                  <span style="color: #334155; font-size: 16px;">${shopInfo.phone || '+221778762082'}</span>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                  <div style="width: 56px; height: 56px; border-radius: 999px; border: 2px solid #dc2626; display: flex; align-items: center; justify-content: center; color: #dc2626; font-size: 24px;">✉️</div>
+                  <span style="color: #334155; font-size: 16px;">${shopInfo.email || 'mohamediadiara98@gmail.com'}</span>
+                </div>
               </div>
             </div>
           </div>
