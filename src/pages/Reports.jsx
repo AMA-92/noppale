@@ -397,9 +397,9 @@ export default function Reports() {
                   </div>
                 </div>
 
-                <div style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 28px; padding: 20px 20px; min-width: 200px; display: flex; align-items: center; gap: 14px; box-shadow: 0 14px 30px rgba(59, 130, 246, 0.08);">
-                  <div style="width: 50px; height: 50px; border-radius: 999px; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);">
-                    <span style="color: #2563eb; font-size: 22px;">📝</span>
+                <div style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 28px; padding: 16px; min-width: 200px; display: flex; align-items: center; gap: 12px; box-shadow: 0 14px 30px rgba(59, 130, 246, 0.08);">
+                  <div style="width: 44px; height: 44px; border-radius: 999px; background: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);">
+                    <span style="color: #2563eb; font-size: 18px;">📝</span>
                   </div>
                   <div>
                     <h2 style="margin: 0; font-size: 26px; font-weight: 800; color: #0f172a;">${shopInfo.name || 'Ma boutique'}</h2>
@@ -407,58 +407,58 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 20px;">
-                <div style="background: #eff6ff; border-radius: 32px; padding: 24px; box-shadow: 0 18px 35px rgba(59, 130, 246, 0.08);">
-                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 12px;">
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px;">
+                <div style="background: #eff6ff; border-radius: 28px; padding: 18px; box-shadow: 0 12px 24px rgba(59, 130, 246, 0.08);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
                     <div>
-                      <p style="margin: 0; color: #1d4ed8; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em;">Total des ventes</p>
-                      <p style="margin: 8px 0 0; color: #0f172a; font-size: 28px; font-weight: 800;">${formatCurrency(totalSales)}</p>
+                      <p style="margin: 0; color: #1d4ed8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Total des ventes</p>
+                      <p style="margin: 8px 0 0; color: #0f172a; font-size: 26px; font-weight: 800;">${formatCurrency(totalSales)}</p>
                     </div>
-                    <div style="width: 48px; height: 48px; border-radius: 16px; background: #dbeafe; display: grid; place-items: center; color: #2563eb; font-size: 20px;">💰</div>
+                    <div style="width: 44px; height: 44px; border-radius: 14px; background: #dbeafe; display: grid; place-items: center; color: #2563eb; font-size: 18px;">💰</div>
                   </div>
                   <p style="margin: 0; color: #475569; font-size: 13px;">${filteredSales.length} vente${filteredSales.length > 1 ? 's' : ''}</p>
                 </div>
-                <div style="background: #fef2f2; border-radius: 32px; padding: 24px; box-shadow: 0 18px 35px rgba(220, 38, 38, 0.08);">
-                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 12px;">
+                <div style="background: #fef2f2; border-radius: 28px; padding: 18px; box-shadow: 0 12px 24px rgba(220, 38, 38, 0.08);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
                     <div>
-                      <p style="margin: 0; color: #b91c1c; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em;">Total des dépenses</p>
-                      <p style="margin: 8px 0 0; color: #0f172a; font-size: 28px; font-weight: 800;">${formatCurrency(totalExpenses)}</p>
+                      <p style="margin: 0; color: #b91c1c; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Total des dépenses</p>
+                      <p style="margin: 8px 0 0; color: #0f172a; font-size: 26px; font-weight: 800;">${formatCurrency(totalExpenses)}</p>
                     </div>
-                    <div style="width: 48px; height: 48px; border-radius: 16px; background: #fecaca; display: grid; place-items: center; color: #991b1b; font-size: 20px;">🧾</div>
+                    <div style="width: 44px; height: 44px; border-radius: 14px; background: #fecaca; display: grid; place-items: center; color: #991b1b; font-size: 18px;">🧾</div>
                   </div>
                   <p style="margin: 0; color: #475569; font-size: 13px;">${filteredExpenses.length} dépense${filteredExpenses.length > 1 ? 's' : ''}</p>
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 30px;">
-                <div style="background: #e0f2fe; border-radius: 32px; padding: 24px; box-shadow: 0 18px 35px rgba(14, 165, 233, 0.08);">
-                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 12px;">
+              <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 30px;">
+                <div style="background: #e0f2fe; border-radius: 28px; padding: 18px; box-shadow: 0 12px 24px rgba(14, 165, 233, 0.08);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
                     <div>
-                      <p style="margin: 0; color: #0c4a6e; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em;">Bénéfice brut</p>
-                      <p style="margin: 8px 0 0; color: ${profit >= 0 ? '#16a34a' : '#dc2626'}; font-size: 28px; font-weight: 800;">${formatCurrency(profit)}</p>
+                      <p style="margin: 0; color: #0c4a6e; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Bénéfice brut</p>
+                      <p style="margin: 8px 0 0; color: ${profit >= 0 ? '#16a34a' : '#dc2626'}; font-size: 26px; font-weight: 800;">${formatCurrency(profit)}</p>
                     </div>
-                    <div style="width: 48px; height: 48px; border-radius: 16px; background: white; display: grid; place-items: center; color: ${profit >= 0 ? '#16a34a' : '#dc2626'}; font-size: 20px;">📈</div>
+                    <div style="width: 44px; height: 44px; border-radius: 14px; background: white; display: grid; place-items: center; color: ${profit >= 0 ? '#16a34a' : '#dc2626'}; font-size: 18px;">📈</div>
                   </div>
                   <p style="margin: 0; color: #475569; font-size: 13px;">${profit >= 0 ? 'Bénéfice' : 'Perte'}</p>
                 </div>
-                <div style="background: #f3e8ff; border-radius: 32px; padding: 24px; box-shadow: 0 18px 35px rgba(167, 139, 250, 0.08);">
-                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 12px;">
+                <div style="background: #f3e8ff; border-radius: 28px; padding: 18px; box-shadow: 0 12px 24px rgba(167, 139, 250, 0.08);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px;">
                     <div>
-                      <p style="margin: 0; color: #6d28d9; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em;">Bénéfice réel</p>
-                      <p style="margin: 8px 0 0; color: #0f172a; font-size: 28px; font-weight: 800;">${formatCurrency(realProfit)}</p>
+                      <p style="margin: 0; color: #6d28d9; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Bénéfice réel</p>
+                      <p style="margin: 8px 0 0; color: #0f172a; font-size: 26px; font-weight: 800;">${formatCurrency(realProfit)}</p>
                     </div>
-                    <div style="width: 48px; height: 48px; border-radius: 16px; background: white; display: grid; place-items: center; color: #7c3aed; font-size: 20px;">💎</div>
+                    <div style="width: 44px; height: 44px; border-radius: 14px; background: white; display: grid; place-items: center; color: #7c3aed; font-size: 18px;">💎</div>
                   </div>
                   <p style="margin: 0; color: #475569; font-size: 13px;">Coût d'achat: ${formatCurrency(totalPurchaseCost)}</p>
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-bottom: 30px; width: 100%;">
                 <!-- Sales Details -->
-                <div>
+                <div style="width: 100%;">
                   <h3 style="color: #0066cc; font-size: 16px; margin: 0 0 15px 0; font-weight: bold; text-transform: uppercase;">Détails des ventes</h3>
-                  <div style="border: 2px solid #0066cc; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <table style="width: 100%; border-collapse: collapse;">
+                  <div style="border: 2px solid #0066cc; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
+                    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                       <thead>
                         <tr style="background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); color: white;">
                           <th style="border: 1px solid #0052a3; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
@@ -486,8 +486,8 @@ export default function Reports() {
                 <!-- Expenses Details -->
                 <div>
                   <h3 style="color: #dc3545; font-size: 16px; margin: 0 0 15px 0; font-weight: bold; text-transform: uppercase;">Détails des dépenses</h3>
-                  <div style="border: 2px solid #dc3545; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <table style="width: 100%; border-collapse: collapse;">
+                  <div style="border: 2px solid #dc3545; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%;">
+                    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                       <thead>
                         <tr style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white;">
                           <th style="border: 1px solid #c82333; padding: 12px; text-align: left; font-weight: 600; font-size: 13px;">DATE</th>
