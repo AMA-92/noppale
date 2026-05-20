@@ -54,8 +54,12 @@ const InvoiceTemplate = ({
     const fetchShopLogo = async () => {
       try {
         const shopInfo = await appStorage.getShopInfo();
+        console.log('Shop info fetched:', shopInfo);
         if (shopInfo && shopInfo.logo) {
+          console.log('Logo found:', shopInfo.logo);
           setFetchedShopLogo(shopInfo.logo);
+        } else {
+          console.log('No logo found in shop info');
         }
       } catch (error) {
         console.error('Error fetching shop logo:', error);
@@ -65,9 +69,9 @@ const InvoiceTemplate = ({
   }, []);
 
   // Use fetched logo if no logo prop is provided
-  const displayLogo = shopLogo || fetchedShopLogo;
-  // Use generated invoice number if not provided
-  const displayInvoiceNumber = invoiceNumber || generateInvoiceNumber();
+  const displayLogo = fetchedShopLogo || shopLogo;
+  // Always generate automatic invoice number (10 digits)
+  const displayInvoiceNumber = generateInvoiceNumber();
 
   const exportToPDF = async () => {
     const element = invoiceRef.current;
