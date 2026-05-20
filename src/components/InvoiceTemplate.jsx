@@ -139,7 +139,7 @@ const InvoiceTemplate = ({
                 <img 
                   src={displayLogo} 
                   alt="Logo" 
-                  className="w-24 h-24 md:w-32 md:h-32 object-contain rounded-2xl shadow-lg"
+                  className="w-24 h-24 md:w-32 md:h-32 object-contain rounded-2xl shadow-lg bg-white"
                 />
               ) : (
                 <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-green-500 via-green-400 to-emerald-300 rounded-2xl flex items-center justify-center shadow-lg">
@@ -199,10 +199,10 @@ const InvoiceTemplate = ({
 
           {/* ITEMS TABLE */}
           <div className="mb-6">
-            <div className="bg-gradient-to-r from-green-500 via-green-400 to-emerald-300 rounded-xl overflow-hidden shadow-lg">
+            <div className="bg-gradient-to-r from-green-200 via-green-100 to-emerald-100 rounded-xl overflow-hidden shadow-lg">
               <table className="w-full">
                 <thead>
-                  <tr className="text-white">
+                  <tr className="text-green-800">
                     <th className="px-4 py-3 text-left font-bold text-xs uppercase tracking-wider">Article</th>
                     <th className="px-4 py-3 text-center font-bold text-xs uppercase tracking-wider">Quantité</th>
                     <th className="px-4 py-3 text-right font-bold text-xs uppercase tracking-wider">Prix Unitaire</th>
