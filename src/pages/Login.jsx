@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
-import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PWAInstallPrompt from '../components/PWAInstallPrompt'
 
@@ -106,18 +106,46 @@ export default function Login() {
           <p className="text-primary-200 text-lg mb-8">
             Votre partenaire de confiance pour gérer efficacement votre boutique ou commerce.
           </p>
-          <div className="grid grid-cols-2 gap-4 text-left">
+          
+          {/* Vidéo démo */}
+          <div className="mb-8">
+            <div className="relative w-full max-w-sm mx-auto rounded-2xl overflow-hidden shadow-2xl border border-primary-400/30">
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-auto"
+                poster="/video-poster.jpg"
+              >
+                <source src="/videos/demo.mp4" type="video/mp4" />
+                <source src="/videos/demo.webm" type="video/webm" />
+                Votre navigateur ne supporte pas les vidéos.
+              </video>
+              
+              {/* Overlay avec bouton play si vidéo ne démarre pas automatiquement */}
+              <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                <button className="bg-white/90 backdrop-blur-sm rounded-full p-4 shadow-xl hover:bg-white transition-all">
+                  <Play size={24} className="text-primary-600" />
+                </button>
+              </div>
+            </div>
+            <p className="text-primary-300 text-sm mt-3 text-center">
+              🎥 Découvrez Noppalé en action
+            </p>
+          </div>
+          
+          {/* Fonctionnalités en dessous de la vidéo */}
+          <div className="grid grid-cols-2 gap-3 text-left">
             {[
-              { icon: '📦', label: 'Gestion des stocks' },
-              { icon: '💰', label: 'Enregistrement des ventes' },
-              { icon: '👥', label: 'Gestion clients & dettes' },
-              { icon: '📊', label: 'Rapports & analyses' },
-              { icon: '💵', label: 'Wave & Orange Money' },
-              { icon: '📄', label: 'Export PDF factures' },
+              { icon: '�', label: 'Stocks' },
+              { icon: '💰', label: 'Ventes' },
+              { icon: '�', label: 'Clients' },
+              { icon: '�', label: 'Rapports' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-primary-100">
-                <span className="text-xl">{item.icon}</span>
-                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-lg">{item.icon}</span>
+                <span className="text-xs font-medium">{item.label}</span>
               </div>
             ))}
           </div>
