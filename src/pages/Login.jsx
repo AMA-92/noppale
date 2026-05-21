@@ -1,25 +1,8 @@
 import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
-import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Phone } from 'lucide-react'
+import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-// Indicatifs téléphoniques pour les pays d'Afrique de l'Ouest
-const PHONE_CODES = [
-  { country: 'Sénégal', code: '+221' },
-  { country: 'Mali', code: '+223' },
-  { country: 'Côte d\'Ivoire', code: '+225' },
-  { country: 'Burkina Faso', code: '+226' },
-  { country: 'Niger', code: '+227' },
-  { country: 'Bénin', code: '+229' },
-  { country: 'Cameroun', code: '+237' },
-  { country: 'Guinée', code: '+224' },
-  { country: 'Gambie', code: '+220' },
-  { country: 'Liberia', code: '+231' },
-  { country: 'Sierra Leone', code: '+232' },
-  { country: 'Ghana', code: '+233' },
-  { country: 'Togo', code: '+228' },
-  { country: 'Autre', code: '+' }
-]
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true)
@@ -28,8 +11,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
-  const [phoneCode, setPhoneCode] = useState('+221')
-  const [phone, setPhone] = useState('')
 
   // Charger les identifiants sauvegardés au démarrage
   React.useEffect(() => {
@@ -96,8 +77,7 @@ export default function Login() {
           return
         }
 
-        const fullPhone = phoneCode + phone
-        const newUser = await usersStorage.signUp(email, password, email.split('@')[0], fullPhone)
+        const newUser = await usersStorage.signUp(email, password, email.split('@')[0], '')
         
         if (newUser) {
           toast.success('Compte créé avec succès !')
@@ -204,36 +184,7 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Phone number (only for signup) */}
-            {!isLogin && (
-              <div>
-                <label className="label-field">Numéro de téléphone</label>
-                <div className="flex gap-2">
-                  <select
-                    value={phoneCode}
-                    onChange={e => setPhoneCode(e.target.value)}
-                    className="input-field w-20 flex-shrink-0"
-                  >
-                    {PHONE_CODES.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.code}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="relative flex-1">
-                    <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="7X XXX XXXX (optionnel)"
-                      className="input-field pl-10"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
+            
             {/* Remember me checkbox (only for login) */}
             {isLogin && (
               <div className="flex items-center">
