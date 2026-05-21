@@ -8,12 +8,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.png', 'icon-512.png'],
+      includeAssets: ['icon-192.svg', 'icon-512.svg', 'favicon-exact.svg'],
       manifest: {
         name: 'Noppalé - Gestion Commerciale',
         short_name: 'Noppalé',
         description: 'Logiciel de gestion commerciale pour les commerçants d\'Afrique de l\'Ouest',
-        theme_color: '#f97316',
+        theme_color: '#3B82F6',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait-primary',
@@ -21,15 +21,15 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: '/icon-192.png',
+            src: '/icon-192.svg',
             sizes: '192x192',
-            type: 'image/png',
+            type: 'image/svg+xml',
             purpose: 'any maskable'
           },
           {
-            src: '/icon-512.png',
+            src: '/logo-exact-512.svg',
             sizes: '512x512',
-            type: 'image/png',
+            type: 'image/svg+xml',
             purpose: 'any maskable'
           }
         ]
