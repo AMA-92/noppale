@@ -3,19 +3,48 @@
 
 import { supabase } from '../supabase/config.js'
 
-// Obtenir l'ID de l'utilisateur connecté
+// Cache pour l'ID utilisateur (évite les appels multiples)
+let cachedUserId = null
+let userIdPromise = null
+
+// Obtenir l'ID de l'utilisateur connecté avec cache
 const getCurrentUserId = async () => {
-  try {
-    const { data, error } = await supabase.auth.getUser()
-    if (error) {
+  // Si déjà en cache, retourner directement
+  if (cachedUserId) return cachedUserId
+  
+  // Si une requête est en cours, retourner la promesse existante
+  if (userIdPromise) return userIdPromise
+  
+  // Créer la promesse et la mettre en cache
+  userIdPromise = (async () => {
+    try {
+      const { data, error } = await supabase.auth.getUser()
+      if (error) {
+        console.error('Erreur getCurrentUserId:', error)
+        cachedUserId = null
+        return null
+      }
+      cachedUserId = data?.user?.id || null
+      return cachedUserId
+    } catch (error) {
       console.error('Erreur getCurrentUserId:', error)
+      cachedUserId = null
       return null
+    } finally {
+      // Libérer la promesse après 2 secondes
+      setTimeout(() => {
+        userIdPromise = null
+      }, 2000)
     }
-    return data?.user?.id || null
-  } catch (error) {
-    console.error('Erreur getCurrentUserId:', error)
-    return null
-  }
+  })()
+  
+  return userIdPromise
+}
+
+// Fonction pour invalider le cache (appelée lors de la déconnexion)
+export const clearUserIdCache = () => {
+  cachedUserId = null
+  userIdPromise = null
 }
 
 // Gestion des utilisateurs avec Supabase Auth
@@ -62,6 +91,10 @@ export const usersStorage = {
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
+      
+      // Vider le cache utilisateur
+      clearUserIdCache()
+      
       return true
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error)

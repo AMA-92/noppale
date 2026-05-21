@@ -22,15 +22,26 @@ export default function Layout({ user }) {
   const [supabaseUser, setSupabaseUser] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
   
-  // Récupérer l'utilisateur Supabase actuel
+  // Récupérer l'utilisateur Supabase actif (optimisé)
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setSupabaseUser(user)
-      console.log('Utilisateur Supabase actuel:', user?.id)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        setSupabaseUser(user)
+        console.log('Utilisateur Supabase actuel:', user?.id)
+      } catch (error) {
+        console.error('Erreur récupération utilisateur:', error)
+        setSupabaseUser(null)
+      }
     }
-    getCurrentUser()
-  }, [])
+    
+    // Exécuter seulement si on a déjà un user du prop
+    if (user) {
+      getCurrentUser()
+    } else {
+      setSupabaseUser(null)
+    }
+  }, [user])
   
   // Vérification de l'abonnement
   const { profile, access, expiringSoon, daysUntilExpiry } = useProfile(supabaseUser?.id || user?.id)

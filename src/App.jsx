@@ -22,11 +22,26 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Vérifier l'état de l'authentification au chargement
+    // Vérifier l'état de l'authentification au chargement avec timeout
     const checkAuth = async () => {
-      const currentUser = await authStorage.getCurrentUser()
-      setUser(currentUser)
-      setLoading(false)
+      try {
+        // Timeout de 5 secondes maximum
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout auth')), 5000)
+        )
+        
+        const currentUser = await Promise.race([
+          authStorage.getCurrentUser(),
+          timeoutPromise
+        ])
+        
+        setUser(currentUser)
+      } catch (error) {
+        console.error('Erreur auth:', error)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
     }
 
     checkAuth()
