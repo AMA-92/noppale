@@ -220,7 +220,7 @@ export default function Login() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="votre@email.com"
-                  className="input-field pl-10"
+                  className="input-field pl-12"
                   required
                 />
               </div>
@@ -236,7 +236,7 @@ export default function Login() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="input-field pl-10 pr-10"
+                  className="input-field pl-12 pr-12"
                   required
                 />
                 <button

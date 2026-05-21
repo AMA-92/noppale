@@ -611,7 +611,7 @@ export default function Sales() {
           placeholder={t('searchSales')}
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="input-field pl-10"
+          className="input-field pl-12"
           aria-label={t('searchSales')}
         />
       </div>
@@ -722,7 +722,7 @@ export default function Sales() {
                       value={productSearch}
                       onChange={(e) => setProductSearch(e.target.value)}
                       placeholder="Rechercher un produit..."
-                      className="input-field pl-10 w-full"
+                      className="input-field pl-12 w-full"
                     />
                   </div>
 

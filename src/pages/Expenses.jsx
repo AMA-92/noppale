@@ -278,7 +278,7 @@ export default function Expenses() {
               placeholder={t('searchExpenses')}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input-field pl-10"
+              className="input-field pl-12"
             />
           </div>
         </div>
