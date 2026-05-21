@@ -111,8 +111,8 @@ export default function Layout({ user }) {
             >
               <Menu size={20} />
             </button>
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-black text-sm">N</span>
+            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center overflow-hidden">
+              <img src="/icon.svg" alt="Noppalé" className="w-6 h-6" />
             </div>
             <span className="font-black text-slate-800 text-base">Noppalé</span>
           </div>
@@ -193,8 +193,8 @@ export default function Layout({ user }) {
         <div className="flex items-center justify-between px-4 py-5 border-b border-slate-200/50 shadow-lg">
           {!isMobile && sidebarOpen && (
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center shadow-lg border border-primary-200">
-                <span className="text-primary-600 font-black text-lg">N</span>
+              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center shadow-lg border border-primary-200 overflow-hidden">
+                <img src="/icon.svg" alt="Noppalé" className="w-8 h-8" />
               </div>
               <div>
                 <span className="font-black text-slate-800 text-lg">Noppalé</span>
