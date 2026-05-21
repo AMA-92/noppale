@@ -641,7 +641,7 @@ export default function Dashboard() {
             <div className="space-y-4">
               {/* Graphique en barres */}
               <div className="h-56 relative overflow-hidden">
-                <div className="absolute inset-0 flex items-end justify-between px-4 pb-8">
+                <div className="absolute inset-0 flex items-end justify-between px-2 pb-8">
                   {salesEvolution.map((day, index) => {
                     const maxTotal = Math.max(...salesEvolution.map(d => d.total))
                     const barHeight = maxTotal > 0 ? (day.total / maxTotal) * 100 : 0
@@ -660,7 +660,7 @@ export default function Dashboard() {
                     return (
                       <div 
                         key={index}
-                        className="group relative flex flex-col items-center flex-1 mx-1"
+                        className="group relative flex flex-col items-center flex-1 mx-0.5"
                         onMouseEnter={(e) => {
                           e.currentTarget.style.transform = 'translateY(-4px) scale(1.05)'
                           e.currentTarget.style.transition = 'transform 0.3s ease'
@@ -672,11 +672,11 @@ export default function Dashboard() {
                         {/* Bâton */}
                         <div className="flex justify-center items-end w-full" style={{ height: '180px' }}>
                           <div 
-                            className={`w-12 bg-gradient-to-t ${barColor} transition-all duration-1500 ease-out rounded-t-lg shadow-lg flex items-center justify-center pt-2`}
+                            className={`w-8 lg:w-12 bg-gradient-to-t ${barColor} transition-all duration-1500 ease-out rounded-t-lg shadow-lg flex items-center justify-center pt-2`}
                             style={{ height: `${barHeight}%`, minHeight: '4px' }}
                           >
                             {barHeight > 20 && (
-                              <span className="text-white text-xs font-bold drop-shadow-lg">
+                              <span className="text-white text-[10px] lg:text-xs font-bold drop-shadow-lg">
                                 {formatCurrency(day.total)}
                               </span>
                             )}
@@ -685,10 +685,10 @@ export default function Dashboard() {
                         
                         {/* Nom du jour */}
                         <div className="mt-2 text-center">
-                          <p className="text-xs font-bold text-slate-700 bg-white px-2 py-1 rounded-full shadow-sm">
+                          <p className="text-[10px] lg:text-xs font-bold text-slate-700 bg-white px-1 lg:px-2 py-1 rounded-full shadow-sm">
                             {day.dayName}
                           </p>
-                          <p className="text-[10px] text-slate-500">{day.dateStr}</p>
+                          <p className="text-[8px] lg:text-[10px] text-slate-500">{day.dateStr}</p>
                         </div>
                         
                         {/* Tooltip au survol */}
