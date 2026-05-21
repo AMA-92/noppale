@@ -270,7 +270,7 @@ export default function Products() {
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-4 pb-6">
               {/* Image Upload */}
               <div>
                 <label className="label-field">Image du produit</label>
