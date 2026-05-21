@@ -11,6 +11,7 @@
 ### 2. Nom de fichier
 - Placez votre vidéo ici : `demo.mp4`
 - ou `demo.webm` pour un meilleur support
+- ou `demo.mp3` pour un fichier audio uniquement
 
 ### 3. Poster image optionnel
 - Ajoutez une image d'aperçu : `../video-poster.jpg`
@@ -24,7 +25,13 @@ Montrez les fonctionnalités principales :
 - Export PDF
 
 ### 5. Compression
+**Pour les vidéos (MP4/WebM) :**
 Utilisez Handbrake ou similar pour compresser :
 - Preset : Fast 1080p30
 - Constant Quality : 22-25
 - Audio : AAC 128kbps
+
+**Pour les fichiers audio (MP3) :**
+- Bitrate : 128kbps (qualité standard)
+- Durée : 15-30 secondes
+- Taille : < 1MB optimal

@@ -120,6 +120,7 @@ export default function Login() {
               >
                 <source src="/videos/demo.mp4" type="video/mp4" />
                 <source src="/videos/demo.webm" type="video/webm" />
+                <source src="/videos/demo.mp3" type="audio/mp3" />
                 Votre navigateur ne supporte pas les vidéos.
               </video>
               
