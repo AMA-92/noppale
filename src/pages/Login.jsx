@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
-import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X } from 'lucide-react'
+import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 
@@ -16,6 +16,8 @@ export default function Login() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [isIOS, setIsIOS] = useState(false)
   const [isStandalone, setIsStandalone] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [countryCode, setCountryCode] = useState('+221') // Sénégal par défaut
 
   // Charger les identifiants sauvegardés au démarrage
   React.useEffect(() => {
@@ -159,7 +161,14 @@ export default function Login() {
           return
         }
 
-        const newUser = await usersStorage.signUp(email, password, email.split('@')[0], '')
+        if (phone.length < 8) {
+          toast.error('Numéro de téléphone invalide (minimum 8 chiffres)')
+          setLoading(false)
+          return
+        }
+
+        const fullPhone = countryCode + phone
+        const newUser = await usersStorage.signUp(email, password, email.split('@')[0], fullPhone)
         
         if (newUser) {
           toast.success('Compte créé avec succès !')
@@ -333,6 +342,46 @@ export default function Login() {
                 </button>
               </div>
             </div>
+
+            {/* Phone number (only for registration) */}
+            {!isLogin && (
+              <div>
+                <label className="label-field">Numéro de téléphone</label>
+                <div className="relative">
+                  <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
+                  <div className="flex">
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      className="input-field-with-icon rounded-r-none border-r-0 bg-slate-50 text-sm font-medium text-slate-600 w-24"
+                    >
+                      <option value="+221">+221</option>
+                      <option value="+225">+225</option>
+                      <option value="+226">+226</option>
+                      <option value="+227">+227</option>
+                      <option value="+228">+228</option>
+                      <option value="+229">+229</option>
+                      <option value="+237">+237</option>
+                      <option value="+241">+241</option>
+                      <option value="+242">+242</option>
+                      <option value="+243">+243</option>
+                    </select>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        // N'accepter que les chiffres
+                        const value = e.target.value.replace(/\D/g, '')
+                        setPhone(value)
+                      }}
+                      placeholder="77 123 45 67"
+                      className="input-field-with-icon rounded-l-none flex-1"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             
             {/* Remember me checkbox (only for login) */}
