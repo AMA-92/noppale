@@ -180,7 +180,7 @@ export default function Products() {
           placeholder={t('searchProducts')}
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="input-field pl-12"
+          className="input-field pl-14"
         />
       </div>
 
