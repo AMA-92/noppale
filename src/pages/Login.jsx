@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
 import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import PWAInstallPrompt from '../components/PWAInstallPrompt'
 
 
 export default function Login() {
@@ -124,27 +125,27 @@ export default function Login() {
       </div>
 
       {/* Right side - Login form */}
-      <div className="flex items-center justify-center w-full lg:w-[480px] bg-white lg:rounded-l-[40px] shadow-2xl px-8 py-12">
+      <div className="flex items-center justify-center w-full lg:w-[480px] bg-white lg:rounded-l-[40px] shadow-2xl lg:px-8 lg:py-12 px-6 py-8">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-black">N</span>
+          <div className="flex items-center gap-3 mb-4 lg:hidden">
+            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-black text-sm">N</span>
             </div>
-            <span className="font-black text-slate-800 text-xl">Noppalé</span>
+            <span className="font-black text-slate-800 text-lg">Noppalé</span>
           </div>
 
-          <h2 className="text-2xl font-black text-slate-800 mb-1">
+          <h2 className="text-xl lg:text-2xl font-black text-slate-800 mb-1">
             {isLogin ? 'Connexion' : 'Créer un compte'}
           </h2>
-          <p className="text-slate-500 text-sm mb-8">
+          <p className="text-slate-500 text-xs lg:text-sm mb-6">
             {isLogin 
               ? 'Accédez à votre espace de gestion' 
               : 'Commencez à gérer votre commerce'
             }
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3 lg:space-y-4">
             {/* Email */}
             <div>
               <label className="label-field">Adresse email</label>
@@ -207,7 +208,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
             <button
               onClick={() => setIsLogin(!isLogin)}
               className="text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -216,13 +217,14 @@ export default function Login() {
             </button>
           </div>
 
-
-
-          <p className="mt-4 text-center text-xs text-slate-400">
+          <p className="mt-3 text-center text-xs text-slate-400">
             Conçu pour les commerçants d'Afrique de l'Ouest 🌍
           </p>
         </div>
       </div>
+      
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
   )
 }
