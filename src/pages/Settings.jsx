@@ -481,8 +481,8 @@ export default function Settings() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm text-slate-600">
                           <Mail size={16} className="text-primary-600" />
-                          <a href="mailto:medconnect092@gmail.com" className="text-primary-600 hover:underline">
-                            medconnect092@gmail.com
+                          <a href="mailto:medconnect000@gmail.com" className="text-primary-600 hover:underline">
+                            medconnect000@gmail.com
                           </a>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-600">

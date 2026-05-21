@@ -125,7 +125,7 @@ export default function SubscriptionBlocked() {
             {/* Actions */}
             <div className="space-y-3">
               <button
-                onClick={() => window.location.href = 'mailto:admin@noppale.com'}
+                onClick={() => window.location.href = 'mailto:medconnect000@gmail.com'}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center"
               >
                 <Mail className="w-4 h-4 mr-2" />

@@ -22,10 +22,10 @@ export default function Contact() {
             </div>
           </div>
           <a 
-            href="mailto:medconnect092@gmail.com" 
+            href="mailto:medconnect000@gmail.com" 
             className="text-primary-600 hover:underline font-medium"
           >
-            medconnect092@gmail.com
+            medconnect000@gmail.com
           </a>
         </div>
 
