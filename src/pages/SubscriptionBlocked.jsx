@@ -134,10 +134,10 @@ export default function SubscriptionBlocked() {
 
               <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => window.location.href = '/settings'}
+                  onClick={() => window.location.href = '/contact'}
                   className="bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors font-medium"
                 >
-                  Paramètres
+                  Contacter
                 </button>
                 
                 <button

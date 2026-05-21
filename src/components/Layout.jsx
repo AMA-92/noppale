@@ -138,10 +138,10 @@ export default function Layout({ user }) {
                   <strong>Attention:</strong> Votre abonnement expire dans {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''}. Renouvelez-le dans les paramètres.
                 </p>
                 <button
-                  onClick={() => navigate('/settings')}
+                  onClick={() => navigate('/contact')}
                   className="ml-4 px-3 py-1 bg-white text-orange-600 rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors flex-shrink-0"
                 >
-                  Renouveler
+                  Contacter l'admin
                 </button>
               </div>
             </div>
@@ -156,7 +156,7 @@ export default function Layout({ user }) {
                   <strong>Période de grâce:</strong> {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''} restant{daysUntilExpiry > 1 ? 's' : ''}. Contactez l'admin rapidement.
                 </p>
                 <button
-                  onClick={() => navigate('/settings')}
+                  onClick={() => navigate('/contact')}
                   className="ml-4 px-3 py-1 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors flex-shrink-0"
                 >
                   Contacter
