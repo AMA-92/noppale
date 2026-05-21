@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
 import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X } from 'lucide-react'
 import toast from 'react-hot-toast'
-import PWAInstallPrompt from '../components/PWAInstallPrompt'
 
 
 export default function Login() {
@@ -109,8 +108,8 @@ export default function Login() {
             Votre partenaire de confiance pour gérer efficacement votre boutique ou commerce.
           </p>
           
-          {/* Bouton vidéo démo */}
-          <div className="mb-8">
+          {/* Boutons vidéo et installation PWA */}
+          <div className="mb-8 space-y-4">
             <button
               onClick={() => setShowVideoModal(true)}
               className="group relative w-full max-w-sm mx-auto bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-2xl p-6 shadow-2xl border border-primary-400/30 transition-all duration-300 hover:scale-105 hover:shadow-primary-500/25"
@@ -122,6 +121,32 @@ export default function Login() {
                 <div className="text-left">
                   <p className="font-bold text-lg">Regarder la vidéo démo</p>
                   <p className="text-primary-200 text-sm">Découvrez Noppalé en action</p>
+                </div>
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            </button>
+
+            <button
+              onClick={() => {
+                // Vérifier si c'est iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                if (isIOS) {
+                  alert('Pour installer Noppalé : 1️⃣ Appuyez sur Partager 2️⃣ "Sur l\'écran d\'accueil"');
+                } else {
+                  // Android - essayer d'installer via le PWA prompt
+                  const event = new CustomEvent('pwa-install-request');
+                  window.dispatchEvent(event);
+                }
+              }}
+              className="group relative w-full max-w-sm mx-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-2xl p-6 shadow-2xl border border-orange-400/30 transition-all duration-300 hover:scale-105 hover:shadow-orange-500/25"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 group-hover:bg-white/30 transition-colors">
+                  <TrendingUp size={24} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-lg">Installer l'application</p>
+                  <p className="text-orange-200 text-sm">Sur votre appareil</p>
                 </div>
               </div>
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
@@ -382,8 +407,6 @@ export default function Login() {
         </div>
       )}
       
-      {/* PWA Install Prompt */}
-      <PWAInstallPrompt />
-    </div>
+      </div>
   )
 }
