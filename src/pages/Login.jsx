@@ -305,7 +305,7 @@ export default function Login() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="votre@email.com"
-                  className="input-field pl-16"
+                  className="input-field-with-icon"
                   required
                 />
               </div>
@@ -321,7 +321,7 @@ export default function Login() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="input-field pl-16 pr-12"
+                  className="input-field-with-icon pr-12"
                   required
                 />
                 <button

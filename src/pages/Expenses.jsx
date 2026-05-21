@@ -278,7 +278,7 @@ export default function Expenses() {
               placeholder={t('searchExpenses')}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input-field pl-16"
+              className="input-field-with-icon"
             />
           </div>
         </div>
