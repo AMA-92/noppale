@@ -13,6 +13,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
+  const [videoError, setVideoError] = useState(false)
 
   // Charger les identifiants sauvegardés au démarrage
   React.useEffect(() => {
@@ -158,12 +159,55 @@ export default function Login() {
           <h2 className="text-xl lg:text-2xl font-black text-slate-800 mb-1">
             {isLogin ? 'Connexion' : 'Créer un compte'}
           </h2>
-          <p className="text-slate-500 text-xs lg:text-sm mb-6">
+          <p className="text-slate-500 text-xs lg:text-sm mb-4">
             {isLogin 
               ? 'Accédez à votre espace de gestion' 
               : 'Commencez à gérer votre commerce'
             }
           </p>
+
+          {/* Mobile buttons - Video demo and PWA install */}
+          <div className="lg:hidden space-y-3 mb-6">
+            <button
+              onClick={() => setShowVideoModal(true)}
+              className="w-full bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl p-4 shadow-lg border border-primary-400/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-primary-500/25"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                  <Play size={20} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-sm">Regarder la vidéo démo</p>
+                  <p className="text-primary-200 text-xs">Découvrez Noppalé</p>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                // Vérifier si c'est iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                if (isIOS) {
+                  alert('Pour installer Noppalé : 1️⃣ Appuyez sur Partager 2️⃣ "Sur l\'écran d\'accueil"');
+                } else {
+                  // Android - essayer d'installer via le PWA prompt
+                  const event = new CustomEvent('pwa-install-request');
+                  window.dispatchEvent(event);
+                }
+              }}
+              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-4 shadow-lg border border-orange-400/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-orange-500/25"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                  <TrendingUp size={20} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-sm">Installer l'application</p>
+                  <p className="text-orange-200 text-xs">Sur votre mobile</p>
+                </div>
+              </div>
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-3 lg:space-y-4">
             {/* Email */}
@@ -267,18 +311,50 @@ export default function Login() {
             <div className="p-6">
               <div className="relative w-full aspect-video bg-slate-100 rounded-2xl overflow-hidden">
                 <video
+                  key={showVideoModal} // Force re-render when modal opens
                   controls
                   autoPlay
                   muted
                   playsInline
                   className="w-full h-full object-cover"
                   poster="/video-poster.jpg"
+                  onLoadStart={() => {
+                    console.log('Début du chargement vidéo');
+                    setVideoError(false);
+                  }}
+                  onCanPlay={() => {
+                    console.log('Vidéo prête à jouer');
+                    setVideoError(false);
+                  }}
+                  onError={(e) => {
+                    console.log('Erreur de chargement vidéo:', e);
+                    setVideoError(true);
+                  }}
                 >
                   <source src="/videos/demo.mp4" type="video/mp4" />
+                  <source src="/videos/WhatsApp Video 2026-05-21 at 21.37.23.mp4" type="video/mp4" />
                   <source src="/videos/demo.webm" type="video/webm" />
                   <source src="/videos/demo.mp3" type="audio/mp3" />
                   Votre navigateur ne supporte pas les vidéos.
                 </video>
+                
+                {/* Message d'erreur si vidéo ne charge pas */}
+                {videoError && (
+                  <div className="absolute inset-0 bg-slate-200 rounded-2xl flex items-center justify-center">
+                    <div className="text-center p-6">
+                      <div className="w-16 h-16 bg-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Play size={24} className="text-slate-500" />
+                      </div>
+                      <p className="text-slate-600 font-medium mb-2">Vidéo non disponible</p>
+                      <p className="text-slate-500 text-sm mb-4">La vidéo n'a pas pu être chargée</p>
+                      <div className="text-xs text-slate-400 space-y-1">
+                        <p>• Vérifiez que le fichier est dans /videos/</p>
+                        <p>• Formats supportés: MP4, WebM, MP3</p>
+                        <p>• Nom attendu: demo.mp4</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Description */}
