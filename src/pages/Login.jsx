@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
-import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play } from 'lucide-react'
+import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PWAInstallPrompt from '../components/PWAInstallPrompt'
 
@@ -11,6 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showVideoModal, setShowVideoModal] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
 
   // Charger les identifiants sauvegardés au démarrage
@@ -107,33 +108,23 @@ export default function Login() {
             Votre partenaire de confiance pour gérer efficacement votre boutique ou commerce.
           </p>
           
-          {/* Vidéo démo */}
+          {/* Bouton vidéo démo */}
           <div className="mb-8">
-            <div className="relative w-full max-w-sm mx-auto rounded-2xl overflow-hidden shadow-2xl border border-primary-400/30">
-              <video
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="w-full h-auto"
-                poster="/video-poster.jpg"
-              >
-                <source src="/videos/demo.mp4" type="video/mp4" />
-                <source src="/videos/demo.webm" type="video/webm" />
-                <source src="/videos/demo.mp3" type="audio/mp3" />
-                Votre navigateur ne supporte pas les vidéos.
-              </video>
-              
-              {/* Overlay avec bouton play si vidéo ne démarre pas automatiquement */}
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <button className="bg-white/90 backdrop-blur-sm rounded-full p-4 shadow-xl hover:bg-white transition-all">
-                  <Play size={24} className="text-primary-600" />
-                </button>
+            <button
+              onClick={() => setShowVideoModal(true)}
+              className="group relative w-full max-w-sm mx-auto bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-2xl p-6 shadow-2xl border border-primary-400/30 transition-all duration-300 hover:scale-105 hover:shadow-primary-500/25"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 group-hover:bg-white/30 transition-colors">
+                  <Play size={24} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-lg">Regarder la vidéo démo</p>
+                  <p className="text-primary-200 text-sm">Découvrez Noppalé en action</p>
+                </div>
               </div>
-            </div>
-            <p className="text-primary-300 text-sm mt-3 text-center">
-              🎥 Découvrez Noppalé en action
-            </p>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+            </button>
           </div>
           
           {/* Fonctionnalités en dessous de la vidéo */}
@@ -251,6 +242,69 @@ export default function Login() {
           </p>
         </div>
       </div>
+
+      {/* Modal Vidéo Démo */}
+      {showVideoModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                  <Play size={20} className="text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Vidéo de démonstration Noppalé</h3>
+              </div>
+              <button
+                onClick={() => setShowVideoModal(false)}
+                className="bg-white/20 backdrop-blur-sm rounded-full p-2 hover:bg-white/30 transition-colors"
+              >
+                <X size={20} className="text-white" />
+              </button>
+            </div>
+
+            {/* Contenu vidéo */}
+            <div className="p-6">
+              <div className="relative w-full aspect-video bg-slate-100 rounded-2xl overflow-hidden">
+                <video
+                  controls
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  poster="/video-poster.jpg"
+                >
+                  <source src="/videos/demo.mp4" type="video/mp4" />
+                  <source src="/videos/demo.webm" type="video/webm" />
+                  <source src="/videos/demo.mp3" type="audio/mp3" />
+                  Votre navigateur ne supporte pas les vidéos.
+                </video>
+              </div>
+              
+              {/* Description */}
+              <div className="mt-6 text-center">
+                <p className="text-slate-600 mb-4">
+                  Découvrez comment Noppalé simplifie la gestion de votre commerce au quotidien.
+                </p>
+                <div className="flex flex-wrap justify-center gap-4 text-sm">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <div className="w-2 h-2 bg-primary-500 rounded-full"></div>
+                    <span>Gestion des stocks</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>Ventes rapides</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    <span>Rapports détaillés</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
