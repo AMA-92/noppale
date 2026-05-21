@@ -603,7 +603,7 @@ export default function Sales() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           id="sales-list-search"
           name="salesSearch"
@@ -712,7 +712,7 @@ export default function Sales() {
                 <section className="sale-product-section">
                   <label htmlFor="sale-product-search" className="label-field">Choisir un produit</label>
                   <div className="relative">
-                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     <input
                       id="sale-product-search"
                       name="productSearch"
