@@ -14,6 +14,8 @@ import Settings from './pages/Settings'
 import Contact from './pages/Contact'
 import LoadingScreen from './components/LoadingScreen'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import SubscriptionGate from './components/SubscriptionGate'
+import SubscriptionBlocked from './pages/SubscriptionBlocked'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -57,12 +59,29 @@ function App() {
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
           <Route path="/" element={user ? <Layout user={user} /> : <Navigate to="/login" />}>
             <Route index element={<Dashboard />} />
-            <Route path="products" element={<Products />} />
-            <Route path="sales" element={<Sales />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="expenses" element={<Expenses />} />
+            <Route path="products" element={
+              <SubscriptionGate featureName="la gestion des produits">
+                <Products />
+              </SubscriptionGate>
+            } />
+            <Route path="sales" element={
+              <SubscriptionGate featureName="la gestion des ventes">
+                <Sales />
+              </SubscriptionGate>
+            } />
+            <Route path="reports" element={
+              <SubscriptionGate featureName="les rapports">
+                <Reports />
+              </SubscriptionGate>
+            } />
+            <Route path="expenses" element={
+              <SubscriptionGate featureName="la gestion des dépenses">
+                <Expenses />
+              </SubscriptionGate>
+            } />
             <Route path="settings" element={<Settings />} />
             <Route path="contact" element={<Contact />} />
+            <Route path="subscription-blocked" element={<SubscriptionBlocked />} />
           </Route>
         </Routes>
       </Router>

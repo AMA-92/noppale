@@ -3,10 +3,12 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { authStorage, appStorage } from '../utils/storage'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime } from '../hooks/useRealtime.jsx'
+import { useProfile } from '../hooks/useProfile'
+import { supabase } from '../supabase/config'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   BarChart3, LogOut, Settings, Wallet, Menu, X,
-  TrendingUp, ChevronRight, Store, Mail
+  TrendingUp, ChevronRight, Store, Mail, AlertTriangle, Calendar
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -17,8 +19,22 @@ export default function Layout({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false) // Closed by default on mobile
   const [shopInfo, setShopInfo] = useState({})
   const [currentUser, setCurrentUser] = useState(user)
+  const [supabaseUser, setSupabaseUser] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
-
+  
+  // Récupérer l'utilisateur Supabase actuel
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setSupabaseUser(user)
+      console.log('Utilisateur Supabase actuel:', user?.id)
+    }
+    getCurrentUser()
+  }, [])
+  
+  // Vérification de l'abonnement
+  const { profile, access, expiringSoon, daysUntilExpiry } = useProfile(supabaseUser?.id || user?.id)
+  
   // Detect mobile screen size
   useEffect(() => {
     const checkMobile = () => {
@@ -109,7 +125,48 @@ export default function Layout({ user }) {
           </div>
         </div>
       )}
-      
+
+      {/* Notifications d'abonnement */}
+      {access.allowed && !access.is_admin && (
+        <>
+          {/* Notification J-5 (expire bientôt) */}
+          {expiringSoon && daysUntilExpiry > 0 && (
+            <div className="bg-orange-500 text-white px-4 py-3 shadow-md flex-shrink-0">
+              <div className="flex items-center justify-center gap-3">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm font-medium">
+                  <strong>Attention:</strong> Votre abonnement expire dans {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''}. Renouvelez-le dans les paramètres.
+                </p>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="ml-4 px-3 py-1 bg-white text-orange-600 rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors flex-shrink-0"
+                >
+                  Renouveler
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Notification période de grâce */}
+          {access.status === 'grace_period' && (
+            <div className="bg-red-500 text-white px-4 py-3 shadow-md flex-shrink-0">
+              <div className="flex items-center justify-center gap-3">
+                <Calendar className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm font-medium">
+                  <strong>Période de grâce:</strong> {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''} restant{daysUntilExpiry > 1 ? 's' : ''}. Contactez l'admin rapidement.
+                </p>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="ml-4 px-3 py-1 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors flex-shrink-0"
+                >
+                  Contacter
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <div className="flex flex-1 overflow-hidden relative">
         {/* Mobile sidebar overlay */}
         {isMobile && sidebarOpen && (
@@ -122,22 +179,21 @@ export default function Layout({ user }) {
         {/* Sidebar */}
         <aside className={`${sidebarOpen ? 'translate-x-0' : isMobile ? '-translate-x-full' : 'w-16'} ${isMobile ? 'fixed inset-y-0 left-0 z-40 w-64' : 'relative'} bg-gradient-to-b from-slate-50 to-white border-r border-slate-200 flex flex-col transition-all duration-300 shadow-xl flex-shrink-0`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-5 border-b border-slate-200/50 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg">
+        <div className="flex items-center justify-between px-4 py-5 border-b border-slate-200/50 shadow-lg">
           {!isMobile && sidebarOpen && (
             <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
-                <span className="text-white font-black text-lg">N</span>
+              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center shadow-lg border border-primary-200">
+                <span className="text-primary-600 font-black text-lg">N</span>
               </div>
               <div>
-                <span className="font-black text-white text-lg drop-shadow-md">Noppalé</span>
-                <p className="text-xs text-white/80 -mt-0.5 font-medium">Gestion Com.</p>
+                <span className="font-black text-slate-800 text-lg">Noppalé</span>
               </div>
             </div>
           )}
           {!isMobile && (
             <button 
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 shadow-md backdrop-blur-sm"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all duration-200 shadow-md"
             >
               {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -145,7 +201,7 @@ export default function Layout({ user }) {
           {isMobile && (
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all duration-200 shadow-md backdrop-blur-sm"
+              className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all duration-200 shadow-md"
             >
               <X size={22} />
             </button>

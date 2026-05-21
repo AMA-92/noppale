@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { authStorage, usersStorage, appStorage } from '../utils/storage'
-import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload, Mail, Phone } from 'lucide-react'
+import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload, Mail, Phone, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime, useUserPreferencesRealtime, useSecretCodeRealtime } from '../hooks/useRealtime.jsx'
@@ -19,7 +19,7 @@ export default function Settings() {
   const [showDataModal, setShowDataModal] = useState(false)
   const [showDataDeleteModal, setShowDataDeleteModal] = useState(false)
   const [showShopInfoModal, setShowShopInfoModal] = useState(false)
-  const [dataDeletePassword, setDataDeletePassword] = useState('')
+    const [dataDeletePassword, setDataDeletePassword] = useState('')
   
   // États pour le code secret
   const [showSecretCodeModal, setShowSecretCodeModal] = useState(false)
@@ -129,7 +129,7 @@ export default function Settings() {
       setSecretCode(savedSecretCode)
     } catch (error) {
       console.error('Erreur de chargement du code secret:', error)
-      setSecretCode('1234')
+      setSecretCode('')
     }
   }
 
@@ -317,6 +317,10 @@ export default function Settings() {
 
   // Gestion du code secret
   const handleSecretCodeSubmit = async () => {
+    if (!secretCode) {
+      toast.error('Veuillez d\u00e9finir un code secret avant de supprimer les donn\u00e9es', { duration: 3000 })
+      return
+    }
     const savedSecretCode = await appStorage.getSecretCode()
 
     if (secretCode === savedSecretCode) {
@@ -436,6 +440,12 @@ export default function Settings() {
           danger: true
         }
       ]
+    },
+    {
+      title: 'Administration',
+      icon: Users,
+      items: [
+              ]
     }
   ]
 
@@ -1233,6 +1243,7 @@ export default function Settings() {
           </div>
         </div>
       )}
-    </div>
+
+          </div>
   )
 }

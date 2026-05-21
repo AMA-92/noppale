@@ -801,7 +801,7 @@ export const appStorage = {
   async getSecretCode() {
     try {
       const userId = await getCurrentUserId()
-      if (!userId) return '1234'
+      if (!userId) return ''
 
       const { data, error } = await supabase
         .from('user_secret_code')
@@ -811,16 +811,16 @@ export const appStorage = {
 
       if (error) {
         if (error.code === 'PGRST116' || error.status === 406) {
-          // Pas de code secret trouvé, retourner le code par défaut
-          return '1234'
+          // Pas de code secret trouvé
+          return ''
         }
         throw error
       }
 
-      return data?.secret_code || '1234'
+      return data?.secret_code || ''
     } catch (error) {
       console.error('Erreur lors de la récupération du code secret:', error)
-      return '1234'
+      return ''
     }
   },
 

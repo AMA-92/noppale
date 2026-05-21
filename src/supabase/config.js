@@ -14,8 +14,8 @@ export const TABLES = {
   SALES: 'sales',
   EXPENSES: 'expenses',
   CUSTOMERS: 'customers',
-  SHOP_INFO: 'shop_info'
-}
+  SHOP_INFO: 'shop_info',
+  }
 
 // Fonctions d'authentification
 export const auth = {
