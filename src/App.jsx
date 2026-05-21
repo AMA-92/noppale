@@ -13,7 +13,6 @@ import Expenses from './pages/Expenses-minimal'
 import Settings from './pages/Settings'
 import Contact from './pages/Contact'
 import LoadingScreen from './components/LoadingScreen'
-import PWAInstallPrompt from './components/PWAInstallPrompt'
 import SubscriptionGate from './components/SubscriptionGate'
 import SubscriptionBlocked from './pages/SubscriptionBlocked'
 
@@ -65,7 +64,6 @@ function App() {
   return (
     <I18nProvider>
       <Router>
-        <PWAInstallPrompt />
         <Toaster position="top-right" toastOptions={{
           duration: 3000,
           style: { background: '#1e293b', color: '#fff', borderRadius: '8px' }
