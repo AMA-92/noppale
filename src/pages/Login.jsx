@@ -100,7 +100,7 @@ export default function Login() {
       <div className="hidden lg:flex flex-col justify-center items-center flex-1 px-12">
         <div className="max-w-md text-center">
           <div className="w-24 h-24 bg-white rounded-3xl shadow-2xl flex items-center justify-center mx-auto mb-8 overflow-hidden">
-            <img src="/icon.svg" alt="Noppalé" className="w-20 h-20" />
+            <img src="/logo-exact.svg" alt="Noppalé" className="w-20 h-20" />
           </div>
           <h1 className="text-5xl font-black text-white mb-4">Noppalé</h1>
           <p className="text-primary-200 text-lg mb-8">
@@ -130,7 +130,7 @@ export default function Login() {
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-4 lg:hidden">
             <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center overflow-hidden">
-              <img src="/icon.svg" alt="Noppalé" className="w-6 h-6" />
+              <img src="/logo-exact.svg" alt="Noppalé" className="w-6 h-6" />
             </div>
             <span className="font-black text-slate-800 text-lg">Noppalé</span>
           </div>
