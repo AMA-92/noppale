@@ -13,6 +13,9 @@ export default function Login() {
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [videoError, setVideoError] = useState(false)
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [isIOS, setIsIOS] = useState(false)
+  const [isStandalone, setIsStandalone] = useState(false)
 
   // Charger les identifiants sauvegardés au démarrage
   React.useEffect(() => {
@@ -30,6 +33,83 @@ export default function Login() {
       }
     }
   }, [])
+
+  // Détecter la plateforme et l'état PWA
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Détecter iOS
+      const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      setIsIOS(ios)
+
+      // Détecter si déjà installé
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+      setIsStandalone(standalone)
+
+      // Écouter l'événement beforeinstallprompt
+      const handleBeforeInstallPrompt = (e) => {
+        e.preventDefault()
+        setDeferredPrompt(e)
+      }
+
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+
+      return () => {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+      }
+    }
+  }, [])
+
+  // Fonction d'installation PWA
+  const handleInstallPWA = async () => {
+    // Si déjà installé
+    if (isStandalone) {
+      toast('Noppalé est déjà installée sur votre appareil !')
+      return
+    }
+
+    // iOS - instructions manuelles
+    if (isIOS) {
+      toast('Pour installer Noppalé : 1️⃣ Appuyez sur Partager 2️⃣ "Sur l\'écran d\'accueil"', { 
+        duration: 5000, 
+        icon: '📱' 
+      })
+      return
+    }
+
+    // Android/Desktop avec prompt disponible
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt()
+        const { outcome } = await deferredPrompt.userChoice
+        if (outcome === 'accepted') {
+          toast.success('Installation en cours...')
+        } else {
+          toast('Installation annulée')
+        }
+        setDeferredPrompt(null)
+      } catch (error) {
+        console.error('Erreur installation PWA:', error)
+        toast.error('Erreur lors de l\'installation')
+      }
+      return
+    }
+
+    // Fallback - instructions manuelles pour Android/Desktop
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)
+    const isEdge = /Edg/.test(navigator.userAgent)
+    
+    if (isChrome || isEdge) {
+      toast('Cliquez sur le menu ⋮ → "Installer Noppalé"', { 
+        duration: 5000, 
+        icon: '📱' 
+      })
+    } else {
+      toast('Utilisez Chrome ou Edge pour installer Noppalé', { 
+        duration: 5000, 
+        icon: '🌐' 
+      })
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -127,17 +207,7 @@ export default function Login() {
             </button>
 
             <button
-              onClick={() => {
-                // Vérifier si c'est iOS
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                if (isIOS) {
-                  alert('Pour installer Noppalé : 1️⃣ Appuyez sur Partager 2️⃣ "Sur l\'écran d\'accueil"');
-                } else {
-                  // Android - essayer d'installer via le PWA prompt
-                  const event = new CustomEvent('pwa-install-request');
-                  window.dispatchEvent(event);
-                }
-              }}
+              onClick={handleInstallPWA}
               className="group relative w-full max-w-sm mx-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-2xl p-6 shadow-2xl border border-orange-400/30 transition-all duration-300 hover:scale-105 hover:shadow-orange-500/25"
             >
               <div className="flex items-center justify-center gap-3">
@@ -209,17 +279,7 @@ export default function Login() {
             </button>
 
             <button
-              onClick={() => {
-                // Vérifier si c'est iOS
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-                if (isIOS) {
-                  alert('Pour installer Noppalé : 1️⃣ Appuyez sur Partager 2️⃣ "Sur l\'écran d\'accueil"');
-                } else {
-                  // Android - essayer d'installer via le PWA prompt
-                  const event = new CustomEvent('pwa-install-request');
-                  window.dispatchEvent(event);
-                }
-              }}
+              onClick={handleInstallPWA}
               className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-4 shadow-lg border border-orange-400/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-orange-500/25"
             >
               <div className="flex items-center justify-center gap-3">
