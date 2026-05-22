@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
 import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
+import CountrySelector from '../components/CountrySelector'
 
 
 export default function Login() {
@@ -350,22 +351,11 @@ export default function Login() {
                 <div className="flex">
                   <div className="relative">
                     <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
-                    <select
+                    <CountrySelector 
                       value={countryCode}
-                      onChange={(e) => setCountryCode(e.target.value)}
-                      className="pl-10 pr-2 py-2.5 border border-slate-200 rounded-l-xl bg-slate-50 text-sm font-medium text-slate-600 w-24 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="+221">+221</option>
-                      <option value="+225">+225</option>
-                      <option value="+226">+226</option>
-                      <option value="+227">+227</option>
-                      <option value="+228">+228</option>
-                      <option value="+229">+229</option>
-                      <option value="+237">+237</option>
-                      <option value="+241">+241</option>
-                      <option value="+242">+242</option>
-                      <option value="+243">+243</option>
-                    </select>
+                      onChange={setCountryCode}
+                      className="pl-10 w-32"
+                    />
                   </div>
                   <input
                     type="tel"
