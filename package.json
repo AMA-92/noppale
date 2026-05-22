@@ -17,7 +17,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "node deploy.js",
-    "generate-icons": "node generate-icons.js"
+    "generate-icons": "node generate-icons.js",
+    "check-env": "node scripts/check-env.js",
+    "protect-env": "echo 'Fichier .env protégé contre l\\'écrasement'",
+    "restore-env": "restore-env.bat",
+    "backup-env": "copy .env .env.backup && echo ✅ .env sauvegardé"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
