@@ -8,6 +8,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <App />
 )
 
+
 // PWA: forcer l'activation immédiate d'une nouvelle version du service worker
 // (permet de voir les mises à jour sans attendre une nouvelle ouverture complète)
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {

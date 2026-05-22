@@ -5,12 +5,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [
-    react({
-      // Optimisations React
-      babel: {
-        plugins: [['@babel/plugin-syntax-typescript']],
-      },
-    }),
+    react(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.svg', 'icon-512.svg', 'favicon-exact.svg'],
