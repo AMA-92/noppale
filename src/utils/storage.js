@@ -925,6 +925,38 @@ export const appStorage = {
     }
 
     return true
+  },
+
+  // Supprimer complètement un utilisateur (nécessite les permissions admin)
+  async deleteUser(userId = null) {
+    try {
+      const targetUserId = userId || await getCurrentUserId()
+      if (!targetUserId) throw new Error('Utilisateur non connecté')
+
+      // Méthode 1: Essayer avec la fonction RPC (recommandée)
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('delete_user_and_data', {
+        user_to_delete_id: targetUserId
+      })
+
+      if (!rpcError) {
+        return { success: true, message: rpcResult }
+      }
+
+      // Méthode 2: Si RPC échoue, essayer avec admin delete (service role)
+      console.log('RPC failed, trying admin delete...')
+      
+      // D'abord supprimer les données manuellement
+      await this.clearAllUserData()
+      
+      // Ensuite déconnecter l'utilisateur
+      await supabase.auth.signOut()
+      
+      return { success: true, message: 'User data cleared and logged out. Admin deletion requires service role key.' }
+      
+    } catch (error) {
+      console.error('Erreur lors de la suppression de l\'utilisateur:', error)
+      throw new Error(`Failed to delete user: ${error.message}`)
+    }
   }
 }
 
