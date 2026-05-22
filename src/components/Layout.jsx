@@ -3,12 +3,10 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { authStorage, appStorage } from '../utils/storage'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime } from '../hooks/useRealtime.jsx'
-import { useProfile } from '../hooks/useProfile'
-import { supabase } from '../supabase/config'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   BarChart3, LogOut, Settings, Wallet, Menu, X,
-  TrendingUp, ChevronRight, Store, Mail, AlertTriangle, Calendar
+  TrendingUp, ChevronRight, Store, Mail
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -19,32 +17,7 @@ export default function Layout({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false) // Closed by default on mobile
   const [shopInfo, setShopInfo] = useState({})
   const [currentUser, setCurrentUser] = useState(user)
-  const [supabaseUser, setSupabaseUser] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
-  
-  // Récupérer l'utilisateur Supabase actif (optimisé)
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setSupabaseUser(user)
-        console.log('Utilisateur Supabase actuel:', user?.id)
-      } catch (error) {
-        console.error('Erreur récupération utilisateur:', error)
-        setSupabaseUser(null)
-      }
-    }
-    
-    // Exécuter seulement si on a déjà un user du prop
-    if (user) {
-      getCurrentUser()
-    } else {
-      setSupabaseUser(null)
-    }
-  }, [user])
-  
-  // Vérification de l'abonnement
-  const { profile, access, expiringSoon, daysUntilExpiry } = useProfile(supabaseUser?.id || user?.id)
   
   // Detect mobile screen size
   useEffect(() => {
@@ -135,47 +108,6 @@ export default function Layout({ user }) {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Notifications d'abonnement */}
-      {access.allowed && !access.is_admin && (
-        <>
-          {/* Notification J-5 (expire bientôt) */}
-          {expiringSoon && daysUntilExpiry > 0 && (
-            <div className="bg-orange-500 text-white px-4 py-3 shadow-md flex-shrink-0">
-              <div className="flex items-center justify-center gap-3">
-                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                <p className="text-sm font-medium">
-                  <strong>Attention:</strong> Votre abonnement expire dans {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''}. Renouvelez-le dans les paramètres.
-                </p>
-                <button
-                  onClick={() => navigate('/contact')}
-                  className="ml-4 px-3 py-1 bg-white text-orange-600 rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors flex-shrink-0"
-                >
-                  Contacter l'admin
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Notification période de grâce */}
-          {access.status === 'grace_period' && (
-            <div className="bg-red-500 text-white px-4 py-3 shadow-md flex-shrink-0">
-              <div className="flex items-center justify-center gap-3">
-                <Calendar className="w-5 h-5 flex-shrink-0" />
-                <p className="text-sm font-medium">
-                  <strong>Période de grâce:</strong> {daysUntilExpiry} jour{daysUntilExpiry > 1 ? 's' : ''} restant{daysUntilExpiry > 1 ? 's' : ''}. Contactez l'admin rapidement.
-                </p>
-                <button
-                  onClick={() => navigate('/contact')}
-                  className="ml-4 px-3 py-1 bg-white text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors flex-shrink-0"
-                >
-                  Contacter
-                </button>
-              </div>
-            </div>
-          )}
-        </>
       )}
 
       <div className="flex flex-1 overflow-hidden relative">

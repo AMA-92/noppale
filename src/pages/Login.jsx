@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
-import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone } from 'lucide-react'
+import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone, User } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 
@@ -13,6 +13,7 @@ export default function Login() {
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [rememberMe, setRememberMe] = useState(false)
   const [videoError, setVideoError] = useState(false)
+  const [fullName, setFullName] = useState('')
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [isIOS, setIsIOS] = useState(false)
   const [isStandalone, setIsStandalone] = useState(false)
@@ -155,6 +156,12 @@ export default function Login() {
         }
       } else {
         // Création de compte avec Supabase
+        if (!fullName.trim()) {
+          toast.error('Veuillez renseigner votre nom')
+          setLoading(false)
+          return
+        }
+
         if (password.length < 6) {
           toast.error('Mot de passe trop faible (minimum 6 caractères)')
           setLoading(false)
@@ -168,7 +175,7 @@ export default function Login() {
         }
 
         const fullPhone = countryCode + phone
-        const newUser = await usersStorage.signUp(email, password, email.split('@')[0], fullPhone)
+        const newUser = await usersStorage.signUp(email, password, fullName.trim(), fullPhone)
         
         if (newUser) {
           toast.success('Compte créé avec succès !')
@@ -304,6 +311,23 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3 lg:space-y-4">
+            {!isLogin && (
+              <div>
+                <label className="label-field">Nom complet</label>
+                <div className="relative">
+                  <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    placeholder="Votre nom"
+                    className="input-field-with-icon"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label className="label-field">Adresse email</label>
