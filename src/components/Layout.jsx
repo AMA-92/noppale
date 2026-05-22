@@ -3,10 +3,11 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { authStorage, appStorage } from '../utils/storage'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime } from '../hooks/useRealtime.jsx'
+import { useSubscription } from '../hooks/useSubscription.jsx'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   BarChart3, LogOut, Settings, Wallet, Menu, X,
-  TrendingUp, ChevronRight, Store, Mail
+  TrendingUp, ChevronRight, Store, Mail, Clock, AlertTriangle
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -18,6 +19,7 @@ export default function Layout({ user }) {
   const [shopInfo, setShopInfo] = useState({})
   const [currentUser, setCurrentUser] = useState(user)
   const [isMobile, setIsMobile] = useState(false)
+  const subscriptionInfo = useSubscription(currentUser?.id)
   
   // Detect mobile screen size
   useEffect(() => {
@@ -106,6 +108,20 @@ export default function Layout({ user }) {
               <Store className="w-6 h-6" />
               <h1 className="text-xl font-bold">{shopInfo.name}</h1>
             </div>
+          </div>
+        </div>
+      )}
+
+      {subscriptionInfo.isTrial && subscriptionInfo.isActive && (
+        <div className={`${subscriptionInfo.isExpiringSoon ? 'bg-amber-500' : 'bg-emerald-500'} text-white px-4 py-3 flex-shrink-0`}>
+          <div className="flex items-center justify-center gap-2 text-sm font-semibold text-center">
+            {subscriptionInfo.isExpiringSoon ? <AlertTriangle size={18} /> : <Clock size={18} />}
+            <span>
+              {subscriptionInfo.isExpiringSoon
+                ? `Votre période d'essai expire dans ${subscriptionInfo.daysRemaining} jour${subscriptionInfo.daysRemaining > 1 ? 's' : ''}. Contactez l'admin pour prolonger votre abonnement.`
+                : `Vous êtes en phase d'essai de 10 jours. Il vous reste ${subscriptionInfo.daysRemaining} jour${subscriptionInfo.daysRemaining > 1 ? 's' : ''}.`
+              }
+            </span>
           </div>
         </div>
       )}

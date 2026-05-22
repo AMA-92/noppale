@@ -58,6 +58,7 @@ export const usersStorage = {
         options: {
           data: { 
             name,
+            full_name: name,
             phone: phone || null
           },
           emailConfirmTo: false // Désactiver la confirmation par email

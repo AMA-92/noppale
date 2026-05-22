@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { authStorage } from './utils/storage'
 import { I18nProvider } from './hooks/useI18n.jsx'
 import Layout from './components/Layout'
+import SubscriptionGate from './components/SubscriptionGate'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard-simple'
 import Products from './pages/Products'
@@ -13,6 +14,7 @@ import Expenses from './pages/Expenses-minimal'
 import Settings from './pages/Settings'
 import Contact from './pages/Contact'
 import LoadingScreen from './components/LoadingScreen'
+import SubscriptionBlocked from './pages/SubscriptionBlocked'
 
 function App() {
   const [user, setUser] = useState(null)
@@ -70,13 +72,14 @@ function App() {
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
           <Route path="/" element={user ? <Layout user={user} /> : <Navigate to="/login" />}>
             <Route index element={<Dashboard />} />
-            <Route path="products" element={<Products />} />
-            <Route path="sales" element={<Sales />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="expenses" element={<Expenses />} />
+            <Route path="products" element={<SubscriptionGate user={user}><Products /></SubscriptionGate>} />
+            <Route path="sales" element={<SubscriptionGate user={user}><Sales /></SubscriptionGate>} />
+            <Route path="reports" element={<SubscriptionGate user={user}><Reports /></SubscriptionGate>} />
+            <Route path="expenses" element={<SubscriptionGate user={user}><Expenses /></SubscriptionGate>} />
             <Route path="settings" element={<Settings />} />
             <Route path="contact" element={<Contact />} />
           </Route>
+          <Route path="/subscription-blocked" element={user ? <SubscriptionBlocked /> : <Navigate to="/login" />} />
         </Routes>
       </Router>
     </I18nProvider>
