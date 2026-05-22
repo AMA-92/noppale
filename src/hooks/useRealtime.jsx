@@ -29,10 +29,11 @@ export function useRealtimeSubscription(tableName, onUpdate) {
         
         // Vérifier si déjà abonné (évite les doublons)
         if (activeSubscriptions.has(subscriptionKey)) {
-          const existingChannel = activeSubscriptions.get(subscriptionKey)
-          existingChannel.onUpdateRef = onUpdateRef
+          // Ne pas muter le callback d'un canal déjà créé (sinon le handler peut devenir incohérent).
+          // On ignore ici; chaque composant doit avoir son propre canal.
           return
         }
+
 
         const channelSuffix = Math.random().toString(36).substring(2, 9)
         const channelName = `realtime:${tableName}:${user.id}:${channelSuffix}`
