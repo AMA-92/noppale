@@ -347,13 +347,13 @@ export default function Login() {
             {!isLogin && (
               <div>
                 <label className="label-field">Numéro de téléphone</label>
-                <div className="relative">
-                  <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
-                  <div className="flex">
+                <div className="flex">
+                  <div className="relative">
+                    <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
                     <select
                       value={countryCode}
                       onChange={(e) => setCountryCode(e.target.value)}
-                      className="pl-12 pr-1 py-2.5 border border-slate-200 rounded-l-xl bg-slate-50 text-sm font-medium text-slate-600 w-20 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="pl-10 pr-2 py-2.5 border border-slate-200 rounded-l-xl bg-slate-50 text-sm font-medium text-slate-600 w-24 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     >
                       <option value="+221">+221</option>
                       <option value="+225">+225</option>
@@ -366,19 +366,19 @@ export default function Login() {
                       <option value="+242">+242</option>
                       <option value="+243">+243</option>
                     </select>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => {
-                        // N'accepter que les chiffres
-                        const value = e.target.value.replace(/\D/g, '')
-                        setPhone(value)
-                      }}
-                      placeholder="77 123 45 67"
-                      className="flex-1 pl-3 pr-4 py-2.5 border border-l-0 border-slate-200 rounded-r-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-slate-400 transition-all duration-150"
-                      required
-                    />
                   </div>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => {
+                      // N'accepter que les chiffres
+                      const value = e.target.value.replace(/\D/g, '')
+                      setPhone(value)
+                    }}
+                    placeholder="77 123 45 67"
+                    className="flex-1 pl-4 pr-4 py-2.5 border border-l-0 border-slate-200 rounded-r-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder:text-slate-400 transition-all duration-150"
+                    required
+                  />
                 </div>
               </div>
             )}
