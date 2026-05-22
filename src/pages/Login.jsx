@@ -457,7 +457,7 @@ export default function Login() {
                     setVideoError(true);
                   }}
                 >
-                  <source src="/videos/demo.mp4" type="video/mp4" />
+                  <source src="/videos/demo-noppalé.mp4" type="video/mp4" />
                   Votre navigateur ne supporte pas les vidéos.
                 </video>
                 
@@ -473,7 +473,7 @@ export default function Login() {
                       <div className="text-xs text-slate-400 space-y-1">
                         <p>• Vérifiez que le fichier est dans /videos/</p>
                         <p>• Formats supportés: MP4, WebM, MP3</p>
-                        <p>• Nom attendu: demo.mp4</p>
+                        <p>• Nom attendu: demo-noppalé.mp4</p>
                       </div>
                     </div>
                   </div>
