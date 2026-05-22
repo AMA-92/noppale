@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
 import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone } from 'lucide-react'
 import toast from 'react-hot-toast'
-import CountrySelector from '../components/CountrySelector'
 
 
 export default function Login() {
@@ -351,10 +350,13 @@ export default function Login() {
                 <div className="flex">
                   <div className="relative">
                     <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
-                    <CountrySelector 
+                    <input
+                      type="text"
                       value={countryCode}
-                      onChange={setCountryCode}
-                      className="pl-10 w-32"
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      placeholder="+221"
+                      className="pl-10 pr-3 py-2.5 border border-slate-200 rounded-l-xl bg-slate-50 text-sm font-medium text-slate-600 w-28 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      required
                     />
                   </div>
                   <input
