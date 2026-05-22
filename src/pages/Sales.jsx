@@ -3,7 +3,7 @@ import { flushSync, createPortal } from 'react-dom'
 import { appStorage } from '../utils/storage'
 import { formatDate, getPaymentMethod, formatCurrency, getProductSellingPrice } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
-import { useSalesRealtime } from '../hooks/useRealtime.jsx'
+import { useProductsRealtime, useSalesRealtime } from '../hooks/useRealtime.jsx'
 import { Plus, Search, ShoppingCart, X, DollarSign, Calendar, User, Package, Printer, Eye, Edit } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { validateSaleData, sanitizeString, truncateString } from '../utils/security'
@@ -109,6 +109,10 @@ export default function Sales() {
   // Écouter les changements en temps réel sur les ventes
   useSalesRealtime(() => {
     loadSales()
+  })
+
+  useProductsRealtime(() => {
+    loadProducts()
   })
 
   const loadProducts = async () => {
@@ -441,12 +445,45 @@ export default function Sales() {
     setShowDetailsModal(false)
   }
 
-  const saveEditedSale = () => {
-    // Pour l'instant, la modification de vente est désactivée avec Supabase
-    // car elle nécessite une logique complexe de gestion du stock
-    toast.error('La modification de vente n\'est pas encore supportée avec Supabase')
-    setIsEditingSale(false)
-    setEditingSaleData(null)
+  const saveEditedSale = async () => {
+    if (!editingSaleData?.items?.length) {
+      toast.error('Ajoutez au moins un article')
+      return
+    }
+
+    const normalizedItems = normalizeSaleItems(editingSaleData.items)
+    const invalidItem = normalizedItems.find((item) => item.unitPrice <= 0 || item.quantity <= 0)
+    if (invalidItem) {
+      toast.error(`Article invalide: ${invalidItem.productName || 'Produit'}`)
+      return
+    }
+
+    const updatedTotal = calculateTotal(normalizedItems)
+    const sanitizedSale = {
+      customerName: sanitizeString(truncateString(editingSaleData.customerName?.trim() || 'Client', 200)),
+      total: updatedTotal,
+      paymentMethod: editingSaleData.paymentMethod,
+      notes: sanitizeString(truncateString(editingSaleData.notes || '', 500)),
+      items: normalizedItems.map(item => ({
+        ...item,
+        productName: sanitizeString(truncateString(item.productName || '', 200))
+      }))
+    }
+
+    setSaving(true)
+    try {
+      await appStorage.updateSale(editingSaleData.id, sanitizedSale)
+      await loadSales()
+      await loadProducts()
+      toast.success('Vente modifiée et stock synchronisé')
+      setIsEditingSale(false)
+      setEditingSaleData(null)
+    } catch (error) {
+      console.error('Erreur modification vente:', error)
+      toast.error('Erreur lors de la modification de la vente: ' + error.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const cancelEditingSale = () => {

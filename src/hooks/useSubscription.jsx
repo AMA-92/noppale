@@ -1,10 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { supabase } from '../supabase/config.js'
+
+// Cache pour les subscriptions (évite les recharges répétées)
+const subscriptionCache = new Map()
+const CACHE_TTL = 30000 // 30 secondes
 
 export function useSubscription(userId) {
   const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(Boolean(userId))
   const [error, setError] = useState(null)
+  const cacheTimeRef = useRef(0)
+  const userIdRef = useRef(userId)
+
+  useEffect(() => {
+    userIdRef.current = userId
+  }, [userId])
 
   useEffect(() => {
     let isMounted = true
@@ -14,6 +24,17 @@ export function useSubscription(userId) {
         setSubscription(null)
         setLoading(false)
         setError(null)
+        return
+      }
+
+      // Vérifier le cache en mémoire
+      const now = Date.now()
+      if (subscriptionCache.has(userId) && (now - cacheTimeRef.current) < CACHE_TTL) {
+        const cached = subscriptionCache.get(userId)
+        if (isMounted) {
+          setSubscription(cached)
+          setLoading(false)
+        }
         return
       }
 
@@ -29,11 +50,13 @@ export function useSubscription(userId) {
 
         if (subscriptionError) throw subscriptionError
 
-        if (isMounted) {
+        if (isMounted && userIdRef.current === userId) {
           setSubscription(data)
+          subscriptionCache.set(userId, data)
+          cacheTimeRef.current = Date.now()
         }
       } catch (loadError) {
-        if (isMounted) {
+        if (isMounted && userIdRef.current === userId) {
           setSubscription(null)
           setError(loadError)
         }

@@ -18,13 +18,13 @@ const getCurrentUserId = async () => {
   // Créer la promesse et la mettre en cache
   userIdPromise = (async () => {
     try {
-      const { data, error } = await supabase.auth.getUser()
+      const { data, error } = await supabase.auth.getSession()
       if (error) {
         console.error('Erreur getCurrentUserId:', error)
         cachedUserId = null
         return null
       }
-      cachedUserId = data?.user?.id || null
+      cachedUserId = data?.session?.user?.id || null
       return cachedUserId
     } catch (error) {
       console.error('Erreur getCurrentUserId:', error)
@@ -143,12 +143,12 @@ export const authStorage = {
   // Obtenir l'utilisateur connecté
   async getCurrentUser() {
     try {
-      const { data, error } = await supabase.auth.getUser()
+      const { data, error } = await supabase.auth.getSession()
       if (error) {
         console.error('Erreur getCurrentUser:', error)
         return null
       }
-      return data?.user || null
+      return data?.session?.user || null
     } catch (error) {
       console.error('Erreur getCurrentUser:', error)
       return null
@@ -164,12 +164,12 @@ export const authStorage = {
   // Vérifier si un utilisateur est connecté
   async isAuthenticated() {
     try {
-      const { data, error } = await supabase.auth.getUser()
+      const { data, error } = await supabase.auth.getSession()
       if (error) {
         console.error('Erreur isAuthenticated:', error)
         return false
       }
-      return data?.user !== null
+      return data?.session?.user !== null
     } catch (error) {
       console.error('Erreur isAuthenticated:', error)
       return false
@@ -228,8 +228,9 @@ export const appStorage = {
           buying_price: parseFloat(product.buyingPrice) || 0,
           selling_price: parseFloat(product.sellingPrice) || 0,
           stock: parseInt(product.stock, 10) || 0,
-          min_stock: product.minStock || 0,
+          min_stock: parseInt(product.minStock, 10) || 0,
           barcode: product.barcode || '',
+          description: product.description || '',
           image: product.image || ''
         })
         .select()
@@ -251,17 +252,18 @@ export const appStorage = {
       const productUpdate = {
         name: updates.name,
         category: updates.category,
-        stock: updates.stock,
-        min_stock: updates.minStock,
+        stock: parseInt(updates.stock, 10) || 0,
+        min_stock: parseInt(updates.minStock, 10) || 0,
         barcode: updates.barcode,
+        description: updates.description || '',
         image: updates.image || '',
         updated_at: new Date().toISOString()
       }
       if (updates.buyingPrice !== undefined && updates.buyingPrice !== '') {
-        productUpdate.buying_price = updates.buyingPrice
+        productUpdate.buying_price = parseFloat(updates.buyingPrice) || 0
       }
       if (updates.sellingPrice !== undefined && updates.sellingPrice !== '') {
-        productUpdate.selling_price = updates.sellingPrice
+        productUpdate.selling_price = parseFloat(updates.sellingPrice) || 0
       }
 
       const { data, error } = await supabase
@@ -474,6 +476,7 @@ export const appStorage = {
               .from('products')
               .select('stock')
               .eq('id', item.productId)
+              .eq('user_id', userId)
               .single()
 
             if (product) {
@@ -484,6 +487,7 @@ export const appStorage = {
                 .from('products')
                 .update({ stock: newStock })
                 .eq('id', item.productId)
+                .eq('user_id', userId)
             }
           }
         }
@@ -492,6 +496,113 @@ export const appStorage = {
       return saleData
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la vente:', error)
+      throw error
+    }
+  },
+
+  async updateSale(id, sale) {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data: existingSale, error: existingError } = await supabase
+        .from('sales')
+        .select('*, sale_items(*)')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .single()
+
+      if (existingError) throw existingError
+
+      for (const item of existingSale.sale_items || []) {
+        if (item.product_id) {
+          const { data: product } = await supabase
+            .from('products')
+            .select('stock')
+            .eq('id', item.product_id)
+            .eq('user_id', userId)
+            .single()
+
+          if (product) {
+            const restoredStock = (parseInt(product.stock, 10) || 0) + (parseInt(item.quantity, 10) || 0)
+            const { error: stockError } = await supabase
+              .from('products')
+              .update({ stock: restoredStock })
+              .eq('id', item.product_id)
+              .eq('user_id', userId)
+
+            if (stockError) throw stockError
+          }
+        }
+      }
+
+      const { data: saleData, error: saleError } = await supabase
+        .from('sales')
+        .update({
+          customer_name: sale.customerName || '',
+          total: sale.total,
+          payment_method: sale.paymentMethod || 'cash',
+          notes: sale.notes || '',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (saleError) throw saleError
+
+      const { error: deleteItemsError } = await supabase
+        .from('sale_items')
+        .delete()
+        .eq('sale_id', id)
+
+      if (deleteItemsError) throw deleteItemsError
+
+      if (sale.items && Array.isArray(sale.items) && sale.items.length > 0) {
+        const saleItems = sale.items.map(item => ({
+          sale_id: id,
+          product_id: item.productId || null,
+          product_name: item.productName,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice
+        }))
+
+        const { error: itemsError } = await supabase
+          .from('sale_items')
+          .insert(saleItems)
+
+        if (itemsError) throw itemsError
+
+        for (const item of sale.items) {
+          if (item.productId) {
+            const { data: product } = await supabase
+              .from('products')
+              .select('stock')
+              .eq('id', item.productId)
+              .eq('user_id', userId)
+              .single()
+
+            if (product) {
+              const currentStock = parseInt(product.stock, 10) || 0
+              const qty = parseInt(item.quantity, 10) || 0
+              const newStock = Math.max(0, currentStock - qty)
+              const { error: stockError } = await supabase
+                .from('products')
+                .update({ stock: newStock })
+                .eq('id', item.productId)
+                .eq('user_id', userId)
+
+              if (stockError) throw stockError
+            }
+          }
+        }
+      }
+
+      return saleData
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la vente:', error)
       throw error
     }
   },
@@ -589,7 +700,8 @@ export const appStorage = {
           category: expense.category || '',
           description: expense.description || '',
           amount: parseFloat(expense.amount) || 0,
-          date: expense.date || new Date().toISOString().split('T')[0]
+          date: expense.date || new Date().toISOString().split('T')[0],
+          notes: expense.notes || ''
         })
         .select()
         .single()
@@ -613,7 +725,9 @@ export const appStorage = {
           category: updates.category,
           description: updates.description,
           amount: parseFloat(updates.amount) || 0,
-          date: updates.date
+          date: updates.date,
+          notes: updates.notes || '',
+          updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .eq('user_id', userId)

@@ -100,6 +100,7 @@ export default function Products() {
           stock: sanitizedForm.stock,
           minStock: sanitizedForm.minStock,
           barcode: sanitizedForm.barcode,
+          description: sanitizeString(truncateString(form.description || '', 500)),
           image: sanitizedForm.image
         })
         const updatedProducts = products.map(p => 
@@ -116,6 +117,7 @@ export default function Products() {
           stock: sanitizedForm.stock,
           minStock: sanitizedForm.minStock,
           barcode: sanitizedForm.barcode,
+          description: sanitizeString(truncateString(form.description || '', 500)),
           image: sanitizedForm.image
         })
         setProducts([...products, newProduct])

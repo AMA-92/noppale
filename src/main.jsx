@@ -3,10 +3,9 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './styles/index.css'
 
+// Performance: Suppression de StrictMode pour éviter les double-rendus
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <App />
 )
 
 // PWA: forcer l'activation immédiate d'une nouvelle version du service worker

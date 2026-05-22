@@ -1,214 +1,328 @@
-# 🚀 Guide Complet - Système d'Abonnement Noppale
+# Guide Abonnement Noppale
 
-## 📋 Étapes d'Installation
+## Architecture actuelle
 
-### 1. ⚙️ Configuration Base de Données
+Le système d'abonnement utilise une table dédiée :
 
-**Exécutez le script SQL complet :**
-```bash
-# Copiez le contenu de subscription-setup-complete.sql
-# Allez dans Supabase Dashboard > SQL Editor
-# Collez et exécutez
+```txt
+public.user_subscriptions
 ```
 
-**Ce script crée :**
-- ✅ Table `profiles` avec tous les champs nécessaires
-- ✅ Fonction `handle_new_user` pour les nouveaux inscrits
-- ✅ Trigger automatique pour créer les profils
-- ✅ Policies RLS pour la sécurité
-- ✅ Votre compte admin (365 jours d'accès)
+Cette table est liée à `auth.users` avec `user_id`.
 
----
+Une vue admin permet de consulter rapidement les utilisateurs :
 
-## 🎯 Scénarios de Test
-
-### Scénario 1: Nouvel Utilisateur (30 jours gratuits)
-
-1. **Créez un nouveau compte** sur https://noppale-desktop.vercel.app
-2. **Vérifiez dans Supabase Dashboard:**
-   ```sql
-   SELECT * FROM profiles WHERE is_admin = false;
-   ```
-3. **Résultat attendu:**
-   - `subscription_end`: aujourd'hui + 30 jours
-   - `grace_period_end`: aujourd'hui + 35 jours
-   - `account_status`: 'active'
-
-### Scénario 2: Test Période de Grâce (J+35)
-
-1. **Modifiez manuellement dans Supabase:**
-   ```sql
-   UPDATE profiles 
-   SET subscription_end = NOW() - INTERVAL '2 days'
-   WHERE id = 'votre-user-id';
-   ```
-2. **Résultat attendu:**
-   - ✅ Accès toujours autorisé
-   - ⚠️ Notification rouge "Période de grâce"
-   - 🔔 Message: "2 jours restants"
-
-### Scénario 3: Test Expiration Complète (J+36)
-
-1. **Modifiez manuellement dans Supabase:**
-   ```sql
-   UPDATE profiles 
-   SET grace_period_end = NOW() - INTERVAL '1 day'
-   WHERE id = 'votre-user-id';
-   ```
-2. **Résultat attendu:**
-   - ❌ Accès bloqué sur toutes les pages protégées
-   - 🚫 Redirection vers `/subscription-blocked`
-   - 📄 Page "Accès Suspendu" affichée
-
-### Scénario 4: Test Suspension Admin
-
-1. **Suspendez un utilisateur:**
-   ```sql
-   UPDATE profiles 
-   SET account_status = 'paused'
-   WHERE id = 'votre-user-id';
-   ```
-2. **Résultat attendu:**
-   - ❌ Accès bloqué immédiatement
-   - 📄 Page "Compte Suspendu" affichée
-
-### Scénario 5: Test Réactivation
-
-1. **Réactivez un utilisateur:**
-   ```sql
-   UPDATE profiles 
-   SET 
-     account_status = 'active',
-     subscription_end = NOW() + INTERVAL '30 days',
-     grace_period_end = NOW() + INTERVAL '35 days'
-   WHERE id = 'votre-user-id';
-   ```
-2. **Résultat attendu:**
-   - ✅ Accès entièrement rétabli
-   - 🎉 Plus de notifications d'avertissement
-
----
-
-## 🔧 Gestion Admin (Supabase Dashboard)
-
-### Ajouter du temps à un utilisateur:
-```sql
-UPDATE profiles 
-SET 
-  subscription_end = NOW() + INTERVAL '60 days',
-  grace_period_end = NOW() + INTERVAL '65 days',
-  subscription_note = 'Paiement Wave reçu'
-WHERE id = 'user-id';
+```txt
+public.admin_users_subscriptions
 ```
 
-### Suspendre un utilisateur:
-```sql
-UPDATE profiles 
-SET 
-  account_status = 'paused',
-  subscription_note = 'Non-paiement'
-WHERE id = 'user-id';
+## Règles principales
+
+- Un nouvel utilisateur reçoit automatiquement 10 jours d'essai.
+- Il n'y a pas de période de grâce.
+- Après expiration, les pages sensibles sont bloquées.
+- Un compte suspendu est bloqué immédiatement.
+- Un admin a accès sans limite.
+- La prolongation se fait depuis Supabase en modifiant `subscription_end`.
+
+## Colonnes importantes
+
+```txt
+user_id
+full_name
+email
+phone
+subscription_type
+account_status
+trial_start
+subscription_end
+is_admin
+admin_note
+created_at
+updated_at
 ```
 
-### Voir tous les utilisateurs actifs:
-```sql
-SELECT * FROM active_users ORDER BY created_at DESC;
+## Valeurs utilisées
+
+### subscription_type
+
+```txt
+trial
+paid
+manual
 ```
 
----
+### account_status
 
-## 📊 États Possibles
-
-| Statut | Condition | Accès | Notification |
-|--------|-----------|--------|--------------|
-| **Actif** | `now <= subscription_end` | ✅ Oui | 🟢 Aucune |
-| **Bientôt expiré** | `subscription_end - now <= 5 days` | ✅ Oui | 🟠 J-5 warning |
-| **Période de grâce** | `now > subscription_end && now <= grace_period_end` | ✅ Oui | 🔴 Grâce warning |
-| **Expiré** | `now > grace_period_end` | ❌ Non | 🚫 Page bloquée |
-| **Suspendu** | `account_status = 'paused'` | ❌ Non | 🚫 Page suspendue |
-
----
-
-## 🛡️ Sécurité Implémentée
-
-### ✅ RLS Policies:
-- Utilisateurs ne voient que leur profil
-- Admins voient tous les profils
-- Modification limitée (seulement `full_name`)
-
-### ✅ Protection Frontend:
-- `SubscriptionGate` sur chaque route sensible
-- Vérification automatique à chaque chargement
-- Notifications en temps réel
-
-### ✅ Protection Backend:
-- Fonction SQL `is_user_allowed()` disponible
-- Vue `active_users` pour les admins
-- Trigger automatique pour nouveaux utilisateurs
-
----
-
-## 🚨 Dépannage
-
-### Problème: "Profil introuvable"
-**Solution:** Vérifiez que le trigger s'est bien exécuté
-```sql
-SELECT * FROM profiles WHERE id = 'votre-user-id';
+```txt
+active
+suspended
 ```
 
-### Problème: "Accès refusé"
-**Solution:** Vérifiez les dates et le statut
+## Voir tous les utilisateurs
+
 ```sql
-SELECT 
+SELECT
+  email,
+  full_name,
+  phone,
+  subscription_type,
   account_status,
   subscription_end,
-  grace_period_end,
-  NOW() as current_time
-FROM profiles WHERE id = 'votre-user-id';
+  is_admin,
+  access_status,
+  days_remaining,
+  admin_note
+FROM public.admin_users_subscriptions
+ORDER BY auth_created_at DESC;
 ```
 
-### Problème: "Erreur RLS"
-**Solution:** Vérifiez les policies
+## Prolonger un utilisateur
+
+### Prolonger de 30 jours à partir d'aujourd'hui
+
 ```sql
-SELECT * FROM pg_policies WHERE tablename = 'profiles';
+UPDATE public.user_subscriptions
+SET
+  subscription_type = 'paid',
+  account_status = 'active',
+  subscription_end = NOW() + INTERVAL '30 days',
+  admin_note = 'Abonnement prolongé 30 jours'
+WHERE email = 'email_utilisateur@example.com';
 ```
 
----
+### Ajouter 30 jours à la date actuelle de fin
 
-## 📱 Test Mobile
+```sql
+UPDATE public.user_subscriptions
+SET
+  subscription_type = 'paid',
+  account_status = 'active',
+  subscription_end = subscription_end + INTERVAL '30 days',
+  admin_note = 'Ajout de 30 jours'
+WHERE email = 'email_utilisateur@example.com';
+```
 
-1. **Ouvrez sur mobile** https://noppale-desktop.vercel.app
-2. **Testez toutes les pages** (Products, Sales, Reports, Expenses)
-3. **Vérifiez les notifications** sur écran petit
-4. **Testez la page bloquée** en mode mobile
+## Suspendre un utilisateur
 
----
+```sql
+UPDATE public.user_subscriptions
+SET
+  account_status = 'suspended',
+  admin_note = 'Compte suspendu par admin'
+WHERE email = 'email_utilisateur@example.com';
+```
 
-## ✅ Checklist de Validation
+## Réactiver un utilisateur
 
-- [ ] Nouvel utilisateur obtient 30 jours
-- [ ] Notification J-5 fonctionne
-- [ ] Période de grâce (5 jours) fonctionne
-- [ ] Blocage après expiration fonctionne
-- [ ] Suspension admin fonctionne
-- [ ] Réactivation fonctionne
-- [ ] Notifications mobile responsives
-- [ ] Page bloquée responsive
-- [ ] Admin a accès illimité
-- [ ] RLS policies fonctionnent
+```sql
+UPDATE public.user_subscriptions
+SET
+  account_status = 'active',
+  subscription_type = 'paid',
+  subscription_end = NOW() + INTERVAL '30 days',
+  admin_note = 'Compte réactivé'
+WHERE email = 'email_utilisateur@example.com';
+```
 
----
+## Rendre un utilisateur admin
 
-## 🎉 Résultat Final
+```sql
+UPDATE public.user_subscriptions
+SET
+  is_admin = true,
+  subscription_type = 'manual',
+  account_status = 'active',
+  admin_note = 'Accès admin illimité'
+WHERE email = 'email_utilisateur@example.com';
+```
 
-Votre application Noppale dispose maintenant d'un **vrai système SaaS** capable de:
+## Retirer l'accès admin
 
-✅ **Gérer des abonnements**  
-✅ **Suspendre des utilisateurs**  
-✅ **Période de grâce automatique**  
-✅ **Notifications intelligentes**  
-✅ **Gestion 100% via Supabase**  
-✅ **Sécurité multi-niveaux**  
-✅ **Interface de blocage professionnelle**  
+```sql
+UPDATE public.user_subscriptions
+SET
+  is_admin = false,
+  admin_note = 'Accès admin retiré'
+WHERE email = 'email_utilisateur@example.com';
+```
 
-**Félicitations ! 🎊**
+## Voir les utilisateurs proches de l'expiration
+
+```sql
+SELECT
+  email,
+  full_name,
+  phone,
+  subscription_type,
+  subscription_end,
+  days_remaining,
+  access_status
+FROM public.admin_users_subscriptions
+WHERE access_status = 'expiring_soon'
+ORDER BY subscription_end ASC;
+```
+
+## Voir les utilisateurs expirés
+
+```sql
+SELECT
+  email,
+  full_name,
+  phone,
+  subscription_type,
+  subscription_end,
+  access_status
+FROM public.admin_users_subscriptions
+WHERE access_status = 'expired'
+ORDER BY subscription_end ASC;
+```
+
+## Vérifier un utilisateur précis
+
+```sql
+SELECT
+  email,
+  full_name,
+  phone,
+  subscription_type,
+  account_status,
+  subscription_end,
+  is_admin,
+  access_status,
+  days_remaining,
+  admin_note
+FROM public.admin_users_subscriptions
+WHERE email = 'email_utilisateur@example.com';
+```
+
+## Comportement dans l'application
+
+### Essai
+
+Si `subscription_type = 'trial'`, l'utilisateur voit un badge indiquant qu'il est en phase d'essai.
+
+### J-5
+
+Quand `subscription_end` est à 5 jours ou moins, l'utilisateur voit un badge d'alerte.
+
+Ce badge J-5 fonctionne pour :
+
+```txt
+trial
+paid
+manual
+```
+
+### Expiration
+
+Si `subscription_end` est dépassée, les pages sensibles sont bloquées.
+
+Pages protégées :
+
+```txt
+/products
+/sales
+/reports
+/expenses
+```
+
+Pages accessibles :
+
+```txt
+/
+/settings
+/contact
+/subscription-blocked
+```
+
+### Suspension
+
+Si `account_status = 'suspended'`, l'utilisateur est bloqué immédiatement sur les pages sensibles.
+
+## Tests recommandés
+
+### Test essai
+
+Créer un nouvel utilisateur depuis l'application.
+
+Résultat attendu :
+
+```txt
+subscription_type = trial
+account_status = active
+days_remaining = 10
+access_status = active
+```
+
+### Test J-5
+
+```sql
+UPDATE public.user_subscriptions
+SET subscription_end = NOW() + INTERVAL '5 days'
+WHERE email = 'email_utilisateur@example.com';
+```
+
+Résultat attendu :
+
+```txt
+Badge J-5 affiché
+Accès autorisé
+```
+
+### Test expiration
+
+```sql
+UPDATE public.user_subscriptions
+SET subscription_end = NOW() - INTERVAL '1 day'
+WHERE email = 'email_utilisateur@example.com';
+```
+
+Résultat attendu :
+
+```txt
+Pages sensibles bloquées
+Redirection vers /subscription-blocked
+```
+
+### Test réactivation
+
+```sql
+UPDATE public.user_subscriptions
+SET
+  subscription_type = 'paid',
+  account_status = 'active',
+  subscription_end = NOW() + INTERVAL '30 days'
+WHERE email = 'email_utilisateur@example.com';
+```
+
+Résultat attendu :
+
+```txt
+Accès rétabli
+Plus de badge essai
+Badge J-5 seulement quand la date approche
+```
+
+### Test suspension
+
+```sql
+UPDATE public.user_subscriptions
+SET account_status = 'suspended'
+WHERE email = 'email_utilisateur@example.com';
+```
+
+Résultat attendu :
+
+```txt
+Pages sensibles bloquées
+Message compte suspendu
+```
+
+## Notes importantes
+
+- Pour prolonger un utilisateur après contact, mettre `subscription_type = 'paid'`.
+- Modifier seulement `subscription_end` prolonge l'accès, mais garde le type actuel.
+- Si l'utilisateur reste en `trial`, le badge d'essai reste visible.
+- Pour enlever le badge d'essai, utiliser `paid` ou `manual`.
+- L'email automatique à l'admin après inscription n'est pas encore implanté.

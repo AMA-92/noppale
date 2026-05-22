@@ -5,7 +5,12 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      // Optimisations React
+      babel: {
+        plugins: [['@babel/plugin-syntax-typescript']],
+      },
+    }),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon-192.svg', 'icon-512.svg', 'favicon-exact.svg'],
@@ -38,6 +43,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
+        // Cache strategy optimisée
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -77,8 +83,24 @@ export default defineConfig({
     assetsDir: 'assets',
     emptyOutDir: true,
     chunkSizeWarningLimit: 1000,
+    // Optimisations agressives
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info'],
+      },
+      mangle: true,
+      format: {
+        comments: false,
+      },
+    },
+    cssCodeSplit: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
+        // Code splitting optimisé
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'chart-vendor': ['chart.js', 'react-chartjs-2'],
@@ -97,6 +119,29 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    host: true
+    host: true,
+    // Optimisations du serveur de développement
+    middlewareMode: false,
+    hmr: {
+      protocol: 'ws'
+    }
+  },
+  // Optimisations de dépendances
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'react-hot-toast',
+      'lucide-react',
+      '@supabase/supabase-js'
+    ],
+    exclude: ['node_modules/.pnpm'],
+    esbuildOptions: {
+      target: 'es2020',
+      supported: {
+        bigint: true
+      }
+    }
   }
 })

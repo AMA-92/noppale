@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import LoadingScreen from './LoadingScreen'
 import { useSubscription } from '../hooks/useSubscription.jsx'
 
-export default function SubscriptionGate({ user, children }) {
+function SubscriptionGate({ user, children }) {
   const subscriptionInfo = useSubscription(user?.id)
 
   if (subscriptionInfo.loading) {
@@ -20,3 +20,5 @@ export default function SubscriptionGate({ user, children }) {
 
   return children
 }
+
+export default React.memo(SubscriptionGate)

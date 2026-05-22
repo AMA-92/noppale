@@ -21,7 +21,10 @@
     "check-env": "node scripts/check-env.js",
     "protect-env": "echo 'Fichier .env protégé contre l\\'écrasement'",
     "restore-env": "restore-env.bat",
-    "backup-env": "copy .env .env.backup && echo ✅ .env sauvegardé"
+    "backup-env": "copy .env .env.backup && echo ✅ .env sauvegardé",
+    "analyze": "npm run build -- --stats && npx rollup-plugin-visualizer dist/stats.html",
+    "lighthouse": "lighthouse http://localhost:5173 --view",
+    "check-perf": "npm run build && echo '✅ Build complété. Utiliser: npm run lighthouse'"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",

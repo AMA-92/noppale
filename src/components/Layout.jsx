@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { authStorage, appStorage } from '../utils/storage'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime } from '../hooks/useRealtime.jsx'
 import { useSubscription } from '../hooks/useSubscription.jsx'
+import { SubscriptionContext } from '../hooks/useSubscriptionContext.jsx'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   BarChart3, LogOut, Settings, Wallet, Menu, X,
@@ -11,29 +12,35 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-export default function Layout({ user }) {
+// Cache pour shopInfo en mémoire
+let shopInfoCache = null
+let shopInfoCacheTime = 0
+const SHOP_INFO_CACHE_TTL = 60000 // 60 secondes
+
+function Layout({ user }) {
   const { t, language } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false) // Closed by default on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [shopInfo, setShopInfo] = useState({})
   const [currentUser, setCurrentUser] = useState(user)
   const [isMobile, setIsMobile] = useState(false)
   const subscriptionInfo = useSubscription(currentUser?.id)
   
-  // Detect mobile screen size
+  // Detecter mobile une seule fois
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768)
-      setSidebarOpen(window.innerWidth >= 768) // Open on desktop, closed on mobile
+      setSidebarOpen(window.innerWidth >= 768)
     }
     
     checkMobile()
-    window.addEventListener('resize', checkMobile)
+    const timer = window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
-  const navItems = [
+  // NavItems mémorisés - créés une seule fois
+  const navItems = useMemo(() => [
     { path: '/', label: t('dashboard'), icon: LayoutDashboard },
     { path: '/products', label: t('products'), icon: Package },
     { path: '/sales', label: t('sales'), icon: ShoppingCart },
@@ -41,30 +48,43 @@ export default function Layout({ user }) {
     { path: '/reports', label: t('reports'), icon: BarChart3 },
     { path: '/settings', label: t('settings'), icon: Settings },
     { path: '/contact', label: 'Contacter nous', icon: Mail },
-  ]
+  ], [t])
 
-  const loadShopInfo = async () => {
+  // Charger shopInfo avec cache agressif
+  const loadShopInfo = useCallback(async () => {
     try {
+      const now = Date.now()
+      
+      // Vérifier le cache en mémoire
+      if (shopInfoCache && (now - shopInfoCacheTime) < SHOP_INFO_CACHE_TTL) {
+        setShopInfo(shopInfoCache)
+        return
+      }
+      
       const savedShopInfo = await appStorage.getShopInfo()
-      setShopInfo(savedShopInfo || {})
+      if (savedShopInfo) {
+        shopInfoCache = savedShopInfo
+        shopInfoCacheTime = now
+        setShopInfo(savedShopInfo)
+      }
     } catch (error) {
       console.error('Erreur de chargement des informations de la boutique:', error)
     }
-  }
+  }, [])
 
   useEffect(() => {
     loadShopInfo()
-  }, [language])
+    // Ne charger qu'une seule fois à la création
+  }, [loadShopInfo])
 
-  useShopInfoRealtime(() => {
-    loadShopInfo()
-  })
+  // Écouter les mises à jour realtime, mais avec cache
+  useShopInfoRealtime(loadShopInfo)
 
   useEffect(() => {
     setCurrentUser(user)
   }, [user])
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     try {
       authStorage.logout()
       toast.success('Déconnexion réussie')
@@ -72,7 +92,7 @@ export default function Layout({ user }) {
     } catch (error) {
       toast.error('Erreur lors de la déconnexion')
     }
-  }
+  }, [navigate])
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-100">
@@ -112,13 +132,13 @@ export default function Layout({ user }) {
         </div>
       )}
 
-      {subscriptionInfo.isTrial && subscriptionInfo.isActive && (
+      {subscriptionInfo.isActive && (subscriptionInfo.isExpiringSoon || subscriptionInfo.isTrial) && (
         <div className={`${subscriptionInfo.isExpiringSoon ? 'bg-amber-500' : 'bg-emerald-500'} text-white px-4 py-3 flex-shrink-0`}>
           <div className="flex items-center justify-center gap-2 text-sm font-semibold text-center">
             {subscriptionInfo.isExpiringSoon ? <AlertTriangle size={18} /> : <Clock size={18} />}
             <span>
               {subscriptionInfo.isExpiringSoon
-                ? `Votre période d'essai expire dans ${subscriptionInfo.daysRemaining} jour${subscriptionInfo.daysRemaining > 1 ? 's' : ''}. Contactez l'admin pour prolonger votre abonnement.`
+                ? `Votre abonnement expire dans ${subscriptionInfo.daysRemaining} jour${subscriptionInfo.daysRemaining > 1 ? 's' : ''}. Contactez l'admin pour prolonger votre abonnement.`
                 : `Vous êtes en phase d'essai de 10 jours. Il vous reste ${subscriptionInfo.daysRemaining} jour${subscriptionInfo.daysRemaining > 1 ? 's' : ''}.`
               }
             </span>
@@ -126,6 +146,7 @@ export default function Layout({ user }) {
         </div>
       )}
 
+      <SubscriptionContext.Provider value={subscriptionInfo}>
       <div className="flex flex-1 overflow-hidden relative">
         {/* Mobile sidebar overlay */}
         {isMobile && sidebarOpen && (
@@ -250,6 +271,9 @@ export default function Layout({ user }) {
         </div>
       </main>
       </div>
+      </SubscriptionContext.Provider>
     </div>
   )
 }
+
+export default React.memo(Layout)

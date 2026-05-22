@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { authStorage } from './utils/storage'
@@ -6,27 +6,40 @@ import { I18nProvider } from './hooks/useI18n.jsx'
 import Layout from './components/Layout'
 import SubscriptionGate from './components/SubscriptionGate'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard-simple'
-import Products from './pages/Products'
-import Sales from './pages/Sales'
-import Reports from './pages/Reports'
-import Expenses from './pages/Expenses-minimal'
-import Settings from './pages/Settings'
-import Contact from './pages/Contact'
 import LoadingScreen from './components/LoadingScreen'
-import SubscriptionBlocked from './pages/SubscriptionBlocked'
+
+// Lazy load pages pour optimiser le chargement initial
+const Dashboard = lazy(() => import('./pages/Dashboard-simple'))
+const Products = lazy(() => import('./pages/Products'))
+const Sales = lazy(() => import('./pages/Sales'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Expenses = lazy(() => import('./pages/Expenses-minimal'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Contact = lazy(() => import('./pages/Contact'))
+const SubscriptionBlocked = lazy(() => import('./pages/SubscriptionBlocked'))
 
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Vérifier l'état de l'authentification au chargement avec timeout
+    // Vérifier l'état de l'authentification avec un timeout minimal (500ms)
+    // Utilise le cache localStorage en priorité pour une expérience instantanée
     const checkAuth = async () => {
       try {
-        // Timeout de 5 secondes maximum
+        // Cache local en priorité (quasi instantané)
+        const cachedUser = localStorage.getItem('cached_user')
+        if (cachedUser) {
+          try {
+            setUser(JSON.parse(cachedUser))
+          } catch (e) {
+            // Cache invalide, ignorer
+          }
+        }
+        
+        // Vérifier l'auth réelle avec timeout court (500ms)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout auth')), 5000)
+          setTimeout(() => reject(new Error('Timeout auth')), 500)
         )
         
         const currentUser = await Promise.race([
@@ -34,10 +47,16 @@ function App() {
           timeoutPromise
         ])
         
-        setUser(currentUser)
+        if (currentUser) {
+          setUser(currentUser)
+          localStorage.setItem('cached_user', JSON.stringify(currentUser))
+        }
       } catch (error) {
-        console.error('Erreur auth:', error)
-        setUser(null)
+        // Utiliser le cache si la requête fail
+        const cachedUser = localStorage.getItem('cached_user')
+        if (!cachedUser) {
+          setUser(null)
+        }
       } finally {
         setLoading(false)
       }
@@ -61,6 +80,9 @@ function App() {
 
   if (loading) return <LoadingScreen />
 
+  // Composant de fallback ultra-léger pour Suspense
+  const PageFallback = () => null
+  
   return (
     <I18nProvider>
       <Router>
@@ -71,15 +93,15 @@ function App() {
         <Routes>
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
           <Route path="/" element={user ? <Layout user={user} /> : <Navigate to="/login" />}>
-            <Route index element={<Dashboard />} />
-            <Route path="products" element={<SubscriptionGate user={user}><Products /></SubscriptionGate>} />
-            <Route path="sales" element={<SubscriptionGate user={user}><Sales /></SubscriptionGate>} />
-            <Route path="reports" element={<SubscriptionGate user={user}><Reports /></SubscriptionGate>} />
-            <Route path="expenses" element={<SubscriptionGate user={user}><Expenses /></SubscriptionGate>} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="contact" element={<Contact />} />
+            <Route index element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
+            <Route path="products" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Products /></SubscriptionGate></Suspense>} />
+            <Route path="sales" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Sales /></SubscriptionGate></Suspense>} />
+            <Route path="reports" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Reports /></SubscriptionGate></Suspense>} />
+            <Route path="expenses" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Expenses /></SubscriptionGate></Suspense>} />
+            <Route path="settings" element={<Suspense fallback={<PageFallback />}><Settings /></Suspense>} />
+            <Route path="contact" element={<Suspense fallback={<PageFallback />}><Contact /></Suspense>} />
           </Route>
-          <Route path="/subscription-blocked" element={user ? <SubscriptionBlocked /> : <Navigate to="/login" />} />
+          <Route path="/subscription-blocked" element={user ? <Suspense fallback={<PageFallback />}><SubscriptionBlocked /></Suspense> : <Navigate to="/login" />} />
         </Routes>
       </Router>
     </I18nProvider>

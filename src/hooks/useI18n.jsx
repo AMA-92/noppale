@@ -83,7 +83,8 @@ export const I18nProvider = ({ children }) => {
 
   const syncFromSupabase = useCallback(async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data } = await supabase.auth.getSession()
+      const user = data?.session?.user
       if (!user) {
         const local = loadFromLocalStorage()
         if (local) applyPreferences(local)
