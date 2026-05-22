@@ -64,6 +64,13 @@ export const usersStorage = {
         }
       })
       if (error) throw error
+
+      // Synchroniser le profil après inscription réussie
+      if (data.user) {
+        const { ProfileManager } = await import('./profileManager.js')
+        await ProfileManager.syncProfileAfterSignup(data.user.id, email, phone)
+      }
+
       return data.user
     } catch (error) {
       console.error('❌ Erreur lors de l\'inscription:', error)
