@@ -19,7 +19,8 @@ export default function Settings() {
   const [showDataModal, setShowDataModal] = useState(false)
   const [showDataDeleteModal, setShowDataDeleteModal] = useState(false)
   const [showShopInfoModal, setShowShopInfoModal] = useState(false)
-    const [dataDeletePassword, setDataDeletePassword] = useState('')
+  const [savingShopInfo, setSavingShopInfo] = useState(false)
+  const [dataDeletePassword, setDataDeletePassword] = useState('')
   
   // États pour le code secret
   const [showSecretCodeModal, setShowSecretCodeModal] = useState(false)
@@ -227,12 +228,15 @@ export default function Settings() {
   const handleShopInfoUpdate = async (e) => {
     e.preventDefault()
 
+    setSavingShopInfo(true)
     try {
       await appStorage.setShopInfo(shopInfo)
       toast.success('Informations de la boutique mises à jour avec succès')
       setShowShopInfoModal(false)
     } catch (error) {
       toast.error('Erreur lors de la mise à jour des informations de la boutique')
+    } finally {
+      setSavingShopInfo(false)
     }
   }
 

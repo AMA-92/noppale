@@ -230,6 +230,7 @@ export default function Expenses() {
         setExpenses([...expenses, newExpense])
         toast.success('Dépense enregistrée')
       }
+      // Fermer le modal immédiatement
       setShowModal(false)
       setForm(emptyExpense)
       setEditingId(null)

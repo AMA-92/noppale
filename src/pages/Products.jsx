@@ -123,6 +123,7 @@ export default function Products() {
         setProducts([...products, newProduct])
         toast.success('Produit ajouté')
       }
+      // Fermer le modal immédiatement
       setShowModal(false)
       setForm(emptyProduct)
       setEditingId(null)

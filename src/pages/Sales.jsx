@@ -325,11 +325,16 @@ export default function Sales() {
       return
     }
 
-    const newQuantity = parseFloat(quantity) || 1
+    // Permettre les valeurs vides temporairement (l'utilisateur supprime pour retaper)
+    const newQuantity = quantity === '' || quantity === null ? 0 : parseFloat(quantity)
+    if (isNaN(newQuantity)) return
+
+    // Si la valeur est 0 ou vide, la placer à 1 (minimum)
+    const finalQuantity = newQuantity || 1
     const availableStock = parseInt(product.stock || 0)
 
     // Validation du stock disponible
-    if (newQuantity > availableStock) {
+    if (finalQuantity > availableStock) {
       toast.error(`Quantité trop élevée ! Il ne reste que ${availableStock} unité(s) de ${product.name}`)
       return
     }
@@ -339,8 +344,8 @@ export default function Sales() {
         item.productId === productId
           ? {
               ...item,
-              quantity: newQuantity,
-              totalPrice: calculateItemTotal(newQuantity, parseFloat(item.unitPrice) || 0)
+              quantity: finalQuantity,
+              totalPrice: calculateItemTotal(finalQuantity, parseFloat(item.unitPrice) || 0)
             }
           : item
       )
@@ -412,16 +417,19 @@ export default function Sales() {
         items: sanitizedSale.items
       })
 
-      await loadSales()
-      await loadProducts()
-
-      toast.success('Vente enregistrée et stock mis à jour')
+      // Fermer le modal immédiatement, puis recharger en arrière-plan
       cartItemsRef.current = []
       setCartItems([])
       setShowModal(false)
       setForm(emptySale)
       setCurrentItem(emptyItem)
       setProductSearch('')
+      toast.success('Vente enregistrée et stock mis à jour')
+
+      // Charger en parallèle (Promise.all) au lieu de séquentiellement
+      Promise.all([loadSales(), loadProducts()]).catch(err => {
+        console.error('Erreur lors du rechargement:', err)
+      })
     } catch(e) {
       console.error('Erreur détaillée:', e)
       toast.error('Erreur lors de l\'enregistrement de la vente: ' + e.message)
