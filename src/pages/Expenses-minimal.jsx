@@ -262,7 +262,12 @@ export default function Expenses() {
               <h2 className="text-xl font-bold text-slate-800">
                 {editingId ? t('editExpense') : t('addExpense')}
               </h2>
-              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+              <button
+                type="button"
+                onClick={() => { setShowModal(false); setEditingId(null); setForm(emptyExpense) }}
+                className="p-1 hover:bg-slate-100 rounded-lg"
+                aria-label="Fermer"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -273,7 +278,7 @@ export default function Expenses() {
                 <input
                   type="text"
                   value={form.description}
-                  onChange={e => setForm({...form, description: e.target.value})}
+                  onChange={e => setForm({ ...form, description: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -283,9 +288,10 @@ export default function Expenses() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Montant *</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   value={form.amount}
-                  onChange={e => setForm({...form, amount: e.target.value})}
+                  onChange={e => setForm({ ...form, amount: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -296,7 +302,7 @@ export default function Expenses() {
                 <input
                   type="text"
                   value={form.category}
-                  onChange={e => setForm({...form, category: e.target.value})}
+                  onChange={e => setForm({ ...form, category: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Ex: Loyer, Transport..."
                 />
@@ -307,7 +313,7 @@ export default function Expenses() {
                 <input
                   type="date"
                   value={form.date}
-                  onChange={e => setForm({...form, date: e.target.value})}
+                  onChange={e => setForm({ ...form, date: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -316,7 +322,7 @@ export default function Expenses() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
                 <textarea
                   value={form.notes}
-                  onChange={e => setForm({...form, notes: e.target.value})}
+                  onChange={e => setForm({ ...form, notes: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                   placeholder="Notes supplémentaires..."
@@ -324,11 +330,15 @@ export default function Expenses() {
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50">
-                  Annuler
+                <button
+                  type="button"
+                  onClick={() => { setShowModal(false); setEditingId(null); setForm(emptyExpense) }}
+                  className="flex-1 px-4 py-2 border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50"
+                >
+                  {t('cancel')}
                 </button>
                 <button type="submit" disabled={saving} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  {saving ? 'Enregistrement...' : (editingId ? 'Modifier' : 'Ajouter')}
+                  {saving ? t('saving') : (editingId ? t('editExpense') : t('addExpense'))}
                 </button>
               </div>
             </form>
@@ -338,3 +348,4 @@ export default function Expenses() {
     </div>
   )
 }
+
