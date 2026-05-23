@@ -846,7 +846,17 @@ export default function Sales() {
                               min="1"
                               max={getAvailableStock(item.productId)}
                               value={item.quantity}
-                              onChange={(e) => updateItemQuantity(item.productId, parseInt(e.target.value, 10) || 1)}
+                              inputMode="numeric"
+                              onChange={(e) => {
+                                // Sur mobile, l'input peut envoyer '' tant que l'utilisateur tape.
+                                const raw = e.target.value
+                                if (raw === '') {
+                                  updateItemQuantity(item.productId, 1)
+                                  return
+                                }
+                                const parsed = parseInt(raw, 10)
+                                updateItemQuantity(item.productId, Number.isFinite(parsed) ? parsed : 1)
+                              }}
                               className="w-14 px-1 py-1 border border-slate-200 rounded text-center text-sm"
                               aria-label={`Quantité ${item.productName}`}
                             />
@@ -1061,87 +1071,84 @@ export default function Sales() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-slate-800">Articles</h3>
-                <button 
+                <button
                   onClick={addEditingSaleItem}
                   className="btn-primary flex items-center gap-2"
+                  type="button"
                 >
                   <Plus size={18} />
                   Ajouter un article
                 </button>
               </div>
-              
-              <div className="border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <th className="text-left p-3 border-b">Article</th>
-                      <th className="text-center p-3 border-b">Quantit├®</th>
-                      <th className="text-right p-3 border-b">Prix Unitaire</th>
-                      <th className="text-right p-3 border-b">Total</th>
-                      <th className="text-center p-3 border-b">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {editingSaleData.items && editingSaleData.items.length > 0 ? (
-                      editingSaleData.items.map((item, index) => (
-                        <tr key={index} className="border-b">
-                          <td className="p-3">
-                            <input
-                              type="text"
-                              value={item.productName || ''}
-                              onChange={(e) => updateEditingSaleItem(index, 'productName', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-300 rounded"
-                              placeholder="Nom de l'article"
-                            />
-                          </td>
-                          <td className="p-3">
+
+              {editingSaleData.items && editingSaleData.items.length > 0 ? (
+                <div className="space-y-3">
+                  {editingSaleData.items.map((item, index) => (
+                    <div key={index} className="border border-slate-200 rounded-lg p-3">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Article</label>
+                          <input
+                            type="text"
+                            value={item.productName || ''}
+                            onChange={(e) => updateEditingSaleItem(index, 'productName', e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                            placeholder="Nom de l'article"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Quantité</label>
                             <input
                               type="number"
-                              value={item.quantity || ''}
+                              value={item.quantity ?? ''}
                               onChange={(e) => updateEditingSaleItem(index, 'quantity', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-300 rounded text-center"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-center"
                               min="1"
+                              inputMode="numeric"
                             />
-                          </td>
-                          <td className="p-3">
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Prix</label>
                             <input
                               type="number"
-                              value={item.unitPrice || ''}
+                              value={item.unitPrice ?? ''}
                               onChange={(e) => updateEditingSaleItem(index, 'unitPrice', e.target.value)}
-                              className="w-full px-2 py-1 border border-slate-300 rounded text-right"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-right"
                               min="0"
                               step="0.01"
+                              inputMode="decimal"
                             />
-                          </td>
-                          <td className="p-3 text-right font-semibold">
-                            {formatCurrency(item.totalPrice || 0)}
-                          </td>
-                          <td className="p-3 text-center">
-                            <button 
-                              onClick={() => removeEditingSaleItem(index)}
-                              className="text-red-600 hover:text-red-800 p-1"
-                            >
-                              <X size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" className="text-center p-4 text-slate-500">
-                          Aucun article
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                  <tfoot className="bg-slate-50 font-bold">
-                    <tr>
-                      <td colSpan="3" className="text-right p-3">TOTAL:</td>
-                      <td className="text-right p-3 text-lg text-green-600">{formatCurrency(editingSaleData.total || 0)}</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-slate-600">Total article</div>
+                          <div className="font-semibold text-green-700">{formatCurrency(item.totalPrice || 0)}</div>
+                          <button
+                            type="button"
+                            onClick={() => removeEditingSaleItem(index)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                            aria-label="Supprimer l'article"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center p-4 text-slate-500">Aucun article</div>
+              )}
+
+              <div className="mt-4 flex items-center justify-end">
+                <div className="text-right">
+                  <div className="text-sm text-slate-600">TOTAL</div>
+                  <div className="text-lg font-bold text-green-700">{formatCurrency(editingSaleData.total || 0)}</div>
+                </div>
               </div>
             </div>
 
