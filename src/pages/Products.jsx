@@ -42,7 +42,7 @@ export default function Products() {
   })
 
   const loadProducts = async () => {
-    setLoading(true)
+    if (!products.length) setLoading(true)
     try {
       const products = await appStorage.getProducts()
       setProducts(products)
@@ -89,46 +89,58 @@ export default function Products() {
       return
     }
     
+    const productPayload = {
+      name: sanitizedForm.name,
+      category: sanitizedForm.category,
+      buyingPrice: sanitizedForm.buyingPrice,
+      sellingPrice: sanitizedForm.sellingPrice,
+      stock: sanitizedForm.stock,
+      minStock: sanitizedForm.minStock,
+      barcode: sanitizedForm.barcode,
+      description: sanitizeString(truncateString(form.description || '', 500)),
+      image: sanitizedForm.image
+    }
+    const currentEditingId = editingId
+    const optimisticProduct = {
+      id: currentEditingId || `temp-${Date.now()}`,
+      name: productPayload.name,
+      category: productPayload.category,
+      buying_price: parseFloat(productPayload.buyingPrice) || 0,
+      selling_price: parseFloat(productPayload.sellingPrice) || 0,
+      stock: parseInt(productPayload.stock, 10) || 0,
+      min_stock: parseInt(productPayload.minStock, 10) || 0,
+      barcode: productPayload.barcode,
+      description: productPayload.description,
+      image: productPayload.image
+    }
+
     setSaving(true)
-    try {
-      if (editingId) {
-        const updatedProduct = await appStorage.updateProduct(editingId, {
-          name: sanitizedForm.name,
-          category: sanitizedForm.category,
-          buyingPrice: sanitizedForm.buyingPrice,
-          sellingPrice: sanitizedForm.sellingPrice,
-          stock: sanitizedForm.stock,
-          minStock: sanitizedForm.minStock,
-          barcode: sanitizedForm.barcode,
-          description: sanitizeString(truncateString(form.description || '', 500)),
-          image: sanitizedForm.image
-        })
-        const updatedProducts = products.map(p => 
-          p.id === editingId ? updatedProduct : p
-        )
-        setProducts(updatedProducts)
-        toast.success('Produit mis à jour')
-      } else {
-        const newProduct = await appStorage.addProduct({
-          name: sanitizedForm.name,
-          category: sanitizedForm.category,
-          buyingPrice: sanitizedForm.buyingPrice,
-          sellingPrice: sanitizedForm.sellingPrice,
-          stock: sanitizedForm.stock,
-          minStock: sanitizedForm.minStock,
-          barcode: sanitizedForm.barcode,
-          description: sanitizeString(truncateString(form.description || '', 500)),
-          image: sanitizedForm.image
-        })
-        setProducts([...products, newProduct])
-        toast.success('Produit ajouté')
-      }
-      // Fermer le modal immédiatement
-      setShowModal(false)
-      setForm(emptyProduct)
-      setEditingId(null)
-    } catch(e) { toast.error('Erreur: ' + e.message) }
-    finally { setSaving(false) }
+    setShowModal(false)
+    setForm(emptyProduct)
+    setEditingId(null)
+
+    if (currentEditingId) {
+      setProducts((prev) => prev.map((p) => (p.id === currentEditingId ? { ...p, ...optimisticProduct } : p)))
+    } else {
+      setProducts((prev) => [optimisticProduct, ...prev])
+    }
+
+    const savePromise = currentEditingId
+      ? appStorage.updateProduct(currentEditingId, productPayload)
+      : appStorage.addProduct(productPayload)
+
+    savePromise
+      .then((savedProduct) => {
+        if (savedProduct) {
+          setProducts((prev) => prev.map((p) => (p.id === optimisticProduct.id ? savedProduct : p)))
+        }
+        toast.success(currentEditingId ? 'Produit mis à jour' : 'Produit ajouté')
+      })
+      .catch((e) => {
+        toast.error('Erreur: ' + e.message)
+        loadProducts().catch(console.error)
+      })
+      .finally(() => setSaving(false))
   }
 
   const handleImageUpload = (e) => {

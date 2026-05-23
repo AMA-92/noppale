@@ -1,9 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { supabase } from '../supabase/config.js'
 
-// Cache des subscriptions actives (évite les doublons)
-const activeSubscriptions = new Map()
-
 /**
  * Hook pour écouter les changements en temps réel sur une table Supabase
  * Optimisé avec cache et évite les reconnexions multiples
@@ -25,16 +22,6 @@ export function useRealtimeSubscription(tableName, onUpdate) {
         if (cancelled || error || !user?.id) return
 
         const filter = `user_id=eq.${user.id}`
-        const subscriptionKey = `${tableName}:${user.id}`
-        
-        // Vérifier si déjà abonné (évite les doublons)
-        if (activeSubscriptions.has(subscriptionKey)) {
-          // Ne pas muter le callback d'un canal déjà créé (sinon le handler peut devenir incohérent).
-          // On ignore ici; chaque composant doit avoir son propre canal.
-          return
-        }
-
-
         const channelSuffix = Math.random().toString(36).substring(2, 9)
         const channelName = `realtime:${tableName}:${user.id}:${channelSuffix}`
 
@@ -54,11 +41,6 @@ export function useRealtimeSubscription(tableName, onUpdate) {
           )
 
         await channel.subscribe()
-        
-        // Enregistrer le canal actif
-        if (!cancelled) {
-          activeSubscriptions.set(subscriptionKey, channel)
-        }
       } catch (err) {
         console.error(`Error setting up realtime subscription for ${tableName}:`, err)
       }
@@ -70,8 +52,6 @@ export function useRealtimeSubscription(tableName, onUpdate) {
       cancelled = true
       if (channel) {
         supabase.removeChannel(channel)
-        // Nettoyer du cache sans bloquer
-        activeSubscriptions.clear()
       }
     }
   }, [tableName])

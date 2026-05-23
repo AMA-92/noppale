@@ -167,7 +167,7 @@ export default function Sales() {
   }
 
   const loadSales = async () => {
-    setLoading(true)
+    if (!sales.length) setLoading(true)
     try {
       const sales = await appStorage.getSales()
       setSales(sales)
@@ -325,12 +325,27 @@ export default function Sales() {
       return
     }
 
+    if (quantity === '') {
+      updateCart((currentItems) =>
+        currentItems.map((item) =>
+          item.productId === productId
+            ? {
+                ...item,
+                quantity: '',
+                totalPrice: 0
+              }
+            : item
+        )
+      )
+      return
+    }
+
     // Permettre les valeurs vides temporairement (l'utilisateur supprime pour retaper)
-    const newQuantity = quantity === '' || quantity === null ? 0 : parseFloat(quantity)
+    const newQuantity = quantity === null ? 0 : parseFloat(quantity)
     if (isNaN(newQuantity)) return
 
     // Si la valeur est 0 ou vide, la placer à 1 (minimum)
-    const finalQuantity = newQuantity || 1
+    const finalQuantity = Math.max(1, newQuantity)
     const availableStock = parseInt(product.stock || 0)
 
     // Validation du stock disponible
@@ -350,6 +365,12 @@ export default function Sales() {
           : item
       )
     )
+  }
+
+  const adjustItemQuantity = (productId, delta) => {
+    const currentItem = getCartItems().find((item) => item.productId === productId)
+    const currentQuantity = parseInt(currentItem?.quantity || 1, 10)
+    updateItemQuantity(productId, currentQuantity + delta)
   }
 
   const updateAmountReceived = (amount) => {
@@ -406,36 +427,62 @@ export default function Sales() {
       }
     }
 
-    setSaving(true)
-    try {
-      // Enregistrer la vente avec Supabase (gère automatiquement le stock)
-      await appStorage.addSale({
-        customerName: sanitizedSale.customerName,
-        total: sanitizedSale.total,
-        paymentMethod: sanitizedSale.paymentMethod,
-        notes: sanitizedSale.notes,
-        items: sanitizedSale.items
-      })
-
-      // Fermer le modal immédiatement, puis recharger en arrière-plan
-      cartItemsRef.current = []
-      setCartItems([])
-      setShowModal(false)
-      setForm(emptySale)
-      setCurrentItem(emptyItem)
-      setProductSearch('')
-      toast.success('Vente enregistrée et stock mis à jour')
-
-      // Charger en parallèle (Promise.all) au lieu de séquentiellement
-      Promise.all([loadSales(), loadProducts()]).catch(err => {
-        console.error('Erreur lors du rechargement:', err)
-      })
-    } catch(e) {
-      console.error('Erreur détaillée:', e)
-      toast.error('Erreur lors de l\'enregistrement de la vente: ' + e.message)
-    } finally {
-      setSaving(false)
+    const salePayload = {
+      customerName: sanitizedSale.customerName,
+      total: sanitizedSale.total,
+      paymentMethod: sanitizedSale.paymentMethod,
+      notes: sanitizedSale.notes,
+      items: sanitizedSale.items
     }
+
+    const optimisticSale = {
+      id: `temp-${Date.now()}`,
+      customerName: salePayload.customerName,
+      customer_name: salePayload.customerName,
+      total: salePayload.total,
+      paymentMethod: salePayload.paymentMethod,
+      payment_method: salePayload.paymentMethod,
+      notes: salePayload.notes,
+      items: salePayload.items,
+      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    }
+
+    setSaving(true)
+    cartItemsRef.current = []
+    setCartItems([])
+    setShowModal(false)
+    setForm(emptySale)
+    setCurrentItem(emptyItem)
+    setProductSearch('')
+    setSales((prev) => [optimisticSale, ...prev])
+    setProducts((prev) =>
+      prev.map((product) => {
+        const soldItem = salePayload.items.find((item) => item.productId === product.id)
+        if (!soldItem) return product
+        return {
+          ...product,
+          stock: Math.max(0, (parseInt(product.stock, 10) || 0) - (parseInt(soldItem.quantity, 10) || 0))
+        }
+      })
+    )
+
+    appStorage.addSale(salePayload)
+      .then((savedSale) => {
+        if (savedSale) {
+          setSales((prev) => prev.map((sale) => (sale.id === optimisticSale.id ? { ...optimisticSale, ...savedSale } : sale)))
+        }
+        toast.success('Vente enregistrée et stock mis à jour')
+        Promise.all([loadSales(), loadProducts()]).catch((err) => {
+          console.error('Erreur lors du rechargement:', err)
+        })
+      })
+      .catch((e) => {
+        console.error('Erreur détaillée:', e)
+        toast.error('Erreur lors de l\'enregistrement de la vente: ' + e.message)
+        Promise.all([loadSales(), loadProducts()]).catch(console.error)
+      })
+      .finally(() => setSaving(false))
   }
 
   const printFacture = () => {
@@ -841,6 +888,14 @@ export default function Sales() {
                             <p className="text-xs text-slate-500">{formatCurrency(item.unitPrice)}</p>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => adjustItemQuantity(item.productId, -1)}
+                              className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 touch-manipulation"
+                              aria-label={`Diminuer la quantité ${item.productName}`}
+                            >
+                              -
+                            </button>
                             <input
                               type="number"
                               min="1"
@@ -848,18 +903,23 @@ export default function Sales() {
                               value={item.quantity}
                               inputMode="numeric"
                               onChange={(e) => {
-                                // Sur mobile, l'input peut envoyer '' tant que l'utilisateur tape.
                                 const raw = e.target.value
-                                if (raw === '') {
-                                  updateItemQuantity(item.productId, 1)
-                                  return
-                                }
-                                const parsed = parseInt(raw, 10)
-                                updateItemQuantity(item.productId, Number.isFinite(parsed) ? parsed : 1)
+                                updateItemQuantity(item.productId, raw === '' ? '' : parseInt(raw, 10))
                               }}
-                              className="w-14 px-1 py-1 border border-slate-200 rounded text-center text-sm"
+                              onBlur={(e) => {
+                                if (e.target.value === '') updateItemQuantity(item.productId, 1)
+                              }}
+                              className="w-14 h-8 px-1 border border-slate-200 rounded text-center text-sm"
                               aria-label={`Quantité ${item.productName}`}
                             />
+                            <button
+                              type="button"
+                              onClick={() => adjustItemQuantity(item.productId, 1)}
+                              className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 touch-manipulation"
+                              aria-label={`Augmenter la quantité ${item.productName}`}
+                            >
+                              +
+                            </button>
                             <button
                               type="button"
                               onClick={() => removeItemFromSale(item.productId)}

@@ -7,13 +7,12 @@ import Layout from './components/Layout'
 import SubscriptionGate from './components/SubscriptionGate'
 import Login from './pages/Login'
 import LoadingScreen from './components/LoadingScreen'
+import Dashboard from './pages/Dashboard-simple'
+import Products from './pages/Products'
+import Sales from './pages/Sales'
+import Expenses from './pages/Expenses'
 
-// Lazy load pages pour optimiser le chargement initial
-const Dashboard = lazy(() => import('./pages/Dashboard-simple'))
-const Products = lazy(() => import('./pages/Products'))
-const Sales = lazy(() => import('./pages/Sales'))
 const Reports = lazy(() => import('./pages/Reports'))
-const Expenses = lazy(() => import('./pages/Expenses'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Contact = lazy(() => import('./pages/Contact'))
 const SubscriptionBlocked = lazy(() => import('./pages/SubscriptionBlocked'))

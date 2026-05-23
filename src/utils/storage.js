@@ -519,22 +519,23 @@ export const appStorage = {
 
       if (existingError) throw existingError
 
-      // Restaurer les stocks EN PARALLÈLE (stock = stock + quantité vendue)
-      await Promise.all((existingSale.sale_items || []).map(async (item) => {
-        if (!item.product_id) return
+      // Restaurer les stocks EN PARALLÈLE (stock = stock + ancienne quantité)
+      await Promise.all(
+        (existingSale.sale_items || []).map(async (item) => {
+          if (!item.product_id) return
+          try {
+            const qty = parseInt(item.quantity, 10) || 0
+            if (qty <= 0) return
 
-        try {
-          const qty = parseInt(item.quantity, 10) || 0
-          if (qty <= 0) return
+            const { data: product } = await supabase
+              .from('products')
+              .select('stock')
+              .eq('id', item.product_id)
+              .eq('user_id', userId)
+              .single()
 
-          const { data: product } = await supabase
-            .from('products')
-            .select('stock')
-            .eq('id', item.product_id)
-            .eq('user_id', userId)
-            .single()
+            if (!product) return
 
-          if (product) {
             const currentStock = parseInt(product.stock, 10) || 0
             const restoredStock = currentStock + qty
 
@@ -545,11 +546,12 @@ export const appStorage = {
               .eq('user_id', userId)
 
             if (updErr) throw updErr
+          } catch (err) {
+            console.error(`Erreur restauration stock ${item.product_id}:`, err)
           }
-        } catch (err) {
-          console.error(`Erreur restauration stock ${item.product_id}:`, err)
-        }
-      }))
+        })
+      )
+
 
       const { data: saleData, error: saleError } = await supabase
         .from('sales')
