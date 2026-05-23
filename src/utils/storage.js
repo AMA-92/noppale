@@ -31,10 +31,10 @@ const getCurrentUserId = async () => {
       cachedUserId = null
       return null
     } finally {
-      // Libérer la promesse après 2 secondes
+      // Libérer la promesse après 30 secondes (au lieu de 2s) pour éviter les refetch
       setTimeout(() => {
         userIdPromise = null
-      }, 2000)
+      }, 30000)
     }
   })()
   
@@ -470,8 +470,11 @@ export const appStorage = {
       }
 
       if (sale.items && Array.isArray(sale.items)) {
-        for (const item of sale.items) {
-          if (item.productId) {
+        // Mettre à jour les stocks EN PARALLÈLE avec Promise.all au lieu de séquentiellement
+        await Promise.all(sale.items.map(async (item) => {
+          if (!item.productId) return
+
+          try {
             const { data: product } = await supabase
               .from('products')
               .select('stock')
@@ -489,8 +492,10 @@ export const appStorage = {
                 .eq('id', item.productId)
                 .eq('user_id', userId)
             }
+          } catch (err) {
+            console.error(`Erreur mise à jour stock ${item.productId}:`, err)
           }
-        }
+        }))
       }
 
       return saleData
@@ -514,8 +519,14 @@ export const appStorage = {
 
       if (existingError) throw existingError
 
-      for (const item of existingSale.sale_items || []) {
-        if (item.product_id) {
+      // Restaurer les stocks EN PARALLÈLE (stock = stock + quantité vendue)
+      await Promise.all((existingSale.sale_items || []).map(async (item) => {
+        if (!item.product_id) return
+
+        try {
+          const qty = parseInt(item.quantity, 10) || 0
+          if (qty <= 0) return
+
           const { data: product } = await supabase
             .from('products')
             .select('stock')
@@ -524,17 +535,21 @@ export const appStorage = {
             .single()
 
           if (product) {
-            const restoredStock = (parseInt(product.stock, 10) || 0) + (parseInt(item.quantity, 10) || 0)
-            const { error: stockError } = await supabase
+            const currentStock = parseInt(product.stock, 10) || 0
+            const restoredStock = currentStock + qty
+
+            const { error: updErr } = await supabase
               .from('products')
               .update({ stock: restoredStock })
               .eq('id', item.product_id)
               .eq('user_id', userId)
 
-            if (stockError) throw stockError
+            if (updErr) throw updErr
           }
+        } catch (err) {
+          console.error(`Erreur restauration stock ${item.product_id}:`, err)
         }
-      }
+      }))
 
       const { data: saleData, error: saleError } = await supabase
         .from('sales')
@@ -575,29 +590,40 @@ export const appStorage = {
 
         if (itemsError) throw itemsError
 
-        for (const item of sale.items) {
-          if (item.productId) {
-            const { data: product } = await supabase
-              .from('products')
-              .select('stock')
-              .eq('id', item.productId)
-              .eq('user_id', userId)
-              .single()
-
-            if (product) {
-              const currentStock = parseInt(product.stock, 10) || 0
+        // Mettre à jour les stocks EN PARALLÈLE via une séquence cohérente:
+        // 1) on restaure l'ancien stock (fait plus haut)
+        // 2) on déduit le stock des nouvelles quantités (ici)
+        await Promise.all(
+          sale.items.map(async (item) => {
+            if (!item.productId) return
+            try {
               const qty = parseInt(item.quantity, 10) || 0
+              if (qty <= 0) return
+
+              const { data: product } = await supabase
+                .from('products')
+                .select('stock')
+                .eq('id', item.productId)
+                .eq('user_id', userId)
+                .single()
+
+              if (!product) return
+
+              const currentStock = parseInt(product.stock, 10) || 0
               const newStock = Math.max(0, currentStock - qty)
-              const { error: stockError } = await supabase
+
+              const { error: updErr } = await supabase
                 .from('products')
                 .update({ stock: newStock })
                 .eq('id', item.productId)
                 .eq('user_id', userId)
 
-              if (stockError) throw stockError
+              if (updErr) throw updErr
+            } catch (err) {
+              console.error(`Erreur mise à jour stock ${item.productId}:`, err)
             }
-          }
-        }
+          })
+        )
       }
 
       return saleData
@@ -612,13 +638,58 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
-      const { error } = await supabase
+      // 1) Récupérer les items de la vente pour restaurer le stock
+      const { data: saleWithItems, error: saleFetchErr } = await supabase
+        .from('sales')
+        .select('*, sale_items(*)')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .single()
+
+      if (saleFetchErr) throw saleFetchErr
+
+      // 2) Restaurer le stock (stock = stock + quantité)
+      await Promise.all(
+        (saleWithItems?.sale_items || []).map(async (item) => {
+          if (!item?.product_id) return
+          const qty = parseInt(item.quantity, 10) || 0
+          if (qty <= 0) return
+
+          try {
+            const { data: product } = await supabase
+              .from('products')
+              .select('stock')
+              .eq('id', item.product_id)
+              .eq('user_id', userId)
+              .single()
+
+            if (!product) return
+
+            const currentStock = parseInt(product.stock, 10) || 0
+            const restoredStock = currentStock + qty
+
+            const { error: updErr } = await supabase
+              .from('products')
+              .update({ stock: restoredStock })
+              .eq('id', item.product_id)
+              .eq('user_id', userId)
+
+            if (updErr) throw updErr
+          } catch (err) {
+            console.error(`Erreur restauration stock (deleteSale) ${item.product_id}:`, err)
+          }
+        })
+      )
+
+      // 3) Supprimer la vente
+      const { error: deleteErr } = await supabase
         .from('sales')
         .delete()
         .eq('id', id)
         .eq('user_id', userId)
 
-      if (error) throw error
+      if (deleteErr) throw deleteErr
+
       return true
     } catch (error) {
       console.error('Erreur lors de la suppression de la vente:', error)

@@ -232,11 +232,12 @@ export default function Settings() {
     try {
       await appStorage.setShopInfo(shopInfo)
       toast.success('Informations de la boutique mises à jour avec succès')
-      setShowShopInfoModal(false)
     } catch (error) {
       toast.error('Erreur lors de la mise à jour des informations de la boutique')
     } finally {
+      // TOUJOURS fermer la modal, même en cas d'erreur
       setSavingShopInfo(false)
+      setShowShopInfoModal(false)
     }
   }
 

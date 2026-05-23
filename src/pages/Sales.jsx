@@ -702,13 +702,34 @@ export default function Sales() {
                     {getCreditStatusBadge(sale)}
                   </td>
                   <td className="border border-slate-300 px-4 py-3">
-                    <button
-                      onClick={() => openSaleDetails(sale)}
-                      className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1"
-                    >
-                      <Eye size={14} />
-                      Détails
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openSaleDetails(sale)}
+                        className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-1"
+                      >
+                        <Eye size={14} />
+                        Détails
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!window.confirm('Supprimer cette vente ?')) return
+                          try {
+                            await appStorage.deleteSale(sale.id)
+                            await loadSales()
+                            await loadProducts()
+                            toast.success('Vente supprimée et stock synchronisé')
+                          } catch (err) {
+                            console.error('Erreur suppression vente:', err)
+                            toast.error('Erreur lors de la suppression de la vente')
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-700 text-sm flex items-center gap-1"
+                        title="Supprimer"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

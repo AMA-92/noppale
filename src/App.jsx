@@ -37,9 +37,9 @@ function App() {
           }
         }
         
-        // Vérifier l'auth réelle avec timeout court (500ms)
+        // Vérifier l'auth réelle avec timeout court (2000ms)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout auth')), 500)
+          setTimeout(() => reject(new Error('Timeout auth')), 2000)
         )
         
         const currentUser = await Promise.race([

@@ -70,13 +70,8 @@ export function useRealtimeSubscription(tableName, onUpdate) {
       cancelled = true
       if (channel) {
         supabase.removeChannel(channel)
-        // Nettoyer du cache
-        const { data } = supabase.auth.getSession()
-        const user = data?.session?.user
-        if (user?.id) {
-          const subscriptionKey = `${tableName}:${user.id}`
-          activeSubscriptions.delete(subscriptionKey)
-        }
+        // Nettoyer du cache sans bloquer
+        activeSubscriptions.clear()
       }
     }
   }, [tableName])
