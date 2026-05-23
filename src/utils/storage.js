@@ -6,6 +6,30 @@ import { supabase } from '../supabase/config.js'
 // Cache pour l'ID utilisateur (évite les appels multiples)
 let cachedUserId = null
 let userIdPromise = null
+let productsCache = null
+let salesCache = null
+let expensesCache = null
+
+export const appCache = {
+  getProducts() {
+    return productsCache || []
+  },
+  setProducts(products) {
+    productsCache = Array.isArray(products) ? products : []
+  },
+  getSales() {
+    return salesCache || []
+  },
+  setSales(sales) {
+    salesCache = Array.isArray(sales) ? sales : []
+  },
+  getExpenses() {
+    return expensesCache || []
+  },
+  setExpenses(expenses) {
+    expensesCache = Array.isArray(expenses) ? expenses : []
+  }
+}
 
 // Obtenir l'ID de l'utilisateur connecté avec cache
 const getCurrentUserId = async () => {

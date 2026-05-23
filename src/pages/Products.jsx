@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { appStorage } from '../utils/storage'
+import { appCache, appStorage } from '../utils/storage'
 import { formatDate } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useProductsRealtime } from '../hooks/useRealtime.jsx'
@@ -21,13 +21,13 @@ const emptyProduct = {
 
 export default function Products() {
   const { formatCurrency, currency, language, t } = useI18n()
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState(() => appCache.getProducts())
   const [filtered, setFiltered] = useState([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState(emptyProduct)
   const [editingId, setEditingId] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => appCache.getProducts().length === 0)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { loadProducts() }, [currency, language])
@@ -45,6 +45,7 @@ export default function Products() {
     if (!products.length) setLoading(true)
     try {
       const products = await appStorage.getProducts()
+      appCache.setProducts(products)
       setProducts(products)
     } catch(e) { toast.error('Erreur de chargement') }
     finally { setLoading(false) }
@@ -120,9 +121,17 @@ export default function Products() {
     setEditingId(null)
 
     if (currentEditingId) {
-      setProducts((prev) => prev.map((p) => (p.id === currentEditingId ? { ...p, ...optimisticProduct } : p)))
+      setProducts((prev) => {
+        const next = prev.map((p) => (p.id === currentEditingId ? { ...p, ...optimisticProduct } : p))
+        appCache.setProducts(next)
+        return next
+      })
     } else {
-      setProducts((prev) => [optimisticProduct, ...prev])
+      setProducts((prev) => {
+        const next = [optimisticProduct, ...prev]
+        appCache.setProducts(next)
+        return next
+      })
     }
 
     const savePromise = currentEditingId
@@ -132,7 +141,11 @@ export default function Products() {
     savePromise
       .then((savedProduct) => {
         if (savedProduct) {
-          setProducts((prev) => prev.map((p) => (p.id === optimisticProduct.id ? savedProduct : p)))
+          setProducts((prev) => {
+            const next = prev.map((p) => (p.id === optimisticProduct.id ? savedProduct : p))
+            appCache.setProducts(next)
+            return next
+          })
         }
         toast.success(currentEditingId ? 'Produit mis à jour' : 'Produit ajouté')
       })

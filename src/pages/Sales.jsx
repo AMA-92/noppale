@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { flushSync, createPortal } from 'react-dom'
-import { appStorage } from '../utils/storage'
+import { appCache, appStorage } from '../utils/storage'
 import { formatDate, getPaymentMethod, formatCurrency, getProductSellingPrice } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useProductsRealtime, useSalesRealtime } from '../hooks/useRealtime.jsx'
@@ -31,7 +31,7 @@ export default function Sales() {
   // Traduction simplifiée
   const { formatCurrency, currency, language, t } = useI18n()
   
-  const [sales, setSales] = useState([])
+  const [sales, setSales] = useState(() => appCache.getSales())
   const [filtered, setFiltered] = useState([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -39,9 +39,9 @@ export default function Sales() {
   const [selectedSale, setSelectedSale] = useState(null)
   const [form, setForm] = useState(emptySale)
   const [editingId, setEditingId] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => appCache.getSales().length === 0)
   const [saving, setSaving] = useState(false)
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState(() => appCache.getProducts())
   const [productSearch, setProductSearch] = useState('')
   const [showProductDropdown, setShowProductDropdown] = useState(false)
   const [currentItem, setCurrentItem] = useState(emptyItem)
@@ -118,6 +118,7 @@ export default function Sales() {
   const loadProducts = async () => {
     try {
       const products = await appStorage.getProducts()
+      appCache.setProducts(products)
       setProducts(products)
     } catch(e) { toast.error('Erreur de chargement des produits') }
   }
@@ -170,6 +171,7 @@ export default function Sales() {
     if (!sales.length) setLoading(true)
     try {
       const sales = await appStorage.getSales()
+      appCache.setSales(sales)
       setSales(sales)
     } catch(e) { toast.error('Erreur de chargement') }
     finally { setLoading(false) }
@@ -455,22 +457,34 @@ export default function Sales() {
     setForm(emptySale)
     setCurrentItem(emptyItem)
     setProductSearch('')
-    setSales((prev) => [optimisticSale, ...prev])
+    setSales((prev) => {
+      const next = [optimisticSale, ...prev]
+      appCache.setSales(next)
+      return next
+    })
     setProducts((prev) =>
-      prev.map((product) => {
+      {
+        const next = prev.map((product) => {
         const soldItem = salePayload.items.find((item) => item.productId === product.id)
         if (!soldItem) return product
         return {
           ...product,
           stock: Math.max(0, (parseInt(product.stock, 10) || 0) - (parseInt(soldItem.quantity, 10) || 0))
         }
-      })
+        })
+        appCache.setProducts(next)
+        return next
+      }
     )
 
     appStorage.addSale(salePayload)
       .then((savedSale) => {
         if (savedSale) {
-          setSales((prev) => prev.map((sale) => (sale.id === optimisticSale.id ? { ...optimisticSale, ...savedSale } : sale)))
+          setSales((prev) => {
+            const next = prev.map((sale) => (sale.id === optimisticSale.id ? { ...optimisticSale, ...savedSale } : sale))
+            appCache.setSales(next)
+            return next
+          })
         }
         toast.success('Vente enregistrée et stock mis à jour')
         Promise.all([loadSales(), loadProducts()]).catch((err) => {

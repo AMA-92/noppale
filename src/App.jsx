@@ -4,7 +4,6 @@ import { Toaster } from 'react-hot-toast'
 import { authStorage } from './utils/storage'
 import { I18nProvider } from './hooks/useI18n.jsx'
 import Layout from './components/Layout'
-import SubscriptionGate from './components/SubscriptionGate'
 import Login from './pages/Login'
 import LoadingScreen from './components/LoadingScreen'
 import Dashboard from './pages/Dashboard-simple'
@@ -93,10 +92,10 @@ function App() {
           <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
           <Route path="/" element={user ? <Layout user={user} /> : <Navigate to="/login" />}>
             <Route index element={<Suspense fallback={<PageFallback />}><Dashboard /></Suspense>} />
-            <Route path="products" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Products /></SubscriptionGate></Suspense>} />
-            <Route path="sales" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Sales /></SubscriptionGate></Suspense>} />
-            <Route path="reports" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Reports /></SubscriptionGate></Suspense>} />
-            <Route path="expenses" element={<Suspense fallback={<PageFallback />}><SubscriptionGate user={user}><Expenses /></SubscriptionGate></Suspense>} />
+            <Route path="products" element={<Suspense fallback={<PageFallback />}><Products /></Suspense>} />
+            <Route path="sales" element={<Suspense fallback={<PageFallback />}><Sales /></Suspense>} />
+            <Route path="reports" element={<Suspense fallback={<PageFallback />}><Reports /></Suspense>} />
+            <Route path="expenses" element={<Suspense fallback={<PageFallback />}><Expenses /></Suspense>} />
             <Route path="settings" element={<Suspense fallback={<PageFallback />}><Settings /></Suspense>} />
             <Route path="contact" element={<Suspense fallback={<PageFallback />}><Contact /></Suspense>} />
           </Route>

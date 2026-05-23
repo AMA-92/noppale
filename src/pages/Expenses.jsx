@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Search, Wallet, X, Calendar, Edit, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { appStorage } from '../utils/storage'
+import { appCache, appStorage } from '../utils/storage'
 import { formatDate } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useExpensesRealtime } from '../hooks/useRealtime.jsx'
@@ -17,7 +17,7 @@ const emptyExpense = {
 
 export default function Expenses() {
   const { formatCurrency, currency, t } = useI18n()
-  const [expenses, setExpenses] = useState([])
+  const [expenses, setExpenses] = useState(() => appCache.getExpenses())
   const [filtered, setFiltered] = useState([])
   const [search, setSearch] = useState('')
 
@@ -25,7 +25,7 @@ export default function Expenses() {
   const [form, setForm] = useState(emptyExpense)
   const [editingId, setEditingId] = useState(null)
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => appCache.getExpenses().length === 0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
@@ -34,7 +34,9 @@ export default function Expenses() {
       if (!expenses.length) setLoading(true)
       setError(null)
       const data = await appStorage.getExpenses()
-      setExpenses(Array.isArray(data) ? data : [])
+      const next = Array.isArray(data) ? data : []
+      appCache.setExpenses(next)
+      setExpenses(next)
     } catch (e) {
       console.error('Expenses: Error loading:', e)
       setError('Erreur lors du chargement des dépenses')
@@ -134,9 +136,17 @@ export default function Expenses() {
     setEditingId(null)
 
     if (currentEditingId) {
-      setExpenses((prev) => prev.map((x) => (x.id === currentEditingId ? { ...x, ...optimisticExpense } : x)))
+      setExpenses((prev) => {
+        const next = prev.map((x) => (x.id === currentEditingId ? { ...x, ...optimisticExpense } : x))
+        appCache.setExpenses(next)
+        return next
+      })
     } else {
-      setExpenses((prev) => [optimisticExpense, ...prev])
+      setExpenses((prev) => {
+        const next = [optimisticExpense, ...prev]
+        appCache.setExpenses(next)
+        return next
+      })
     }
 
     const savePromise = currentEditingId
@@ -146,7 +156,11 @@ export default function Expenses() {
     savePromise
       .then((savedExpense) => {
         if (savedExpense) {
-          setExpenses((prev) => prev.map((x) => (x.id === optimisticExpense.id ? savedExpense : x)))
+          setExpenses((prev) => {
+            const next = prev.map((x) => (x.id === optimisticExpense.id ? savedExpense : x))
+            appCache.setExpenses(next)
+            return next
+          })
         }
         toast.success(currentEditingId ? 'Dépense modifiée' : 'Dépense enregistrée')
       })
