@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['noppale-192.png', 'noppale-512.png', 'noppale-icon.jpeg'],
+      includeAssets: ['logo.jpeg'],
       manifest: {
         name: 'Noppalé - Gestion Commerciale',
         short_name: 'Noppalé',
@@ -21,21 +21,21 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: '/noppale-192.png',
-            sizes: '192x192',
-            type: 'image/png',
+            src: '/logo.jpeg',
+            sizes: '512x512',
+            type: 'image/jpeg',
             purpose: 'any maskable'
           },
           {
-            src: '/noppale-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
+            src: '/logo.jpeg',
+            sizes: '192x192',
+            type: 'image/jpeg',
+            purpose: 'any'
           }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,svg,woff2}'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api/],
         // Cache strategy optimisée

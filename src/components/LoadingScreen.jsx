@@ -6,7 +6,7 @@ export default function LoadingScreen() {
       <div className="flex flex-col items-center gap-6">
         {/* Logo */}
         <div className="w-24 h-24 bg-white rounded-2xl shadow-2xl flex items-center justify-center overflow-hidden">
-          <img src="/noppale-192.png" alt="Noppalé" className="w-20 h-20 object-contain" />
+          <img src="/logo.jpeg" alt="Noppalé" className="w-20 h-20 object-contain" />
         </div>
         
         <div className="flex flex-col items-center gap-2">
