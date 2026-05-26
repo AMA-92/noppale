@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
-import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone, User } from 'lucide-react'
+import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone, User, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 
@@ -56,8 +56,27 @@ export default function Login() {
 
       window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 
+      // Écouter quand l'app est installée
+      const handleAppInstalled = () => {
+        setIsStandalone(true)
+        setDeferredPrompt(null)
+      }
+      window.addEventListener('appinstalled', handleAppInstalled)
+
+      // Écouter les changements de display-mode
+      const mediaQuery = window.matchMedia('(display-mode: standalone)')
+      const handleDisplayModeChange = (e) => {
+        if (e.matches) {
+          setIsStandalone(true)
+          setDeferredPrompt(null)
+        }
+      }
+      mediaQuery.addEventListener('change', handleDisplayModeChange)
+
       return () => {
         window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+        window.removeEventListener('appinstalled', handleAppInstalled)
+        mediaQuery.removeEventListener('change', handleDisplayModeChange)
       }
     }
   }, [])
@@ -222,21 +241,35 @@ export default function Login() {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
             </button>
 
-            <button
-              onClick={handleInstallPWA}
-              className="group relative w-full max-w-sm mx-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-2xl p-6 shadow-2xl border border-orange-400/30 transition-all duration-300 hover:scale-105 hover:shadow-orange-500/25"
-            >
-              <div className="flex items-center justify-center gap-3">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 group-hover:bg-white/30 transition-colors">
-                  <TrendingUp size={24} className="text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-lg">Installer l'application</p>
-                  <p className="text-orange-200 text-sm">Sur votre appareil</p>
+            {isStandalone ? (
+              <div className="w-full max-w-sm mx-auto bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl p-6 shadow-2xl border border-green-400/30">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-3">
+                    <CheckCircle size={24} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-lg">Application déjà installée</p>
+                    <p className="text-green-200 text-sm">Noppalé est sur votre appareil</p>
+                  </div>
                 </div>
               </div>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-            </button>
+            ) : (
+              <button
+                onClick={handleInstallPWA}
+                className="group relative w-full max-w-sm mx-auto bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white rounded-2xl p-6 shadow-2xl border border-orange-400/30 transition-all duration-300 hover:scale-105 hover:shadow-orange-500/25"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-3 group-hover:bg-white/30 transition-colors">
+                    <TrendingUp size={24} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-lg">Installer l'application</p>
+                    <p className="text-orange-200 text-sm">Sur votre appareil</p>
+                  </div>
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              </button>
+            )}
           </div>
           
           {/* Fonctionnalités en dessous de la vidéo */}
@@ -294,20 +327,34 @@ export default function Login() {
               </div>
             </button>
 
-            <button
-              onClick={handleInstallPWA}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-4 shadow-lg border border-orange-400/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-orange-500/25"
-            >
-              <div className="flex items-center justify-center gap-3">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
-                  <TrendingUp size={20} className="text-white" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-sm">Installer l'application</p>
-                  <p className="text-orange-200 text-xs">Sur votre mobile</p>
+            {isStandalone ? (
+              <div className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl p-4 shadow-lg border border-green-400/30">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                    <CheckCircle size={20} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-sm">Application déjà installée</p>
+                    <p className="text-green-200 text-xs">Noppalé est sur votre appareil</p>
+                  </div>
                 </div>
               </div>
-            </button>
+            ) : (
+              <button
+                onClick={handleInstallPWA}
+                className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl p-4 shadow-lg border border-orange-400/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-orange-500/25"
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full p-2">
+                    <TrendingUp size={20} className="text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-sm">Installer l'application</p>
+                    <p className="text-orange-200 text-xs">Sur votre mobile</p>
+                  </div>
+                </div>
+              </button>
+            )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-3 lg:space-y-4">
