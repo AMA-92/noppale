@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon-192.svg', 'icon-512.svg', 'favicon-exact.svg'],
+      includeAssets: ['noppale-192.png', 'noppale-512.png', 'noppale-icon.jpeg'],
       manifest: {
         name: 'Noppalé - Gestion Commerciale',
         short_name: 'Noppalé',
@@ -21,15 +21,15 @@ export default defineConfig({
         scope: '/',
         icons: [
           {
-            src: '/icon-192.svg',
+            src: '/noppale-192.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
           },
           {
-            src: '/logo-exact-512.svg',
+            src: '/noppale-512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any maskable'
           }
         ]

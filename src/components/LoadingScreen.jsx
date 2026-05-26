@@ -5,8 +5,8 @@ export default function LoadingScreen() {
     <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-primary-600 to-primary-800">
       <div className="flex flex-col items-center gap-6">
         {/* Logo */}
-        <div className="w-20 h-20 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
-          <span className="text-3xl font-black text-primary-600">N</span>
+        <div className="w-24 h-24 bg-white rounded-2xl shadow-2xl flex items-center justify-center overflow-hidden">
+          <img src="/noppale-192.png" alt="Noppalé" className="w-20 h-20 object-contain" />
         </div>
         
         <div className="flex flex-col items-center gap-2">
