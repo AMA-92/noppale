@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { usersStorage, authStorage } from '../utils/storage'
 import { TrendingUp, Mail, Lock, Eye, EyeOff, Loader2, Play, X, Phone, User, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -15,6 +15,7 @@ export default function Login() {
   const [videoError, setVideoError] = useState(false)
   const [fullName, setFullName] = useState('')
   const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const deferredPromptRef = useRef(null)
   const [isIOS, setIsIOS] = useState(false)
   const [isStandalone, setIsStandalone] = useState(false)
   const [phone, setPhone] = useState('')
@@ -51,6 +52,7 @@ export default function Login() {
       // Écouter l'événement beforeinstallprompt
       const handleBeforeInstallPrompt = (e) => {
         e.preventDefault()
+        deferredPromptRef.current = e
         setDeferredPrompt(e)
       }
 
@@ -60,6 +62,7 @@ export default function Login() {
       const handleAppInstalled = () => {
         setIsStandalone(true)
         setDeferredPrompt(null)
+        deferredPromptRef.current = null
       }
       window.addEventListener('appinstalled', handleAppInstalled)
 
@@ -99,16 +102,19 @@ export default function Login() {
     }
 
     // Android/Desktop avec prompt disponible
-    if (deferredPrompt) {
+    const prompt = deferredPromptRef.current
+    if (prompt) {
       try {
-        deferredPrompt.prompt()
-        const { outcome } = await deferredPrompt.userChoice
+        prompt.prompt()
+        const { outcome } = await prompt.userChoice
         if (outcome === 'accepted') {
           toast.success('Installation en cours...')
+          setIsStandalone(true)
         } else {
           toast('Installation annulée')
         }
         setDeferredPrompt(null)
+        deferredPromptRef.current = null
       } catch (error) {
         console.error('Erreur installation PWA:', error)
         toast.error('Erreur lors de l\'installation')
