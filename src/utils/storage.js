@@ -488,6 +488,12 @@ export const appStorage = {
       const userId = await getCurrentUserId()
       if (!userId) throw new Error('Utilisateur non connecté')
 
+      // Déterminer les montants payé et restant
+      const isCredit = sale.paymentMethod === 'credit'
+      const initialPayment = isCredit ? (parseFloat(sale.initialPayment) || 0) : (parseFloat(sale.total) || 0)
+      const paidAmount = isCredit ? initialPayment : (parseFloat(sale.total) || 0)
+      const remainingAmount = isCredit ? ((parseFloat(sale.total) || 0) - paidAmount) : 0
+
       const { data: saleData, error: saleError } = await supabase
         .from('sales')
         .insert({
@@ -498,7 +504,9 @@ export const appStorage = {
           payment_method: sale.paymentMethod || 'cash',
           notes: sale.notes || '',
           due_date: sale.dueDate || null,
-          payment_status: sale.paymentMethod === 'credit' ? 'pending' : 'paid'
+          payment_status: isCredit ? (paidAmount > 0 ? 'partial' : 'pending') : 'paid',
+          paid_amount: paidAmount,
+          remaining_amount: remainingAmount
         })
         .select()
         .single()
