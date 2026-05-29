@@ -126,10 +126,21 @@ export default function Dashboard() {
       ])
 
       console.log('Données brutes:', { sales: sales.length, expenses: expenses.length, products: products.length, customers: customers.length })
+      
+      // Debug: Afficher les détails des ventes à crédit
+      const creditSales = sales.filter(s => s.paymentMethod === 'credit' || s.payment_method === 'credit')
+      console.log('Ventes à crédit:', creditSales.map(s => ({
+        id: s.id,
+        total: s.total,
+        paidAmount: s.paidAmount || s.paid_amount,
+        remainingAmount: s.remainingAmount || s.remaining_amount,
+        paymentStatus: s.paymentStatus || s.payment_status
+      })))
 
       // Filtrer les ventes selon la période pour le calcul des ventes
       const filteredSales = salesPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', salesPeriod)
       // Calculer le CA réel : pour les ventes à crédit, ne compter que le montant payé (paid_amount)
+      let debugCA = []
       const totalSales = filteredSales.reduce((sum, sale) => {
         // Si c'est une vente à crédit, prendre le montant payé, sinon prendre le total
         const paidAmount = sale.paidAmount || sale.paid_amount || 0
@@ -138,11 +149,15 @@ export default function Dashboard() {
         // Si c'est une vente à crédit (paymentMethod = 'credit'), utiliser paidAmount
         // Sinon utiliser le total (vente payée immédiatement)
         if (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') {
+          debugCA.push({ id: sale.id, type: 'credit', total: totalAmount, paid: paidAmount, addedToCA: paidAmount })
           return sum + paidAmount
         } else {
+          debugCA.push({ id: sale.id, type: 'cash', total: totalAmount, addedToCA: totalAmount })
           return sum + totalAmount
         }
       }, 0)
+      console.log('Debug CA:', debugCA)
+      console.log('Total CA calculé:', totalSales)
 
       // Filtrer les dépenses selon la période
       const filteredExpenses = expensesPeriod === 'all' ? expenses : filterByPeriod(expenses, 'createdAt', expensesPeriod)
@@ -150,6 +165,7 @@ export default function Dashboard() {
 
       // Calculer le total des dettes en cours (ventes à crédit non remboursées)
       const filteredDebtSales = debtPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', debtPeriod)
+      let debugDebt = []
       const totalDebt = filteredDebtSales
         .filter(sale => {
           // Vérifier si c'est une vente à crédit
@@ -160,6 +176,14 @@ export default function Dashboard() {
           const remainingAmount = sale.remainingAmount || sale.remaining_amount || 
                                  (sale.total - (sale.paidAmount || sale.paid_amount || 0))
           
+          debugDebt.push({ 
+            id: sale.id, 
+            total: sale.total, 
+            paid: sale.paidAmount || sale.paid_amount || 0,
+            remaining: remainingAmount,
+            included: remainingAmount > 0 
+          })
+          
           // Inclure si il reste quelque chose à payer
           return remainingAmount > 0
         })
@@ -169,6 +193,9 @@ export default function Dashboard() {
                                  (sale.total - (sale.paidAmount || sale.paid_amount || 0))
           return sum + remainingAmount
         }, 0)
+      
+      console.log('Debug Dette - Ventes filtrées:', debugDebt)
+      console.log('Total Dette calculée:', totalDebt)
 
       // Filtrer les ventes selon la période pour le calcul des clients uniques
       const filteredSalesForCustomers = customersPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', customersPeriod)

@@ -531,7 +531,23 @@ export default function Sales() {
           }
 
           setSales((prev) => {
-            const next = prev.map((sale) => (sale.id === optimisticSale.id ? { ...optimisticSale, ...savedSale } : sale))
+            // Fusionner les données en préservant les valeurs calculées si savedSale ne les a pas
+            const mergedSale = {
+              ...optimisticSale,
+              ...savedSale,
+              // Préserver les valeurs calculées si savedSale ne les a pas définies
+              paidAmount: savedSale.paidAmount || savedSale.paid_amount || optimisticSale.paidAmount || 0,
+              paid_amount: savedSale.paid_amount || savedSale.paidAmount || optimisticSale.paid_amount || 0,
+              remainingAmount: savedSale.remainingAmount || savedSale.remaining_amount || optimisticSale.remainingAmount || 
+                             (savedSale.total - (savedSale.paidAmount || savedSale.paid_amount || 0)),
+              remaining_amount: savedSale.remaining_amount || savedSale.remainingAmount || optimisticSale.remaining_amount ||
+                                (savedSale.total - (savedSale.paidAmount || savedSale.paid_amount || 0)),
+              paymentStatus: savedSale.paymentStatus || savedSale.payment_status || optimisticSale.paymentStatus || 'pending',
+              payment_status: savedSale.payment_status || savedSale.paymentStatus || optimisticSale.payment_status || 'pending',
+              paymentMethod: savedSale.paymentMethod || savedSale.payment_method || optimisticSale.paymentMethod,
+              payment_method: savedSale.payment_method || savedSale.paymentMethod || optimisticSale.payment_method
+            }
+            const next = prev.map((sale) => (sale.id === optimisticSale.id ? mergedSale : sale))
             appCache.setSales(next)
             return next
           })
