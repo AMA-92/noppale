@@ -563,7 +563,20 @@ export const appStorage = {
         }))
       }
 
-      return saleData
+      // Retourner les données enrichies avec les valeurs calculées correctes
+      // au lieu des données brutes de Supabase qui peuvent avoir des valeurs incorrectes
+      return {
+        ...saleData,
+        paidAmount: paidAmount,
+        paid_amount: paidAmount,
+        remainingAmount: isCredit ? ((parseFloat(sale.total) || 0) - paidAmount) : 0,
+        remaining_amount: isCredit ? ((parseFloat(sale.total) || 0) - paidAmount) : 0,
+        paymentStatus: isCredit ? (paidAmount > 0 ? 'partial' : 'pending') : 'paid',
+        payment_status: isCredit ? (paidAmount > 0 ? 'partial' : 'pending') : 'paid',
+        paymentMethod: sale.paymentMethod || 'cash',
+        payment_method: sale.paymentMethod || 'cash',
+        items: sale.items || []
+      }
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la vente:', error)
       throw error
