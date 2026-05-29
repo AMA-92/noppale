@@ -8,6 +8,7 @@ import {
 import { useI18n } from '../hooks/useI18n'
 import { appStorage } from '../utils/storage'
 import { formatDate, formatCurrency } from '../utils/helpers'
+import { useSalesRealtime } from '../hooks/useRealtime'
 
 // Fonctions pour calculer les périodes
 const getToday = () => {
@@ -101,17 +102,28 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadStats()
+    const fetchStats = async () => {
+      await loadStats()
+    }
+    fetchStats()
   }, [salesPeriod, expensesPeriod, customersPeriod, debtPeriod, salesExpensesMode, customersDebtMode])
 
-  const loadStats = () => {
+  // Écouter les changements en temps réel sur les ventes pour rafraîchir automatiquement
+  useSalesRealtime(() => {
+    console.log('Dashboard: Changement détecté sur les ventes, rechargement des stats...')
+    loadStats()
+  })
+
+  const loadStats = async () => {
     try {
       console.log('Début du chargement des stats...')
       
-      const sales = appStorage.getSales() || []
-      const expenses = appStorage.getExpenses() || []
-      const products = appStorage.getProducts() || []
-      const customers = appStorage.getCustomers() || []
+      const [sales, expenses, products, customers] = await Promise.all([
+        appStorage.getSales(),
+        appStorage.getExpenses(),
+        appStorage.getProducts(),
+        appStorage.getCustomers()
+      ])
 
       console.log('Données brutes:', { sales: sales.length, expenses: expenses.length, products: products.length, customers: customers.length })
 

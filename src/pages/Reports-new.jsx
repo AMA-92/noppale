@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { appStorage } from '../utils/storage'
 import { useI18n } from '../hooks/useI18n'
+import { useSalesRealtime, useExpensesRealtime } from '../hooks/useRealtime'
 import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingCart, FileText, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -75,18 +76,34 @@ export default function Reports() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    loadData()
+    const fetchData = async () => {
+      await loadData()
+    }
+    fetchData()
   }, [period])
 
-  const loadData = () => {
+  // Écouter les changements en temps réel pour rafraîchir automatiquement
+  useSalesRealtime(() => {
+    console.log('Reports: Changement détecté sur les ventes, rechargement...')
+    loadData()
+  })
+
+  useExpensesRealtime(() => {
+    console.log('Reports: Changement détecté sur les dépenses, rechargement...')
+    loadData()
+  })
+
+  const loadData = async () => {
     try {
       console.log('Reports: Début du chargement...')
       setLoading(true)
       setError(null)
       
-      const allSales = appStorage.getSales() || []
-      const allExpenses = appStorage.getExpenses() || []
-      const allProducts = appStorage.getProducts() || []
+      const [allSales, allExpenses, allProducts] = await Promise.all([
+        appStorage.getSales(),
+        appStorage.getExpenses(),
+        appStorage.getProducts()
+      ])
 
       console.log('Reports: Données brutes', { 
         sales: allSales.length, 
