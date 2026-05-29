@@ -434,13 +434,13 @@ export const appStorage = {
       if (error) throw error
 
       return (data || []).map((sale) => {
-        // Calculer le montant payé : priorité aux paiements enregistrés, sinon utiliser paid_amount de la base
+        // Calculer le montant payé à partir des paiements enregistrés
         const paidFromPayments = (sale.sale_payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
-        // Utiliser paidFromPayments s'il y a des paiements, sinon utiliser le champ paid_amount
-        const paidAmount = paidFromPayments > 0 ? paidFromPayments : (parseFloat(sale.paid_amount) || 0)
-        // Calculer remainingAmount : utiliser la valeur de la base ou calculer
-        const remainingFromDB = parseFloat(sale.remaining_amount)
-        const remainingAmount = !isNaN(remainingFromDB) ? remainingFromDB : ((parseFloat(sale.total) || 0) - paidAmount)
+        // Utiliser le montant des paiements (même si c'est 0) - c'est la source de vérité
+        // Le champ paid_amount de la base peut être incorrect ou obsolète
+        const paidAmount = paidFromPayments
+        // Calculer remainingAmount : total - paidAmount
+        const remainingAmount = (parseFloat(sale.total) || 0) - paidAmount
 
         return {
           id: sale.id,
