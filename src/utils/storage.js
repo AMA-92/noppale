@@ -505,8 +505,8 @@ export const appStorage = {
           notes: sale.notes || '',
           due_date: sale.dueDate || null,
           payment_status: isCredit ? (paidAmount > 0 ? 'partial' : 'pending') : 'paid',
-          paid_amount: paidAmount,
-          remaining_amount: remainingAmount
+          paid_amount: paidAmount
+          // remaining_amount est une colonne générée, elle se calcule automatiquement
         })
         .select()
         .single()

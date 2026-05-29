@@ -344,14 +344,22 @@ export default function Settings() {
   }
 
   const handleChangeSecretCode = async () => {
-    if (!currentCodeForChange || !newSecretCode || !confirmNewSecretCode) {
+    const savedSecretCode = await appStorage.getSecretCode()
+    const hasExistingCode = savedSecretCode && savedSecretCode.length > 0
+
+    // Si un code existe déjà, vérifier que l'ancien code est fourni
+    if (hasExistingCode && !currentCodeForChange) {
+      toast.error('❌ Veuillez saisir le code actuel', { duration: 3000 })
+      return
+    }
+
+    if (!newSecretCode || !confirmNewSecretCode) {
       toast.error('❌ Veuillez remplir tous les champs', { duration: 3000 })
       return
     }
 
-    // Vérifier le code actuel
-    const savedSecretCode = await appStorage.getSecretCode()
-    if (currentCodeForChange !== savedSecretCode) {
+    // Vérifier le code actuel seulement si un code existe déjà
+    if (hasExistingCode && currentCodeForChange !== savedSecretCode) {
       toast.error('❌ Code actuel incorrect - Veuillez réessayer', { duration: 3000 })
       return
     }
@@ -369,16 +377,24 @@ export default function Settings() {
     try {
       // Sauvegarder le nouveau code secret dans Supabase
       await appStorage.setSecretCode(newSecretCode)
-      toast.success('✅ Code secret modifié avec succès !', { duration: 3000 })
+      
+      if (hasExistingCode) {
+        toast.success('✅ Code secret modifié avec succès !', { duration: 3000 })
+      } else {
+        toast.success('✅ Code secret créé avec succès !', { duration: 3000 })
+      }
 
       // Réinitialiser le formulaire
       setCurrentCodeForChange('')
       setNewSecretCode('')
       setConfirmNewSecretCode('')
       setShowChangeCodeModal(false)
+      
+      // Recharger le code secret
+      await loadSecretCode()
     } catch (error) {
-      console.error('Erreur lors de la modification du code secret:', error)
-      toast.error('Erreur lors de la modification du code secret')
+      console.error('Erreur lors de la sauvegarde du code secret:', error)
+      toast.error('Erreur lors de la sauvegarde du code secret')
     }
   }
 
@@ -428,8 +444,10 @@ export default function Settings() {
           action: () => setShowPasswordModal(true)
         },
         {
-          label: 'Code secret',
-          description: 'Modifier le code secret de suppression des données',
+          label: secretCode ? 'Code secret' : 'Créer un code secret',
+          description: secretCode 
+            ? 'Modifier le code secret de suppression des données' 
+            : 'Créer un code secret pour sécuriser la suppression des données',
           action: () => setShowChangeCodeModal(true)
         }
       ]
@@ -1168,7 +1186,9 @@ export default function Settings() {
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800">Modifier le code secret</h2>
+              <h2 className="text-xl font-bold text-slate-800">
+                {secretCode ? 'Modifier le code secret' : 'Créer un code secret'}
+              </h2>
               <button onClick={() => setShowChangeCodeModal(false)} className="p-1.5 hover:bg-slate-100 rounded-lg">
                 <X size={20} />
               </button>
@@ -1176,20 +1196,22 @@ export default function Settings() {
 
             <form onSubmit={(e) => { e.preventDefault(); handleChangeSecretCode(); }}>
               <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Code actuel
-                  </label>
-                  <input
-                    type="password"
-                    value={currentCodeForChange}
-                    onChange={(e) => setCurrentCodeForChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Entrez le code secret actuel"
-                    maxLength={4}
-                    required
-                  />
-                </div>
+                {secretCode && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Code actuel
+                    </label>
+                    <input
+                      type="password"
+                      value={currentCodeForChange}
+                      onChange={(e) => setCurrentCodeForChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      placeholder="Entrez le code secret actuel"
+                      maxLength={4}
+                      required={!!secretCode}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
