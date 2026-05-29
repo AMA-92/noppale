@@ -434,10 +434,13 @@ export const appStorage = {
       if (error) throw error
 
       return (data || []).map((sale) => {
-        // Calculer le montant payé à partir des paiements ou utiliser les champs de la base
+        // Calculer le montant payé : priorité aux paiements enregistrés, sinon utiliser paid_amount de la base
         const paidFromPayments = (sale.sale_payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+        // Utiliser paidFromPayments s'il y a des paiements, sinon utiliser le champ paid_amount
         const paidAmount = paidFromPayments > 0 ? paidFromPayments : (parseFloat(sale.paid_amount) || 0)
-        const remainingAmount = (parseFloat(sale.total) || 0) - paidAmount
+        // Calculer remainingAmount : utiliser la valeur de la base ou calculer
+        const remainingFromDB = parseFloat(sale.remaining_amount)
+        const remainingAmount = !isNaN(remainingFromDB) ? remainingFromDB : ((parseFloat(sale.total) || 0) - paidAmount)
 
         return {
           id: sale.id,
@@ -490,9 +493,10 @@ export const appStorage = {
 
       // Déterminer les montants payé et restant
       const isCredit = sale.paymentMethod === 'credit'
-      const initialPayment = isCredit ? (parseFloat(sale.initialPayment) || 0) : (parseFloat(sale.total) || 0)
+      // Pour les ventes à crédit : paid_amount = avance initiale (ou 0 si pas d'avance)
+      // Pour les ventes cash : paid_amount = total
+      const initialPayment = isCredit ? (parseFloat(sale.initialPayment) || 0) : 0
       const paidAmount = isCredit ? initialPayment : (parseFloat(sale.total) || 0)
-      const remainingAmount = isCredit ? ((parseFloat(sale.total) || 0) - paidAmount) : 0
 
       const { data: saleData, error: saleError } = await supabase
         .from('sales')

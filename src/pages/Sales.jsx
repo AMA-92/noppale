@@ -457,8 +457,15 @@ export default function Sales() {
       paymentMethod: sanitizedSale.paymentMethod,
       notes: sanitizedSale.notes,
       items: sanitizedSale.items,
-      dueDate: form.dueDate || null
+      dueDate: form.dueDate || null,
+      initialPayment: initialPayment // Ajouter l'avance initiale pour les ventes à crédit
     }
+
+    // Calculer paidAmount et remainingAmount pour l'optimistic update
+    const isCredit = salePayload.paymentMethod === 'credit'
+    const paidAmount = isCredit ? initialPayment : salePayload.total
+    const remainingAmount = isCredit ? (salePayload.total - paidAmount) : 0
+    const paymentStatus = isCredit ? (paidAmount > 0 ? 'partial' : 'pending') : 'paid'
 
     const optimisticSale = {
       id: `temp-${Date.now()}`,
@@ -467,6 +474,12 @@ export default function Sales() {
       total: salePayload.total,
       paymentMethod: salePayload.paymentMethod,
       payment_method: salePayload.paymentMethod,
+      paidAmount: paidAmount,
+      paid_amount: paidAmount,
+      remainingAmount: remainingAmount,
+      remaining_amount: remainingAmount,
+      paymentStatus: paymentStatus,
+      payment_status: paymentStatus,
       notes: salePayload.notes,
       items: salePayload.items,
       createdAt: new Date().toISOString(),
