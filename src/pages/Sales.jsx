@@ -4,7 +4,7 @@ import { appCache, appStorage } from '../utils/storage'
 import { formatDate, getPaymentMethod, formatCurrency, getProductSellingPrice } from '../utils/helpers'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useProductsRealtime, useSalesRealtime } from '../hooks/useRealtime.jsx'
-import { Plus, Search, ShoppingCart, X, DollarSign, Calendar, User, Package, Printer, Eye, Edit } from 'lucide-react'
+import { Plus, Search, ShoppingCart, X, DollarSign, Calendar, User, Package, Printer, Eye, Edit, CreditCard, CheckCircle, Clock, AlertCircle, Banknote } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { validateSaleData, sanitizeString, truncateString } from '../utils/security'
 import InvoiceTemplate from '../components/InvoiceTemplate'
@@ -17,7 +17,9 @@ const emptySale = {
   change: 0,
   paymentMethod: 'especes',
   notes: '',
-  createdAt: new Date().toISOString()
+  createdAt: new Date().toISOString(),
+  initialPayment: 0,
+  dueDate: ''
 }
 
 const emptyItem = {
@@ -57,6 +59,17 @@ export default function Sales() {
   const [cartItems, setCartItems] = useState([])
   const cartItemsRef = useRef([])
   const lastProductTapRef = useRef(0)
+
+  // États pour la gestion des paiements
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    paymentMethod: 'especes',
+    notes: '',
+    paymentDate: new Date().toISOString().split('T')[0]
+  })
+  const [salePayments, setSalePayments] = useState([])
+  const [loadingPayments, setLoadingPayments] = useState(false)
 
   const syncCartWithForm = useCallback((items, prevForm) => {
     const newTotal = items.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0)
@@ -429,12 +442,22 @@ export default function Sales() {
       }
     }
 
+    // Vérification pour les ventes à crédit avec avance
+    const initialPayment = parseFloat(form.initialPayment) || 0
+    if (sanitizedSale.paymentMethod === 'credit' && initialPayment > 0) {
+      if (initialPayment > saleTotal) {
+        toast.error('L\'avance ne peut pas dépasser le montant total')
+        return
+      }
+    }
+
     const salePayload = {
       customerName: sanitizedSale.customerName,
       total: sanitizedSale.total,
       paymentMethod: sanitizedSale.paymentMethod,
       notes: sanitizedSale.notes,
-      items: sanitizedSale.items
+      items: sanitizedSale.items,
+      dueDate: form.dueDate || null
     }
 
     const optimisticSale = {
@@ -478,8 +501,22 @@ export default function Sales() {
     )
 
     appStorage.addSale(salePayload)
-      .then((savedSale) => {
+      .then(async (savedSale) => {
         if (savedSale) {
+          // Si c'est une vente à crédit avec avance initiale, ajouter le paiement
+          if (salePayload.paymentMethod === 'credit' && initialPayment > 0) {
+            try {
+              await appStorage.addSalePayment(savedSale.id, {
+                amount: initialPayment,
+                paymentMethod: 'especes',
+                notes: 'Avance initiale lors de la vente',
+                paymentDate: new Date().toISOString()
+              })
+            } catch (paymentError) {
+              console.error('Erreur lors de l\'ajout de l\'avance initiale:', paymentError)
+            }
+          }
+
           setSales((prev) => {
             const next = prev.map((sale) => (sale.id === optimisticSale.id ? { ...optimisticSale, ...savedSale } : sale))
             appCache.setSales(next)
@@ -558,6 +595,111 @@ export default function Sales() {
   const cancelEditingSale = () => {
     setIsEditingSale(false)
     setEditingSaleData(null)
+  }
+
+  // Fonctions de gestion des paiements
+  const openPaymentModal = async (sale) => {
+    setSelectedSale(sale)
+    setShowPaymentModal(true)
+    setLoadingPayments(true)
+    try {
+      const payments = await appStorage.getSalePayments(sale.id)
+      setSalePayments(payments)
+    } catch (error) {
+      console.error('Erreur chargement paiements:', error)
+      toast.error('Erreur lors du chargement des paiements')
+    } finally {
+      setLoadingPayments(false)
+    }
+  }
+
+  const closePaymentModal = () => {
+    setShowPaymentModal(false)
+    setSelectedSale(null)
+    setSalePayments([])
+    setPaymentForm({
+      amount: '',
+      paymentMethod: 'especes',
+      notes: '',
+      paymentDate: new Date().toISOString().split('T')[0]
+    })
+  }
+
+  const handleAddPayment = async () => {
+    if (!selectedSale) return
+
+    const amount = parseFloat(paymentForm.amount)
+    if (!amount || amount <= 0) {
+      toast.error('Veuillez entrer un montant valide')
+      return
+    }
+
+    const remainingAmount = selectedSale.remainingAmount || (selectedSale.total - (selectedSale.paidAmount || 0))
+    if (amount > remainingAmount) {
+      toast.error(`Le montant ne peut pas dépasser le reste à payer (${formatCurrency(remainingAmount)})`)
+      return
+    }
+
+    try {
+      await appStorage.addSalePayment(selectedSale.id, {
+        amount: amount,
+        paymentMethod: paymentForm.paymentMethod,
+        notes: paymentForm.notes,
+        paymentDate: new Date(paymentForm.paymentDate).toISOString()
+      })
+
+      toast.success('Paiement ajouté avec succès')
+
+      // Recharger les paiements
+      const updatedPayments = await appStorage.getSalePayments(selectedSale.id)
+      setSalePayments(updatedPayments)
+
+      // Mettre à jour la liste des ventes
+      await loadSales()
+
+      // Reset form
+      setPaymentForm({
+        amount: '',
+        paymentMethod: 'especes',
+        notes: '',
+        paymentDate: new Date().toISOString().split('T')[0]
+      })
+    } catch (error) {
+      console.error('Erreur ajout paiement:', error)
+      toast.error('Erreur lors de l\'ajout du paiement')
+    }
+  }
+
+  const getPaymentStatusBadge = (sale) => {
+    if (sale.paymentMethod !== 'credit' && sale.payment_method !== 'credit') return null
+
+    const status = sale.paymentStatus || sale.payment_status || 'pending'
+    const remaining = sale.remainingAmount || sale.remaining_amount || (sale.total - (sale.paidAmount || sale.paid_amount || 0))
+
+    if (status === 'paid' || remaining <= 0) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+          <CheckCircle size={12} />
+          Payé
+        </span>
+      )
+    }
+
+    if (status === 'partial') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
+          <Clock size={12} />
+          Partiel
+        </span>
+      )
+    }
+
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+        <AlertCircle size={12} />
+        En attente
+      </span>
+    )
   }
 
   const updateEditingSaleItem = (index, field, value) => {
@@ -732,7 +874,7 @@ export default function Sales() {
                 <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Date</th>
                 <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Montant</th>
                 <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Paiement</th>
-                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Statut crédit</th>
+                <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Statut paiement</th>
                 <th className="border border-slate-300 px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
               </tr>
             </thead>
@@ -760,7 +902,14 @@ export default function Sales() {
                     </span>
                   </td>
                   <td className="border border-slate-300 px-4 py-3">
-                    {getCreditStatusBadge(sale)}
+                    <div className="flex flex-col gap-1">
+                      {getPaymentStatusBadge(sale)}
+                      {(sale.paymentMethod === 'credit' || sale.payment_method === 'credit') && (
+                        <span className="text-xs text-slate-500">
+                          Payé: {formatCurrency(sale.paidAmount || sale.paid_amount || 0)} / Reste: {formatCurrency(sale.remainingAmount || sale.remaining_amount || (sale.total - (sale.paidAmount || sale.paid_amount || 0)))}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="border border-slate-300 px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -771,6 +920,16 @@ export default function Sales() {
                         <Eye size={14} />
                         Détails
                       </button>
+                      {(sale.paymentMethod === 'credit' || sale.payment_method === 'credit') && (
+                        <button
+                          onClick={() => openPaymentModal(sale)}
+                          className="text-green-600 hover:text-green-700 text-sm flex items-center gap-1"
+                          title="Ajouter un paiement"
+                        >
+                          <Banknote size={14} />
+                          Paiement
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={async () => {
@@ -1022,9 +1181,54 @@ export default function Sales() {
                     <option value="especes">Espèces</option>
                     <option value="mobile_money">Mobile Money</option>
                     <option value="carte_bancaire">Carte Bancaire</option>
-                    <option value="credit">À Crédit</option>
+                    <option value="credit">À Crédit / Avance</option>
                   </select>
                 </section>
+
+                {/* Champs pour les ventes à crédit */}
+                {form.paymentMethod === 'credit' && (
+                  <div className="space-y-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-orange-800 font-medium">
+                      <CreditCard size={18} />
+                      <span>Paiement échelonné</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="sale-initial-payment" className="label-field text-sm">Avance (optionnel)</label>
+                        <input
+                          id="sale-initial-payment"
+                          name="initialPayment"
+                          type="number"
+                          inputMode="numeric"
+                          value={form.initialPayment || ''}
+                          onChange={(e) => setForm({ ...form, initialPayment: parseFloat(e.target.value) || 0 })}
+                          className="input-field w-full"
+                          placeholder="Montant avance"
+                          min="0"
+                          step="100"
+                        />
+                        {form.initialPayment > 0 && (
+                          <p className="text-xs text-orange-600 mt-1">
+                            Reste: {formatCurrency((form.total || 0) - (form.initialPayment || 0))}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="sale-due-date" className="label-field text-sm">Date d'échéance</label>
+                        <input
+                          id="sale-due-date"
+                          name="dueDate"
+                          type="date"
+                          value={form.dueDate || ''}
+                          onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                          className="input-field w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <section>
                   <label htmlFor="sale-notes" className="label-field">Notes</label>
@@ -1273,6 +1477,142 @@ export default function Sales() {
                 placeholder="Notes suppl├®mentaires..."
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Paiement */}
+      {showPaymentModal && selectedSale && (
+        <div className="modal-overlay">
+          <div className="modal-content max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-800">
+                Paiement - Vente #{selectedSale.id?.slice(-6)}
+              </h2>
+              <button
+                onClick={closePaymentModal}
+                className="p-1.5 hover:bg-slate-100 rounded-lg"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 bg-slate-50 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-slate-600">Client:</span>
+                <span className="font-medium">{selectedSale.customerName || 'Client'}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-slate-600">Montant total:</span>
+                <span className="font-semibold">{formatCurrency(selectedSale.total || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-slate-600">Déjà payé:</span>
+                <span className="font-medium text-green-600">
+                  {formatCurrency(selectedSale.paidAmount || selectedSale.paid_amount || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-sm font-medium text-slate-800">Reste à payer:</span>
+                <span className="font-bold text-orange-600">
+                  {formatCurrency(
+                    (selectedSale.total || 0) - (selectedSale.paidAmount || selectedSale.paid_amount || 0)
+                  )}
+                </span>
+              </div>
+            </div>
+
+            {/* Historique des paiements */}
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-2">Historique des paiements</h3>
+              {loadingPayments ? (
+                <div className="text-center py-4">
+                  <div className="spinner mx-auto"></div>
+                </div>
+              ) : salePayments.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {salePayments.map((payment) => (
+                    <div key={payment.id} className="flex justify-between items-center p-2 bg-slate-50 rounded">
+                      <div>
+                        <p className="font-medium text-sm">{formatCurrency(payment.amount || 0)}</p>
+                        <p className="text-xs text-slate-500">
+                          {formatDate(payment.paymentDate || payment.createdAt)}
+                        </p>
+                        {payment.notes && (
+                          <p className="text-xs text-slate-400">{payment.notes}</p>
+                        )}
+                      </div>
+                      <span className="badge badge-green text-xs">
+                        {getPaymentMethod(payment.paymentMethod || payment.payment_method)?.label || payment.paymentMethod}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 text-center py-4">Aucun paiement enregistré</p>
+              )}
+            </div>
+
+            {/* Formulaire d'ajout de paiement */}
+            {(selectedSale.remainingAmount ||
+              (selectedSale.total - (selectedSale.paidAmount || selectedSale.paid_amount || 0))) > 0 && (
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Ajouter un paiement</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Montant</label>
+                    <input
+                      type="number"
+                      value={paymentForm.amount}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                      className="input-field w-full"
+                      placeholder="Montant du paiement"
+                      min="0"
+                      step="100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Mode de paiement</label>
+                    <select
+                      value={paymentForm.paymentMethod}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
+                      className="input-field w-full"
+                    >
+                      <option value="especes">Espèces</option>
+                      <option value="mobile_money">Mobile Money</option>
+                      <option value="carte_bancaire">Carte Bancaire</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
+                    <input
+                      type="date"
+                      value={paymentForm.paymentDate}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
+                      className="input-field w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Notes (optionnel)</label>
+                    <input
+                      type="text"
+                      value={paymentForm.notes}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                      className="input-field w-full"
+                      placeholder="Notes sur le paiement"
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddPayment}
+                    className="btn-primary w-full"
+                    disabled={!paymentForm.amount || parseFloat(paymentForm.amount) <= 0}
+                  >
+                    <CheckCircle size={18} className="mr-2" />
+                    Ajouter le paiement
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

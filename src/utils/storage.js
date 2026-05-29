@@ -424,32 +424,59 @@ export const appStorage = {
 
       const { data, error } = await supabase
         .from('sales')
-        .select('*, sale_items(*)')
+        .select(`
+          *,
+          sale_items(*),
+          sale_payments(*)
+        `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return (data || []).map((sale) => ({
-        id: sale.id,
-        user_id: sale.user_id,
-        customerId: sale.customer_id,
-        customerName: sale.customer_name || '',
-        customer_name: sale.customer_name || '',
-        total: sale.total,
-        paymentMethod: sale.payment_method,
-        payment_method: sale.payment_method,
-        creditStatus: sale.credit_status || 'pending',
-        credit_status: sale.credit_status || 'pending',
-        notes: sale.notes,
-        createdAt: sale.created_at,
-        created_at: sale.created_at,
-        items: (sale.sale_items || []).map((item) => ({
-          productId: item.product_id,
-          productName: item.product_name,
-          quantity: item.quantity,
-          unitPrice: item.unit_price,
-          totalPrice: item.total_price
-        }))
-      }))
+
+      return (data || []).map((sale) => {
+        // Calculer le montant payé à partir des paiements ou utiliser les champs de la base
+        const paidFromPayments = (sale.sale_payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+        const paidAmount = paidFromPayments > 0 ? paidFromPayments : (parseFloat(sale.paid_amount) || 0)
+        const remainingAmount = (parseFloat(sale.total) || 0) - paidAmount
+
+        return {
+          id: sale.id,
+          user_id: sale.user_id,
+          customerId: sale.customer_id,
+          customerName: sale.customer_name || '',
+          customer_name: sale.customer_name || '',
+          total: parseFloat(sale.total) || 0,
+          paidAmount: paidAmount,
+          paid_amount: paidAmount,
+          remainingAmount: remainingAmount,
+          remaining_amount: remainingAmount,
+          paymentStatus: sale.payment_status || 'pending',
+          payment_status: sale.payment_status || 'pending',
+          paymentMethod: sale.payment_method,
+          payment_method: sale.payment_method,
+          creditStatus: sale.credit_status || 'pending',
+          credit_status: sale.credit_status || 'pending',
+          dueDate: sale.due_date,
+          due_date: sale.due_date,
+          notes: sale.notes,
+          createdAt: sale.created_at,
+          created_at: sale.created_at,
+          items: (sale.sale_items || []).map((item) => ({
+            productId: item.product_id,
+            productName: item.product_name,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            totalPrice: item.total_price
+          })),
+          payments: (sale.sale_payments || []).map((p) => ({
+            id: p.id,
+            amount: p.amount,
+            paymentMethod: p.payment_method,
+            paymentDate: p.payment_date,
+            notes: p.notes
+          }))
+        }
+      })
     } catch (error) {
       console.error('Erreur lors de la récupération des ventes:', error)
       return []
@@ -469,7 +496,9 @@ export const appStorage = {
           customer_name: sale.customerName || '',
           total: sale.total,
           payment_method: sale.paymentMethod || 'cash',
-          notes: sale.notes || ''
+          notes: sale.notes || '',
+          due_date: sale.dueDate || null,
+          payment_status: sale.paymentMethod === 'credit' ? 'pending' : 'paid'
         })
         .select()
         .single()
@@ -743,6 +772,163 @@ export const appStorage = {
       return data
     } catch (error) {
       console.error('Erreur lors de la mise à jour du statut de crédit:', error)
+      throw error
+    }
+  },
+
+  // === PAIEMENTS ÉCHELONNÉS / AVANCES ===
+
+  async addSalePayment(saleId, payment) {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('sale_payments')
+        .insert({
+          sale_id: saleId,
+          amount: parseFloat(payment.amount) || 0,
+          payment_method: payment.paymentMethod || 'especes',
+          payment_date: payment.paymentDate || new Date().toISOString(),
+          notes: payment.notes || '',
+          received_by: userId
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du paiement:', error)
+      throw error
+    }
+  },
+
+  async getSalePayments(saleId) {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) return []
+
+      const { data, error } = await supabase
+        .from('sale_payments')
+        .select('*')
+        .eq('sale_id', saleId)
+        .order('payment_date', { ascending: false })
+
+      if (error) throw error
+      return (data || []).map(p => ({
+        id: p.id,
+        saleId: p.sale_id,
+        amount: p.amount,
+        paymentMethod: p.payment_method,
+        paymentDate: p.payment_date,
+        notes: p.notes,
+        createdAt: p.created_at
+      }))
+    } catch (error) {
+      console.error('Erreur lors de la récupération des paiements:', error)
+      return []
+    }
+  },
+
+  async deleteSalePayment(paymentId) {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { error } = await supabase
+        .from('sale_payments')
+        .delete()
+        .eq('id', paymentId)
+
+      if (error) throw error
+      return true
+    } catch (error) {
+      console.error('Erreur lors de la suppression du paiement:', error)
+      throw error
+    }
+  },
+
+  async getPendingCredits() {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) return []
+
+      const { data, error } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          sale_items(*),
+          sale_payments(*)
+        `)
+        .eq('user_id', userId)
+        .eq('payment_method', 'credit')
+        .in('payment_status', ['pending', 'partial', 'overdue'])
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      return (data || []).map((sale) => {
+        const paidAmount = (sale.sale_payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+        const remainingAmount = (parseFloat(sale.total) || 0) - paidAmount
+
+        return {
+          id: sale.id,
+          customerName: sale.customer_name || '',
+          customer_name: sale.customer_name || '',
+          total: parseFloat(sale.total) || 0,
+          paidAmount: paidAmount,
+          paid_amount: paidAmount,
+          remainingAmount: remainingAmount,
+          remaining_amount: remainingAmount,
+          paymentStatus: sale.payment_status || 'pending',
+          payment_status: sale.payment_status || 'pending',
+          dueDate: sale.due_date,
+          due_date: sale.due_date,
+          createdAt: sale.created_at,
+          created_at: sale.created_at,
+          items: (sale.sale_items || []).map((item) => ({
+            productId: item.product_id,
+            productName: item.product_name,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            totalPrice: item.total_price
+          })),
+          payments: (sale.sale_payments || []).map((p) => ({
+            id: p.id,
+            amount: p.amount,
+            paymentMethod: p.payment_method,
+            paymentDate: p.payment_date,
+            notes: p.notes
+          }))
+        }
+      })
+    } catch (error) {
+      console.error('Erreur lors de la récupération des crédits en attente:', error)
+      return []
+    }
+  },
+
+  async updateSaleDueDate(saleId, dueDate) {
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Utilisateur non connecté')
+
+      const { data, error } = await supabase
+        .from('sales')
+        .update({
+          due_date: dueDate,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', saleId)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la date d\'échéance:', error)
       throw error
     }
   },
@@ -1169,6 +1355,103 @@ export const appStorage = {
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'utilisateur:', error)
       throw new Error(`Failed to delete user: ${error.message}`)
+    }
+  },
+
+  // === FONCTIONS UTILITAIRES DE CALCUL ===
+
+  /**
+   * Calcule le chiffre d'affaires réel basé sur les paiements effectués
+   * Pour les ventes à crédit : compte seulement le montant payé (paid_amount)
+   * Pour les ventes normales : compte le montant total
+   * 
+   * @param {Array} sales - Tableau des ventes
+   * @returns {number} - Le chiffre d'affaires réel
+   */
+  calculateRealRevenue(sales) {
+    if (!Array.isArray(sales)) return 0
+    
+    return sales.reduce((sum, sale) => {
+      const paidAmount = parseFloat(sale.paidAmount || sale.paid_amount || 0)
+      const totalAmount = parseFloat(sale.total || 0)
+      
+      // Si c'est une vente à crédit (paymentMethod = 'credit'), utiliser paidAmount
+      // Sinon utiliser le total (vente payée immédiatement)
+      if (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') {
+        return sum + (isNaN(paidAmount) ? 0 : paidAmount)
+      } else {
+        return sum + (isNaN(totalAmount) ? 0 : totalAmount)
+      }
+    }, 0)
+  },
+
+  /**
+   * Calcule la dette totale (montants restants à payer)
+   * Ne compte que les ventes à crédit non entièrement payées
+   * 
+   * @param {Array} sales - Tableau des ventes
+   * @returns {number} - La dette totale
+   */
+  calculateTotalDebt(sales) {
+    if (!Array.isArray(sales)) return 0
+    
+    return sales
+      .filter(sale => (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') &&
+                      (sale.paymentStatus !== 'paid' && sale.payment_status !== 'paid'))
+      .reduce((sum, sale) => {
+        // Utiliser le montant restant (remaining_amount) ou calculer (total - paid)
+        const remainingAmount = sale.remainingAmount || sale.remaining_amount || 
+                               (parseFloat(sale.total || 0) - parseFloat(sale.paidAmount || sale.paid_amount || 0))
+        return sum + (isNaN(remainingAmount) ? 0 : remainingAmount)
+      }, 0)
+  },
+
+  /**
+   * Filtre les ventes par période et calcule les statistiques
+   * 
+   * @param {Array} sales - Tableau des ventes
+   * @param {string} period - Période ('day', 'week', 'month', 'quarter', 'year', 'all')
+   * @returns {Object} - Statistiques { revenue, debt, count }
+   */
+  getSalesStatsByPeriod(sales, period = 'all') {
+    if (!Array.isArray(sales)) return { revenue: 0, debt: 0, count: 0 }
+    
+    const now = new Date()
+    let startDate = null
+    
+    switch(period) {
+      case 'day':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        break
+      case 'week':
+        const dayOfWeek = now.getDay()
+        const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
+        startDate = new Date(now.setDate(diff))
+        startDate.setHours(0, 0, 0, 0)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'quarter':
+        const quarter = Math.floor(now.getMonth() / 3)
+        startDate = new Date(now.getFullYear(), quarter * 3, 1)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+      default:
+        // 'all' - pas de filtre
+        startDate = null
+    }
+    
+    const filteredSales = startDate 
+      ? sales.filter(sale => new Date(sale.createdAt || sale.created_at) >= startDate)
+      : sales
+    
+    return {
+      revenue: this.calculateRealRevenue(filteredSales),
+      debt: this.calculateTotalDebt(filteredSales),
+      count: filteredSales.length
     }
   }
 }

@@ -114,7 +114,20 @@ export default function Reports() {
   }
 
   const calculateSalesTotals = () => {
-    const totalSales = sales.reduce((sum, sale) => sum + (sale.total || 0), 0)
+    // Calculer le CA réel : pour les ventes à crédit, ne compter que le montant payé (paid_amount)
+    const totalSales = sales.reduce((sum, sale) => {
+      const paidAmount = sale.paidAmount || sale.paid_amount || 0
+      const totalAmount = sale.total || 0
+      
+      // Si c'est une vente à crédit, utiliser le montant payé
+      // Sinon utiliser le total (vente payée immédiatement)
+      if (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') {
+        return sum + paidAmount
+      } else {
+        return sum + totalAmount
+      }
+    }, 0)
+    
     const totalCost = sales.reduce((sum, sale) => {
       if (sale.items && Array.isArray(sale.items)) {
         return sum + sale.items.reduce((itemSum, item) => {

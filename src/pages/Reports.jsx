@@ -142,7 +142,15 @@ export default function Reports() {
 
   const totalSales = useMemo(() => sales.reduce((sum, s) => {
     const total = parseFloat(s.total || 0)
-    return sum + (Number.isNaN(total) ? 0 : total)
+    const paidAmount = parseFloat(s.paidAmount || s.paid_amount || 0)
+    
+    // Pour les ventes à crédit, compter seulement le montant payé
+    // Pour les autres ventes, compter le total
+    if (s.paymentMethod === 'credit' || s.payment_method === 'credit') {
+      return sum + (Number.isNaN(paidAmount) ? 0 : paidAmount)
+    } else {
+      return sum + (Number.isNaN(total) ? 0 : total)
+    }
   }, 0), [sales])
 
   const totalExpenses = useMemo(() => expenses.reduce((sum, e) => {
@@ -179,7 +187,17 @@ export default function Reports() {
       const filteredSales = filterDataByPeriod(allSales || [], period)
       const filteredExpenses = filterDataByPeriod(allExpenses || [], period)
 
-      const pdfTotalSales = filteredSales.reduce((sum, s) => sum + (parseFloat(s.total || 0) || 0), 0)
+      const pdfTotalSales = filteredSales.reduce((sum, s) => {
+        const total = parseFloat(s.total || 0)
+        const paidAmount = parseFloat(s.paidAmount || s.paid_amount || 0)
+        
+        // Pour les ventes à crédit, compter seulement le montant payé
+        if (s.paymentMethod === 'credit' || s.payment_method === 'credit') {
+          return sum + paidAmount
+        } else {
+          return sum + total
+        }
+      }, 0)
       const pdfTotalExpenses = filteredExpenses.reduce((sum, e) => sum + (parseFloat(e.amount || 0) || 0), 0)
       const pdfProfit = pdfTotalSales - pdfTotalExpenses
       const pdfPurchaseCost = calculatePurchaseCost(filteredSales, allProducts || [])

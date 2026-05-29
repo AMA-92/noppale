@@ -117,7 +117,20 @@ export default function Dashboard() {
 
       // Filtrer les ventes selon la période pour le calcul des ventes
       const filteredSales = salesPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', salesPeriod)
-      const totalSales = filteredSales.reduce((sum, sale) => sum + (sale.total || 0), 0)
+      // Calculer le CA réel : pour les ventes à crédit, ne compter que le montant payé (paid_amount)
+      const totalSales = filteredSales.reduce((sum, sale) => {
+        // Si c'est une vente à crédit, prendre le montant payé, sinon prendre le total
+        const paidAmount = sale.paidAmount || sale.paid_amount || 0
+        const totalAmount = sale.total || 0
+        
+        // Si c'est une vente à crédit (paymentMethod = 'credit'), utiliser paidAmount
+        // Sinon utiliser le total (vente payée immédiatement)
+        if (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') {
+          return sum + paidAmount
+        } else {
+          return sum + totalAmount
+        }
+      }, 0)
 
       // Filtrer les dépenses selon la période
       const filteredExpenses = expensesPeriod === 'all' ? expenses : filterByPeriod(expenses, 'createdAt', expensesPeriod)
@@ -126,8 +139,14 @@ export default function Dashboard() {
       // Calculer le total des dettes en cours (ventes à crédit non remboursées)
       const filteredDebtSales = debtPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', debtPeriod)
       const totalDebt = filteredDebtSales
-        .filter(sale => sale.paymentMethod === 'credit' && sale.creditStatus === 'pending')
-        .reduce((sum, sale) => sum + (sale.total || 0), 0)
+        .filter(sale => (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') && 
+                        (sale.paymentStatus !== 'paid' && sale.payment_status !== 'paid'))
+        .reduce((sum, sale) => {
+          // Utiliser le montant restant (remaining_amount) ou calculer (total - paid)
+          const remainingAmount = sale.remainingAmount || sale.remaining_amount || 
+                                 (sale.total - (sale.paidAmount || sale.paid_amount || 0))
+          return sum + remainingAmount
+        }, 0)
 
       // Filtrer les ventes selon la période pour le calcul des clients uniques
       const filteredSalesForCustomers = customersPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', customersPeriod)

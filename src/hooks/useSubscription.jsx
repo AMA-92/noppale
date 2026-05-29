@@ -42,11 +42,14 @@ export function useSubscription(userId) {
       setError(null)
 
       try {
+        console.log('useSubscription: fetching for userId:', userId)
         const { data, error: subscriptionError } = await supabase
           .from('user_subscriptions')
           .select('*')
           .eq('user_id', userId)
           .single()
+
+        console.log('useSubscription: response data:', data, 'error:', subscriptionError)
 
         if (subscriptionError) throw subscriptionError
 
@@ -56,6 +59,7 @@ export function useSubscription(userId) {
           cacheTimeRef.current = Date.now()
         }
       } catch (loadError) {
+        console.error('useSubscription: error loading:', loadError)
         if (isMounted && userIdRef.current === userId) {
           setSubscription(null)
           setError(loadError)
