@@ -151,8 +151,18 @@ export default function Dashboard() {
       // Calculer le total des dettes en cours (ventes à crédit non remboursées)
       const filteredDebtSales = debtPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', debtPeriod)
       const totalDebt = filteredDebtSales
-        .filter(sale => (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') && 
-                        (sale.paymentStatus !== 'paid' && sale.payment_status !== 'paid'))
+        .filter(sale => {
+          // Vérifier si c'est une vente à crédit
+          const isCredit = sale.paymentMethod === 'credit' || sale.payment_method === 'credit'
+          if (!isCredit) return false
+          
+          // Calculer le montant restant
+          const remainingAmount = sale.remainingAmount || sale.remaining_amount || 
+                                 (sale.total - (sale.paidAmount || sale.paid_amount || 0))
+          
+          // Inclure si il reste quelque chose à payer
+          return remainingAmount > 0
+        })
         .reduce((sum, sale) => {
           // Utiliser le montant restant (remaining_amount) ou calculer (total - paid)
           const remainingAmount = sale.remainingAmount || sale.remaining_amount || 
