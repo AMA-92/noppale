@@ -25,7 +25,8 @@ export default function Settings() {
   // États pour le code secret
   const [showSecretCodeModal, setShowSecretCodeModal] = useState(false)
   const [showChangeCodeModal, setShowChangeCodeModal] = useState(false)
-  const [secretCode, setSecretCode] = useState('')
+  const [secretCode, setSecretCode] = useState('')  // Le code secret sauvegardé
+  const [verificationCode, setVerificationCode] = useState('')  // Code tapé dans le modal de suppression
   const [currentCodeForChange, setCurrentCodeForChange] = useState('')
   const [newSecretCode, setNewSecretCode] = useState('')
   const [confirmNewSecretCode, setConfirmNewSecretCode] = useState('')
@@ -322,24 +323,30 @@ export default function Settings() {
 
   // Gestion du code secret
   const handleSecretCodeSubmit = async () => {
-    if (!secretCode) {
-      toast.error('Veuillez d\u00e9finir un code secret avant de supprimer les donn\u00e9es', { duration: 3000 })
+    if (!verificationCode) {
+      toast.error('Veuillez saisir le code secret', { duration: 3000 })
       return
     }
+    
     const savedSecretCode = await appStorage.getSecretCode()
+    
+    if (!savedSecretCode) {
+      toast.error('Aucun code secret défini. Veuillez d\u00e9finir un code secret dans les paramètres.', { duration: 3000 })
+      return
+    }
 
-    if (secretCode === savedSecretCode) {
+    if (verificationCode === savedSecretCode) {
       // Code correct - supprimer toutes les données
       toast.loading('Suppression de toutes les données en cours...', { duration: 1000 })
       
       setTimeout(() => {
         handleClearData()
         setShowSecretCodeModal(false)
-        setSecretCode('')
+        setVerificationCode('')  // Reset le code de vérification
       }, 1000)
     } else {
       toast.error('❌ Code secret incorrect - Veuillez réessayer', { duration: 3000 })
-      setSecretCode('')
+      setVerificationCode('')  // Reset le code de vérification
     }
   }
 
@@ -1149,8 +1156,8 @@ export default function Settings() {
                 </label>
                 <input
                   type="password"
-                  value={secretCode}
-                  onChange={(e) => setSecretCode(e.target.value)}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   placeholder="Entrez le code secret à 4 chiffres"
                   maxLength={4}
@@ -1163,7 +1170,7 @@ export default function Settings() {
               <button
                 onClick={() => {
                   setShowSecretCodeModal(false)
-                  setSecretCode('')
+                  setVerificationCode('')
                 }}
                 className="btn-secondary flex-1"
               >
@@ -1172,7 +1179,7 @@ export default function Settings() {
               <button
                 onClick={handleSecretCodeSubmit}
                 className="btn-danger flex-1"
-                disabled={secretCode.length !== 4}
+                disabled={verificationCode.length !== 4}
               >
                 Supprimer tout
               </button>
