@@ -84,7 +84,7 @@ export default function Login() {
     }
   }, [])
 
-  // Fonction d'installation PWA
+  // Fonction d'installation PWA améliorée
   const handleInstallPWA = async () => {
     // Si déjà installé
     if (isStandalone) {
@@ -101,38 +101,111 @@ export default function Login() {
       return
     }
 
-    // Android/Desktop avec prompt disponible
-    const prompt = deferredPromptRef.current
+    // Android/Desktop - tenter l'installation automatique
+    const prompt = deferredPromptRef.current || deferredPrompt
+    
     if (prompt) {
       try {
-        prompt.prompt()
+        // Afficher le prompt natif d'installation
+        await prompt.prompt()
+        
+        // Attendre la réponse de l'utilisateur
         const { outcome } = await prompt.userChoice
+        
         if (outcome === 'accepted') {
-          toast.success('Installation en cours...')
+          toast.success('Installation en cours... Ouvrez Noppalé depuis votre écran d\'accueil !', {
+            duration: 4000,
+            icon: '🎉'
+          })
           setIsStandalone(true)
         } else {
-          toast('Installation annulée')
+          toast('Installation annulée. Vous pouvez réessayer quand vous voulez.', {
+            duration: 3000,
+            icon: 'ℹ️'
+          })
         }
+        
+        // Nettoyer le prompt
         setDeferredPrompt(null)
         deferredPromptRef.current = null
       } catch (error) {
         console.error('Erreur installation PWA:', error)
-        toast.error('Erreur lors de l\'installation')
+        // En cas d'erreur, essayer la méthode alternative
+        showAlternativeInstallInstructions()
       }
       return
     }
 
-    // Fallback - instructions manuelles pour Android/Desktop
+    // Si pas de prompt disponible, essayer de forcer l'enregistrement du service worker
+    // et redemander le prompt
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready
+        
+        // Vérifier si l'installation est possible
+        if (window.BeforeInstallPromptEvent) {
+          toast('Préparation de l\'installation... Appuyez à nouveau dans 2 secondes', {
+            duration: 3000,
+            icon: '⏳'
+          })
+          
+          // Réessayer après un court délai
+          setTimeout(() => {
+            if (deferredPromptRef.current || deferredPrompt) {
+              handleInstallPWA()
+            } else {
+              showAlternativeInstallInstructions()
+            }
+          }, 2500)
+          return
+        }
+      }
+      
+      // Fallback - instructions manuelles
+      showAlternativeInstallInstructions()
+    } catch (error) {
+      console.error('Erreur lors de la tentative d\'installation:', error)
+      showAlternativeInstallInstructions()
+    }
+  }
+
+  // Fonction d'aide pour afficher les instructions alternatives
+  const showAlternativeInstallInstructions = () => {
     const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor)
     const isEdge = /Edg/.test(navigator.userAgent)
+    const isFirefox = /Firefox/.test(navigator.userAgent)
+    const isSamsung = /SamsungBrowser/.test(navigator.userAgent)
+    const isAndroid = /Android/.test(navigator.userAgent)
     
-    if (isChrome || isEdge) {
-      toast('Cliquez sur le menu ⋮ → "Installer Noppalé"', { 
+    if (isSamsung && isAndroid) {
+      toast('Appuyez sur le menu ⋮ → "Ajouter à l\'écran d\'accueil"', { 
+        duration: 6000, 
+        icon: '📱' 
+      })
+    } else if (isChrome || isEdge) {
+      if (isAndroid) {
+        toast('Appuyez sur le menu ⋮ → "Installer l\'application" ou "Ajouter à l\'écran d\'accueil"', { 
+          duration: 6000, 
+          icon: '📱' 
+        })
+      } else {
+        toast('Cliquez sur le menu ⋮ → "Installer Noppalé" ou regardez l\'icône dans la barre d\'adresse', { 
+          duration: 6000, 
+          icon: '💻' 
+        })
+      }
+    } else if (isFirefox && isAndroid) {
+      toast('Appuyez sur le menu ⋮ → "Ajouter à l\'écran d\'accueil"', { 
+        duration: 5000, 
+        icon: '📱' 
+      })
+    } else if (isAndroid) {
+      toast('Appuyez sur le menu du navigateur → "Ajouter à l\'écran d\'accueil"', { 
         duration: 5000, 
         icon: '📱' 
       })
     } else {
-      toast('Utilisez Chrome ou Edge pour installer Noppalé', { 
+      toast('Utilisez Chrome ou Edge pour installer Noppalé automatiquement', { 
         duration: 5000, 
         icon: '🌐' 
       })
