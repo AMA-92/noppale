@@ -93,11 +93,16 @@ export function useSubscription(userId) {
 
     const now = new Date()
     const endDate = new Date(subscription.subscription_end)
+    const startDate = new Date(subscription.subscription_start || subscription.created_at || now)
     const diffMs = endDate.getTime() - now.getTime()
     const daysRemaining = Math.max(Math.ceil(diffMs / 86400000), 0)
     const isAdmin = subscription.is_admin === true
     const isSuspended = subscription.account_status === 'suspended'
     const isExpired = !isAdmin && !isSuspended && diffMs < 0
+    
+    // Période d'essai = uniquement les 10 premiers jours depuis l'inscription
+    const daysSinceStart = Math.ceil((now.getTime() - startDate.getTime()) / 86400000)
+    const isTrialActive = subscription.subscription_type === 'trial' && daysSinceStart <= 10
 
     return {
       isAdmin,
@@ -105,7 +110,7 @@ export function useSubscription(userId) {
       isSuspended,
       isExpired,
       isExpiringSoon: !isAdmin && !isSuspended && !isExpired && daysRemaining <= 5,
-      isTrial: subscription.subscription_type === 'trial',
+      isTrial: isTrialActive,
       daysRemaining
     }
   }, [subscription])
