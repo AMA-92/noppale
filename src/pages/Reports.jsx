@@ -17,7 +17,7 @@ import {
   ArcElement,
   Filler,
 } from 'chart.js'
-import { appStorage } from '../utils/storage'
+import { appCache, appStorage } from '../utils/storage'
 import { useProductsRealtime, useSalesRealtime, useExpensesRealtime, useShopInfoRealtime } from '../hooks/useRealtime.jsx'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -85,20 +85,30 @@ const calculatePurchaseCost = (salesList, productsList) => {
   }, 0)
 }
 
+const getCachedReportsData = () => ({
+  sales: appCache.getSales(),
+  expenses: appCache.getExpenses(),
+  products: appCache.getProducts()
+})
+
 export default function Reports() {
   const { formatCurrency, currency, language, t } = useI18n()
   const [period, setPeriod] = useState('month')
-  const [sales, setSales] = useState([])
-  const [expenses, setExpenses] = useState([])
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const cachedData = getCachedReportsData()
+  const [sales, setSales] = useState(cachedData.sales)
+  const [expenses, setExpenses] = useState(cachedData.expenses)
+  const [products, setProducts] = useState(cachedData.products)
+  const [loading, setLoading] = useState(() => !(cachedData.sales.length || cachedData.expenses.length || cachedData.products.length))
+  const [refreshing, setRefreshing] = useState(false)
   const [reportType, setReportType] = useState('sales') // 'sales', 'expenses', 'balance'
   const [shopInfo, setShopInfo] = useState({})
   const salesReportRef = useRef(null)
   const expensesReportRef = useRef(null)
   const balanceReportRef = useRef(null)
 
-  useEffect(() => { loadData() }, [period, currency, language])
+  useEffect(() => {
+    loadData()
+  }, [period, currency, language])
 
   const loadShopInfo = async () => {
     try {
@@ -119,24 +129,41 @@ export default function Reports() {
   useShopInfoRealtime(() => loadShopInfo())
 
   const loadData = async () => {
+    const hasCachedData = sales.length || expenses.length || products.length
     try {
-      setLoading(true)
+      if (hasCachedData) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
       const [allSales, allExpenses, allProducts] = await Promise.all([
         appStorage.getSales(),
         appStorage.getExpenses(),
         appStorage.getProducts()
       ])
 
-      setSales(filterDataByPeriod(allSales || [], period))
-      setExpenses(filterDataByPeriod(allExpenses || [], period))
-      setProducts(allProducts || [])
+      const salesData = Array.isArray(allSales) ? allSales : []
+      const expensesData = Array.isArray(allExpenses) ? allExpenses : []
+      const productsData = Array.isArray(allProducts) ? allProducts : []
+
+      appCache.setSales(salesData)
+      appCache.setExpenses(expensesData)
+      appCache.setProducts(productsData)
+
+      setSales(filterDataByPeriod(salesData, period))
+      setExpenses(filterDataByPeriod(expensesData, period))
+      setProducts(productsData)
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error)
-      setSales([])
-      setExpenses([])
-      setProducts([])
+      if (!hasCachedData) {
+        setSales([])
+        setExpenses([])
+        setProducts([])
+      }
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 

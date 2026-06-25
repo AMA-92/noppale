@@ -9,6 +9,7 @@ let userIdPromise = null
 let productsCache = null
 let salesCache = null
 let expensesCache = null
+let customersCache = null
 
 export const appCache = {
   getProducts() {
@@ -28,6 +29,12 @@ export const appCache = {
   },
   setExpenses(expenses) {
     expensesCache = Array.isArray(expenses) ? expenses : []
+  },
+  getCustomers() {
+    return customersCache || []
+  },
+  setCustomers(customers) {
+    customersCache = Array.isArray(customers) ? customers : []
   }
 }
 
@@ -221,12 +228,14 @@ export const appStorage = {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return (data || []).map((p) => ({
+      const products = (data || []).map((p) => ({
         ...p,
         selling_price: parseFloat(p.selling_price) || 0,
         buying_price: parseFloat(p.buying_price) || 0,
         stock: parseInt(p.stock, 10) || 0
       }))
+      appCache.setProducts(products)
+      return products
     } catch (error) {
       console.error('Erreur lors de la récupération des produits:', error)
       return []
@@ -338,7 +347,9 @@ export const appStorage = {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data || []
+      const customers = data || []
+      appCache.setCustomers(customers)
+      return customers
     } catch (error) {
       console.error('Erreur lors de la récupération des clients:', error)
       return []
@@ -433,7 +444,7 @@ export const appStorage = {
         .order('created_at', { ascending: false })
       if (error) throw error
 
-      return (data || []).map((sale) => {
+      const sales = (data || []).map((sale) => {
         // Calculer le montant payé à partir des paiements enregistrés
         const paidFromPayments = (sale.sale_payments || []).reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
         // Utiliser le montant des paiements (même si c'est 0) - c'est la source de vérité
@@ -480,6 +491,8 @@ export const appStorage = {
           }))
         }
       })
+      appCache.setSales(sales)
+      return sales
     } catch (error) {
       console.error('Erreur lors de la récupération des ventes:', error)
       return []
@@ -970,7 +983,9 @@ export const appStorage = {
         .eq('user_id', userId)
         .order('date', { ascending: false })
       if (error) throw error
-      return Array.isArray(data) ? data : []
+      const expenses = Array.isArray(data) ? data : []
+      appCache.setExpenses(expenses)
+      return expenses
     } catch (error) {
       console.error('Erreur lors de la récupération des dépenses:', error)
       return []

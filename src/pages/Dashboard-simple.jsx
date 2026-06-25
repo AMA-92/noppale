@@ -6,7 +6,7 @@ import {
   ArrowUpRight, ArrowDownRight, BarChart3, Trophy
 } from 'lucide-react'
 import { useI18n } from '../hooks/useI18n'
-import { appStorage } from '../utils/storage'
+import { appStorage, appCache } from '../utils/storage'
 import { useProductsRealtime, useSalesRealtime, useExpensesRealtime } from '../hooks/useRealtime.jsx'
 import { formatDate, formatCurrency } from '../utils/helpers'
 
@@ -71,6 +71,153 @@ const filterByPeriod = (items, dateField, period) => {
   })
 }
 
+const getCachedDashboardData = () => {
+  return {
+    sales: appCache.getSales(),
+    expenses: appCache.getExpenses(),
+    products: appCache.getProducts(),
+    customers: appCache.getCustomers()
+  }
+}
+
+const buildDashboardSnapshot = (
+  { sales = [], expenses = [], products = [], customers = [] },
+  { salesPeriod = 'all', expensesPeriod = 'all', customersPeriod = 'all', debtPeriod = 'all' },
+  selectedWeek = new Date()
+) => {
+  const filteredSales = salesPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', salesPeriod)
+  const totalSales = filteredSales.reduce((sum, sale) => {
+    const paymentMethod = sale.paymentMethod || sale.payment_method
+    const paidAmount = parseFloat(sale.paidAmount || sale.paid_amount || 0) || 0
+    const totalAmount = parseFloat(sale.total || 0) || 0
+
+    if (paymentMethod === 'credit') {
+      return sum + paidAmount
+    }
+    return sum + totalAmount
+  }, 0)
+
+  const filteredExpenses = expensesPeriod === 'all' ? expenses : filterByPeriod(expenses, 'date', expensesPeriod)
+  const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + (parseFloat(expense.amount) || 0), 0)
+
+  const filteredDebtSales = debtPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', debtPeriod)
+  const totalDebt = filteredDebtSales
+    .filter(sale => {
+      const paymentMethod = sale.paymentMethod || sale.payment_method
+      if (paymentMethod !== 'credit') return false
+      const remainingAmount = parseFloat(sale.remainingAmount || sale.remaining_amount || (parseFloat(sale.total || 0) - parseFloat(sale.paidAmount || sale.paid_amount || 0))) || 0
+      return remainingAmount > 0
+    })
+    .reduce((sum, sale) => {
+      const remainingAmount = parseFloat(sale.remainingAmount || sale.remaining_amount || (parseFloat(sale.total || 0) - parseFloat(sale.paidAmount || sale.paid_amount || 0))) || 0
+      return sum + remainingAmount
+    }, 0)
+
+  const filteredSalesForCustomers = customersPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', customersPeriod)
+  const uniqueCustomers = [...new Set(filteredSalesForCustomers.map(sale => {
+    return sale.customer_name || sale.customerName || sale.customerId || 'Anonyme'
+  }).filter(name => name && name !== 'Anonyme'))].length
+
+  const totalStockValue = products.reduce((sum, product) => {
+    const stock = parseInt(product.stock) || 0
+    const price = parseFloat(product.selling_price) || 0
+    return sum + (stock * price)
+  }, 0)
+  const totalStock = products.reduce((sum, product) => sum + (parseInt(product.stock) || 0), 0)
+
+  const outOfStockProducts = products.filter(product => {
+    const stock = parseInt(product.stock) || 0
+    const minStock = parseInt(product.min_stock) || 0
+    return stock === 0 || (minStock > 0 && stock <= minStock)
+  })
+  const outOfStockCount = outOfStockProducts.length
+
+  const recentSales = [...sales]
+    .sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt))
+    .slice(0, 5)
+
+  const recentExpenses = [...expenses]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5)
+
+  const productSales = {}
+  sales.forEach(sale => {
+    if (!sale.items || !Array.isArray(sale.items)) return
+
+    sale.items.forEach(item => {
+      const productName = item.productName || item.product_name || 'Produit inconnu'
+      if (!productSales[productName]) {
+        productSales[productName] = {
+          name: productName,
+          quantity: 0,
+          revenue: 0
+        }
+      }
+      productSales[productName].quantity += parseInt(item.quantity || 0)
+      productSales[productName].revenue += parseFloat(item.totalPrice || item.total_price || 0) || 0
+    })
+  })
+
+  const topProducts = Object.values(productSales)
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 3)
+    .map((product, index, all) => ({
+      ...product,
+      rank: index + 1,
+      percentage: all.length === 0 ? '0.0' : ((product.quantity / all.reduce((sum, p) => sum + p.quantity, 0)) * 100).toFixed(1)
+    }))
+
+  const weekStart = new Date(selectedWeek)
+  const dayOfWeek = weekStart.getDay()
+  weekStart.setDate(weekStart.getDate() - dayOfWeek)
+  weekStart.setHours(0, 0, 0, 0)
+
+  const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+  const salesEvolution = []
+
+  for (let i = 0; i < 7; i += 1) {
+    const date = new Date(weekStart)
+    date.setDate(date.getDate() + i)
+    date.setHours(0, 0, 0, 0)
+
+    const daySales = sales.filter(sale => {
+      const saleDate = new Date(sale.created_at || sale.createdAt)
+      if (Number.isNaN(saleDate.getTime())) return false
+      return saleDate.getFullYear() === date.getFullYear() &&
+        saleDate.getMonth() === date.getMonth() &&
+        saleDate.getDate() === date.getDate()
+    })
+
+    const dayTotal = daySales.reduce((sum, sale) => sum + (parseFloat(sale.total || 0) || 0), 0)
+    salesEvolution.push({
+      date,
+      dateStr: date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
+      dayName: days[i],
+      total: dayTotal,
+      count: daySales.length
+    })
+  }
+
+  return {
+    stats: {
+      totalSales,
+      totalExpenses,
+      totalDebt,
+      totalProducts: products.length,
+      totalCustomers: customers.length,
+      uniqueCustomers,
+      totalStockValue,
+      totalStock,
+      outOfStockCount,
+      outOfStockProducts,
+      recentSales,
+      recentExpenses
+    },
+    topProducts,
+    salesEvolution
+  }
+}
+
 export default function Dashboard() {
   const { formatCurrency, currency, language, t } = useI18n()
   const [salesPeriod, setSalesPeriod] = useState('all')
@@ -80,23 +227,26 @@ export default function Dashboard() {
   const [salesExpensesMode, setSalesExpensesMode] = useState('sales')
   const [customersDebtMode, setCustomersDebtMode] = useState('customers')
   const [showOutOfStockDropdown, setShowOutOfStockDropdown] = useState(false)
-  const [topProducts, setTopProducts] = useState([])
-  const [salesEvolution, setSalesEvolution] = useState([])
   const [selectedWeek, setSelectedWeek] = useState(new Date())
-  const [stats, setStats] = useState({
-    totalSales: 0,
-    totalExpenses: 0,
-    totalProducts: 0,
-    totalCustomers: 0,
-    uniqueCustomers: 0,
-    totalStockValue: 0,
-    totalStock: 0,
-    outOfStockCount: 0,
-    outOfStockProducts: [],
-    recentSales: [],
-    recentExpenses: []
+  const cachedData = getCachedDashboardData()
+  const initialSnapshot = buildDashboardSnapshot(cachedData, {
+    salesPeriod,
+    expensesPeriod,
+    customersPeriod,
+    debtPeriod
+  }, selectedWeek)
+
+  const [sales, setSales] = useState(cachedData.sales)
+  const [expenses, setExpenses] = useState(cachedData.expenses)
+  const [products, setProducts] = useState(cachedData.products)
+  const [customers, setCustomers] = useState(cachedData.customers)
+  const [topProducts, setTopProducts] = useState(initialSnapshot.topProducts)
+  const [salesEvolution, setSalesEvolution] = useState(initialSnapshot.salesEvolution)
+  const [stats, setStats] = useState(initialSnapshot.stats)
+  const [loading, setLoading] = useState(() => {
+    return !(cachedData.sales.length || cachedData.expenses.length || cachedData.products.length || cachedData.customers.length)
   })
-  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     loadStats()
@@ -120,194 +270,45 @@ export default function Dashboard() {
   }, [showOutOfStockDropdown])
 
   const loadStats = async () => {
+    const hasCachedData = sales.length || expenses.length || products.length || customers.length
     try {
-      const sales = await appStorage.getSales()
-      const expenses = await appStorage.getExpenses()
-      const products = await appStorage.getProducts()
-      const customers = await appStorage.getCustomers()
-
-      // Filtrer les ventes selon la période pour le calcul des ventes
-      const filteredSales = salesPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', salesPeriod)
-      // Calculer le CA réel : pour les ventes à crédit, ne compter que le montant payé (paid_amount)
-      const totalSales = filteredSales.reduce((sum, sale) => {
-        // Si c'est une vente à crédit, prendre le montant payé, sinon prendre le total
-        const paidAmount = sale.paidAmount || sale.paid_amount || 0
-        const totalAmount = sale.total || 0
-        
-        // Si c'est une vente à crédit (paymentMethod = 'credit'), utiliser paidAmount
-        // Sinon utiliser le total (vente payée immédiatement)
-        if (sale.paymentMethod === 'credit' || sale.payment_method === 'credit') {
-          return sum + paidAmount
-        } else {
-          return sum + totalAmount
-        }
-      }, 0)
-
-      // Filtrer les dépenses selon la période
-      const filteredExpenses = expensesPeriod === 'all' ? expenses : filterByPeriod(expenses, 'createdAt', expensesPeriod)
-      const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + (expense.amount || 0), 0)
-
-      // Calculer le total des dettes en cours (ventes à crédit non remboursées)
-      const filteredDebtSales = debtPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', debtPeriod)
-      const totalDebt = filteredDebtSales
-        .filter(sale => {
-          // Vérifier si c'est une vente à crédit avec un reste à payer
-          const isCredit = sale.paymentMethod === 'credit' || sale.payment_method === 'credit'
-          if (!isCredit) return false
-          
-          // Calculer le montant restant
-          const remainingAmount = sale.remainingAmount || sale.remaining_amount || 
-                                 (sale.total - (sale.paidAmount || sale.paid_amount || 0))
-          
-          // Inclure si il reste quelque chose à payer
-          return remainingAmount > 0
-        })
-        .reduce((sum, sale) => {
-          // Utiliser le montant restant (remaining_amount) ou calculer (total - paid)
-          const remainingAmount = sale.remainingAmount || sale.remaining_amount || 
-                                 (sale.total - (sale.paidAmount || sale.paid_amount || 0))
-          return sum + remainingAmount
-        }, 0)
-
-      // Filtrer les ventes selon la période pour le calcul des clients uniques
-      const filteredSalesForCustomers = customersPeriod === 'all' ? sales : filterByPeriod(sales, 'createdAt', customersPeriod)
-      
-      // Calculer les clients uniques
-      let customerNames = []
-      try {
-        customerNames = [...new Set(filteredSalesForCustomers.map(sale => {
-          return sale.customer_name || sale.customerId || 'Anonyme'
-        }).filter(name => name && name !== 'Anonyme'))]
-      } catch (error) {
-        console.error('Erreur dans le calcul des clients:', error)
-        customerNames = []
+      if (hasCachedData) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
       }
 
-      const uniqueCustomers = customerNames.length
+      const [nextSales, nextExpenses, nextProducts, nextCustomers] = await Promise.all([
+        appStorage.getSales(),
+        appStorage.getExpenses(),
+        appStorage.getProducts(),
+        appStorage.getCustomers()
+      ])
 
-      // Calculer la valeur du stock total
-      const totalStockValue = products.reduce((sum, product) => {
-        try {
-          const stock = parseInt(product.stock) || 0
-          const price = parseFloat(product.selling_price) || 0
-          return sum + (stock * price)
-        } catch (error) {
-          console.error('Erreur calcul stock pour produit:', product, error)
-          return sum
-        }
-      }, 0)
-      const totalStock = products.reduce((sum, product) => sum + (parseInt(product.stock) || 0), 0)
+      const nextSnapshot = buildDashboardSnapshot({
+        sales: nextSales,
+        expenses: nextExpenses,
+        products: nextProducts,
+        customers: nextCustomers
+      }, {
+        salesPeriod,
+        expensesPeriod,
+        customersPeriod,
+        debtPeriod
+      }, selectedWeek)
 
-      // Calculer les produits en rupture de stock
-      const outOfStockProducts = products.filter(product => {
-        const stock = parseInt(product.stock) || 0
-        const minStock = parseInt(product.min_stock) || 0
-        return stock === 0 || (minStock > 0 && stock <= minStock)
-      })
-      const outOfStockCount = outOfStockProducts.length
-
-      const recentSales = sales
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5)
-
-      const recentExpenses = expenses
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 5)
-
-      // Calculer le top 3 des produits les plus vendus
-      const productSales = {}
-      sales.forEach(sale => {
-        if (sale.items && Array.isArray(sale.items)) {
-          sale.items.forEach(item => {
-            const productName = item.productName || 'Produit inconnu'
-            if (!productSales[productName]) {
-              productSales[productName] = {
-                name: productName,
-                quantity: 0,
-                revenue: 0
-              }
-            }
-            productSales[productName].quantity += parseInt(item.quantity || 0)
-            productSales[productName].revenue += parseFloat(item.totalPrice || 0)
-          })
-        }
-      })
-
-      // Trier et prendre le top 3
-      const top3Products = Object.values(productSales)
-        .sort((a, b) => b.quantity - a.quantity)
-        .slice(0, 3)
-        .map((product, index) => ({
-          ...product,
-          rank: index + 1,
-          percentage: ((product.quantity / Object.values(productSales).reduce((sum, p) => sum + p.quantity, 0)) * 100).toFixed(1)
-        }))
-
-      setTopProducts(top3Products)
-
-      // Calculer l'évolution des ventes pour la semaine sélectionnée (7 jours)
-      const evolutionData = []
-      const weekStart = new Date(selectedWeek)
-      const dayOfWeek = weekStart.getDay()
-      weekStart.setDate(weekStart.getDate() - dayOfWeek)
-      weekStart.setHours(0, 0, 0, 0)
-
-      const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
-
-      // Générer les données pour les 7 jours de la semaine
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(weekStart)
-        date.setDate(date.getDate() + i)
-        date.setHours(0, 0, 0, 0)
-
-        const nextDate = new Date(date)
-        nextDate.setDate(nextDate.getDate() + 1)
-        nextDate.setHours(23, 59, 59, 999)
-
-        // Filtrer les ventes pour cette journée
-        const daySales = sales.filter(sale => {
-          // Normaliser pour éviter les décalages de timezone (ex: 19/05 non compté)
-          const saleDate = new Date(sale.created_at)
-          if (Number.isNaN(saleDate.getTime())) return false
-
-          return saleDate.getFullYear() === date.getFullYear() &&
-            saleDate.getMonth() === date.getMonth() &&
-            saleDate.getDate() === date.getDate()
-        })
-
-
-        const dayTotal = daySales.reduce((sum, sale) => sum + (sale.total || 0), 0)
-
-
-        evolutionData.push({
-          date: date,
-          dateStr: date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-          dayName: days[i],
-          total: dayTotal,
-          count: daySales.length
-        })
-      }
-
-      setSalesEvolution(evolutionData)
-
-      setStats({
-        totalSales,
-        totalExpenses,
-        totalDebt,
-        totalProducts: products.length,
-        totalCustomers: customers.length,
-        uniqueCustomers,
-        totalStockValue,
-        totalStock,
-        outOfStockCount,
-        outOfStockProducts,
-        recentSales,
-        recentExpenses
-      })
+      setSales(nextSales)
+      setExpenses(nextExpenses)
+      setProducts(nextProducts)
+      setCustomers(nextCustomers)
+      setTopProducts(nextSnapshot.topProducts)
+      setSalesEvolution(nextSnapshot.salesEvolution)
+      setStats(nextSnapshot.stats)
     } catch (error) {
       console.error('Dashboard: Erreur de chargement:', error)
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
