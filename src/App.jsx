@@ -49,6 +49,9 @@ function App() {
         if (currentUser) {
           setUser(currentUser)
           localStorage.setItem('cached_user', JSON.stringify(currentUser))
+        } else {
+          localStorage.removeItem('cached_user')
+          setUser(null)
         }
       } catch (error) {
         // Utiliser le cache si la requête fail
