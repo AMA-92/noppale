@@ -26,16 +26,6 @@ function App() {
     // Utilise le cache localStorage en priorité pour une expérience instantanée
     const checkAuth = async () => {
       try {
-        // Cache local en priorité (quasi instantané)
-        const cachedUser = localStorage.getItem('cached_user')
-        if (cachedUser) {
-          try {
-            setUser(JSON.parse(cachedUser))
-          } catch (e) {
-            // Cache invalide, ignorer
-          }
-        }
-        
         // Vérifier l'auth réelle avec timeout court (2000ms)
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout auth')), 2000)
@@ -54,11 +44,9 @@ function App() {
           setUser(null)
         }
       } catch (error) {
-        // Utiliser le cache si la requête fail
-        const cachedUser = localStorage.getItem('cached_user')
-        if (!cachedUser) {
-          setUser(null)
-        }
+        // Ne jamais afficher l’application avec un utilisateur seulement mis en cache.
+        localStorage.removeItem('cached_user')
+        setUser(null)
       } finally {
         setLoading(false)
       }
