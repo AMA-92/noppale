@@ -32,9 +32,12 @@ const parseNumber = (value) => {
   return total + current
 }
 
-const isYes = (text) => /^(oui|oui c est bon|confirme|confirmer|valide|valider|d accord|exact|yes)$/i.test(normalize(text))
-const isNo = (text) => /^(non|annule|annuler|recommence|recommencer|pas du tout)$/i.test(normalize(text))
-const isGreeting = (text) => /\b(bonjour|bonsoir|salut|coucou|hello|bon matin)\b/i.test(normalize(text))
+const isYes = (text) => /^(oui|oui c est bon|confirme|confirmer|valide|valider|d accord|exact|yes|waaw|waaw degg)$/i.test(normalize(text))
+const isNo = (text) => /^(non|annule|annuler|recommence|recommencer|pas du tout|deedeet|deedeet)$/i.test(normalize(text))
+const isGreeting = (text) => {
+  const value = normalize(text)
+  return /\b(bonjour|bonsoir|salut|coucou|hello|bon matin|nanga def|jamm rekk|salaam aleekum)\b/i.test(value) || /[\u0600-\u06ff]/.test(text) && /(مرحبا|اهلا|أهلا|السلام عليكم|سلام)/.test(text)
+}
 const isAddProductCommand = (text) => {
   const value = normalize(text)
   return /\b(ajouter|ajoute|ajout|creer|cree|nouveau|nouvelle)\b.*\b(produit|article|marchandise)\b/.test(value) || /\b(produit|article|marchandise)\b.*\b(ajouter|ajoute|ajout|creer|cree)\b/.test(value)
@@ -101,7 +104,9 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
     } catch (ttsError) { console.warn('TTS indisponible, voix navigateur utilisée', ttsError) }
     if (!('speechSynthesis' in window) || speechSessionRef.current !== session) return
     const utterance = new SpeechSynthesisUtterance(text); utterance.lang = languageRef.current; utterance.rate = 0.94
-    const voices = window.speechSynthesis.getVoices(); utterance.voice = voices.find((voice) => voice.lang?.toLowerCase().startsWith('fr')) || null
+    const voices = window.speechSynthesis.getVoices()
+    const languagePrefix = languageRef.current.toLowerCase().split('-')[0]
+    utterance.voice = voices.find((voice) => voice.lang?.toLowerCase().startsWith(languagePrefix)) || voices.find((voice) => voice.lang?.toLowerCase().startsWith('fr')) || null
     window.speechSynthesis.speak(utterance)
   }
 
@@ -118,7 +123,7 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
     const recognition = new SpeechRecognition(); recognition.lang = languageRef.current === 'wo-SN' ? 'fr-FR' : languageRef.current; recognition.continuous = false; recognition.interimResults = false; recognition.maxAlternatives = 3
     recognition.onstart = () => setPhase('listening')
     recognition.onresult = (event) => { const answer = event.results[0]?.[0]?.transcript?.trim(); if (answer) { window.speechSynthesis?.cancel(); audioRef.current?.pause(); recognition.stop(); handleAnswer(answer) } else setError('Je n’ai pas entendu votre réponse.') }
-    recognition.onerror = (event) => { if (event.error === 'not-allowed' || event.error === 'service-not-allowed') setError('Autorisez le microphone dans votre navigateur.'); else if (event.error !== 'aborted') setError(`Erreur de reconnaissance : ${event.error}`); setPhase(stateRef.current.step || 'command') }
+    recognition.onerror = (event) => { if (event.error === 'not-allowed' || event.error === 'service-not-allowed') setError('Autorisez le microphone dans votre navigateur.'); else if (event.error === 'audio-capture') setError('Aucun microphone n’est détecté. Branchez ou autorisez un microphone, puis réessayez.'); else if (event.error !== 'aborted') setError(`Erreur de reconnaissance : ${event.error}`); setPhase(stateRef.current.step || 'command') }
     recognition.onend = () => { recognitionRef.current = null; setPhase((current) => current === 'listening' ? (stateRef.current.step || 'command') : current) }
     recognitionRef.current = recognition; recognition.start()
   }
