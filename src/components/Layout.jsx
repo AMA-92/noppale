@@ -5,6 +5,7 @@ import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime } from '../hooks/useRealtime.jsx'
 import { useSubscription } from '../hooks/useSubscription.jsx'
 import { SubscriptionContext } from '../hooks/useSubscriptionContext.jsx'
+import VoiceSaleAssistant from './VoiceSaleAssistant'
 import { 
   LayoutDashboard, Package, ShoppingCart, 
   BarChart3, LogOut, Settings, Wallet, Menu, X,
@@ -270,6 +271,7 @@ function Layout({ user }) {
           <Outlet />
         </div>
       </main>
+      <VoiceSaleAssistant />
       </div>
       </SubscriptionContext.Provider>
     </div>
