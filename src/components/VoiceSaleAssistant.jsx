@@ -62,6 +62,7 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
   const recognitionRef = useRef(null)
   const audioRef = useRef(null)
   const speechSessionRef = useRef(0)
+  const conversationRef = useRef([])
   const languageRef = useRef('fr-FR')
   const money = formatCurrency || contextFormatCurrency || moneyDefault
   const detectLanguage = (text) => {
@@ -114,7 +115,7 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
     stateRef.current = { ...stateRef.current, step, data }; setPhase(step); setStatus(text); speak(text, true)
   }
 
-  const reset = () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); stateRef.current = initial; setPhase('idle'); setStatus(''); setError('') }
+  const reset = () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); conversationRef.current = []; stateRef.current = initial; setPhase('idle'); setStatus(''); setError('') }
   const close = () => { speechSessionRef.current += 1; recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); audioRef.current?.pause(); audioRef.current = null; setIsOpen(false); reset() }
 
   function listenOnce() {
@@ -167,9 +168,11 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
   const askAssistant = async (answer) => {
     const { data: { session } = {} } = await supabase.auth.getSession()
     if (!session) throw new Error('Veuillez vous connecter à Noppalé avant d’utiliser l’assistant vocal.')
-    const { data, error } = await supabase.functions.invoke('assistant', { body: { message: answer, currency } })
+    const messages = [...conversationRef.current, { role: 'user', content: answer }]
+    const { data, error } = await supabase.functions.invoke('assistant', { body: { messages, currency } })
     if (error) throw new Error(data?.error || error.message || 'Erreur de connexion avec l’assistant IA.')
     if (!data?.text) throw new Error('Réponse vide de l’assistant IA.')
+    conversationRef.current = [...messages, { role: 'assistant', content: data.text }].slice(-12)
     if (data.language) languageRef.current = data.language === 'anglais' ? 'en-US' : data.language === 'wolof' ? 'wo-SN' : data.language === 'arabe' ? 'ar-SA' : 'fr-FR'
     return data.text
   }
@@ -179,8 +182,8 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
     try {
       if (isAddProductCommand(text)) return startFlow('addProduct')
       if (isUpdateProductCommand(text)) return startFlow('updateProduct')
-      if (/vente|vendre|realiser une vente|enregistrer une vente/.test(text)) return startFlow('sale')
-      if (/depense|enregistrer une depense|realiser une depense/.test(text)) return startFlow('expense')
+      if (/\b(vente|vendre|encaisser|transaction)\b/.test(text) && /\b(veux|veut|fais|faire|enregistre|enregistrer|effectue|effectuer|realise|realiser|nouvelle|une)\b/.test(text)) return startFlow('sale')
+      if (/\b(depense|depenses|charge|charges)\b/.test(text) && /\b(veux|veut|fais|faire|enregistre|enregistrer|effectue|effectuer|realise|realiser|ajoute|ajouter|une)\b/.test(text)) return startFlow('expense')
       let result = null
       try { result = await query(answer) } catch (queryError) { console.warn('Lecture locale indisponible, relais vers l’assistant IA', queryError) }
       if (result) { stateRef.current = { flow: 'query', step: 'command', data: {} }; setPhase('command'); setStatus(result); speak(result, true); return }
