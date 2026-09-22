@@ -40,7 +40,7 @@ const isGreeting = (text) => {
 }
 const isAddProductCommand = (text) => {
   const value = normalize(text)
-  return /\b(ajouter|ajoute|ajout|creer|cree|nouveau|nouvelle)\b.*\b(produit|article|marchandise)\b/.test(value) || /\b(produit|article|marchandise)\b.*\b(ajouter|ajoute|ajout|creer|cree)\b/.test(value)
+  return /\b(ajouter|ajoute|ajout|acheter|achete|achat|creer|cree|cr[eé]ation|nouveau|nouvelle)\b.*\b(produit|article|marchandise)\b/.test(value) || /\b(produit|article|marchandise)\b.*\b(ajouter|ajoute|ajout|acheter|achete|achat|creer|cree|cr[eé]ation)\b/.test(value)
 }
 const isUpdateProductCommand = (text) => {
   const value = normalize(text)
