@@ -189,7 +189,7 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
       if (result) { stateRef.current = { flow: 'query', step: 'command', data: {} }; setPhase('command'); setStatus(result); speak(result, true); return }
       const response = await askAssistant(answer)
       stateRef.current = { flow: 'query', step: 'command', data: {} }; setPhase('command'); setStatus(response); speak(response, true)
-    } catch (e) { setError(e.message || 'Une erreur est survenue.'); setPhase('command'); speak('Je n’ai pas pu réaliser cette opération.') }
+    } catch (e) { const message = e.message || 'Une erreur est survenue.'; setError(message); setPhase('command'); speak(message) }
   }
 
   const handleAnswer = async (answer) => {
