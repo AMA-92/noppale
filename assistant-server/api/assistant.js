@@ -1,4 +1,4 @@
-const { Anthropic } = require('@anthropic-ai/sdk')
+import { Anthropic } from '@anthropic-ai/sdk'
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
@@ -26,7 +26,7 @@ INSTRUCTIONS SPÉCIALES :
 - Après un simple bonjour, réponds uniquement par une salutation courte
 - Ne lance jamais d'explication spontanée de tes capacités
 - Pour les commandes complexes (ajout produit, vente, etc.), résume l'action et demande confirmation
-- Cette version est en lecture seule : ne prétends jamais avoir exécuté une action de modification`
+- Cette version est en lecture seule : ne prétends jamais avoir exécuté une action de modification
 
 DEMANDE : Réponds de manière naturelle et conversationnelle comme un assistant vocal réel.`
 
