@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Noppalé - Gestion Commerciale avec Mouna</title>
+    <meta name="description" content="Logiciel de gestion commerciale pour les commerçants d'Afrique de l'Ouest">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Noppalé">
+    <meta name="robots" content="noindex, nofollow">
+    
+    <!-- Icônes et Manifests -->
+    <link rel="icon" type="image/jpeg" href="/logo.jpeg" />
+    <link rel="apple-touch-icon" href="/logo.jpeg" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Performance: DNS Prefetch pour les ressources externes -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    
+    <!-- Performance: Preconnect pour les ressources critiques -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Performance: Prefetch du manifest pour PWA -->
+    <link rel="prefetch" href="/manifest.json" as="fetch" />
+    
+    <!-- Fonts (optimisées avec display=swap) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Performance: Preload des icônes critiques -->
+    <link rel="preload" href="/logo.jpeg" as="image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

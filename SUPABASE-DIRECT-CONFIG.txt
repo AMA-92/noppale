@@ -1,0 +1,9 @@
+// Si le .env ne fonctionne pas, remplacez temporairement dans src/supabase/config.js:
+
+// Ligne 5-6, remplacez:
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://votre-projet.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'votre-clé-anonyme'
+
+// Par:
+const supabaseUrl = 'https://sewgwcxaenssloobnfjk.supabase.co'
+const supabaseAnonKey = 'METTRE_VOTRE_CLÉ_ANONYME_ICI'
