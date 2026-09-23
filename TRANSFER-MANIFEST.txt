@@ -1,0 +1,4 @@
+Noppalé Claude Transfer
+Current roadmap step: 4 (Parcours métier guidés implémentés - en attente de déploiement et tests)
+Secrets excluded: yes
+Git history excluded: yes
