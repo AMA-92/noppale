@@ -1,9 +1,19 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Configuration Supabase
-// Remplacez ces valeurs par vos clés Supabase réelles après création du projet
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://votre-projet.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'votre-clé-anonyme'
+// Configuration Supabase avec valeurs par défaut correctes pour le projet Noppalé
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://sewgwcxaenssloobnfjk.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+
+// Validation de la configuration
+if (!supabaseUrl || supabaseUrl.includes('votre-projet')) {
+  console.error('❌ Configuration Supabase invalide: URL incorrecte')
+  console.error('Veuillez configurer VITE_SUPABASE_URL dans les variables d\'environnement')
+}
+
+if (!supabaseAnonKey || supabaseAnonKey.includes('votre-clé')) {
+  console.error('❌ Configuration Supabase invalide: Clé anonyme manquante')
+  console.error('Veuillez configurer VITE_SUPABASE_ANON_KEY dans les variables d\'environnement')
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
