@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard-simple'
 import Products from './pages/Products'
 import Sales from './pages/Sales'
 import Expenses from './pages/Expenses'
+import './utils/debug-auth.js' // Import des fonctions de diagnostic
 
 const Reports = lazy(() => import('./pages/Reports'))
 const Settings = lazy(() => import('./pages/Settings'))
