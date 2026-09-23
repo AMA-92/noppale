@@ -1,6 +1,7 @@
 {
   "name": "noppale-assistant-server",
   "version": "1.0.0",
+  "type": "module",
   "description": "Serveur backend pour l'assistant IA Noppalé",
   "main": "index.js",
   "scripts": {
