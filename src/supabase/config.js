@@ -1,8 +1,23 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Configuration Supabase
-// Remplacez ces valeurs par vos clés Supabase réelles après création du projet
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://votre-projet.supabase.co'
+const normalizeSupabaseUrl = (value) => {
+  if (!value || typeof value !== 'string') return ''
+
+  let normalized = value.trim()
+
+  normalized = normalized.replace(/^https?:\/\/https(?:\/\/|:\/\/+)?/i, 'https://')
+  normalized = normalized.replace(/^http:\/\/http(?:\/\/|:\/\/+)?/i, 'http://')
+  normalized = normalized.replace(/^https?:\/\/\//i, 'https://')
+  normalized = normalized.replace(/\/+$/, '')
+
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = `https://${normalized}`
+  }
+
+  return normalized
+}
+
+const supabaseUrl = normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL || 'https://sewgwcxaenssloobnfjk.supabase.co')
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'votre-clé-anonyme'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
