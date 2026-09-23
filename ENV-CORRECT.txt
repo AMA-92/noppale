@@ -1,0 +1,9 @@
+# Configuration Supabase - À copier dans votre fichier .env
+VITE_SUPABASE_URL=https://sewgwcxaenssloobnfjk.supabase.co
+VITE_SUPABASE_ANON_KEY=VOTRE_CLÉ_ANONYME_ICI
+
+# Pour trouver votre clé anon:
+# 1. Allez sur https://sewgwcxaenssloobnfjk.supabase.co
+# 2. Cliquez sur "Go to Dashboard"
+# 3. Settings → API
+# 4. Copiez la "anon public key"
