@@ -1,7 +1,59 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, Send, X, Sparkles, Volume2, VolumeX } from 'lucide-react'
+import { supabase } from '../../supabase/config'
 
 const API_ENDPOINT = import.meta.env.VITE_MOUNA_API_URL || '/api/mouna'
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+
+const stripEmojiAndNoise = (text = '') => {
+  return String(text)
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, ' ')
+    .replace(/[“”«»"'`]/g, ' ')
+    .replace(/[\[\]{}()]/g, ' ')
+    .replace(/[*_#~]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const normalizeMonetaryText = (text = '') => {
+  let clean = String(text)
+
+  clean = clean.replace(/\b(\d{1,3}(?:\s?\d{3})*(?:[.,]\d+)?)\s*(?:FCFA|XOF|CFA)\b/gi, (_, amount) => {
+    const normalized = amount.replace(/\s+/g, '').replace(',', '.')
+    return `${Number(normalized).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} francs CFA`
+  })
+
+  clean = clean.replace(/\b(\d{1,3}(?:\s?\d{3})*(?:[.,]\d+)?)\s*(?:€|EUR)\b/gi, (_, amount) => {
+    const normalized = amount.replace(/\s+/g, '').replace(',', '.')
+    return `${Number(normalized).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} euros`
+  })
+
+  clean = clean.replace(/\b(\d{1,3}(?:\s?\d{3})*(?:[.,]\d+)?)\s*(?:\$|USD)\b/gi, (_, amount) => {
+    const normalized = amount.replace(/\s+/g, '').replace(',', '.')
+    return `${Number(normalized).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} dollars`
+  })
+
+  return clean
+}
+
+const makeSpeechFriendlyText = (text = '') => {
+  let clean = stripEmojiAndNoise(text)
+  clean = normalizeMonetaryText(clean)
+
+  clean = clean.replace(/\s*([;:])\s*/g, '. ')
+  clean = clean.replace(/\s*[-–—]\s*/g, '. ')
+  clean = clean.replace(/\s*\.\s*/g, '. ')
+  clean = clean.replace(/\s*\?\s*/g, '. ')
+  clean = clean.replace(/\s*!\s*/g, '. ')
+  clean = clean.replace(/\s+,\s*/g, ', ')
+  clean = clean.replace(/\b(\d+)\s+francs\s+CFA\b/gi, (_, value) => `${value} francs CFA`)
+  clean = clean.replace(/\b(\d+)\s+euros\b/gi, (_, value) => `${value} euros`)
+  clean = clean.replace(/\b(\d+)\s+dollars\b/gi, (_, value) => `${value} dollars`)
+  clean = clean.replace(/\s+/g, ' ').trim()
+
+  if (!clean) return 'Bonjour.'
+  return clean
+}
 
 function MounaAssistant() {
   const [open, setOpen] = useState(false)
@@ -16,13 +68,31 @@ function MounaAssistant() {
 
   const speak = (text) => {
     if (!('speechSynthesis' in window)) return
+    const spokenText = makeSpeechFriendlyText(text)
     window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
+
+    const utterance = new SpeechSynthesisUtterance(spokenText)
     utterance.lang = 'fr-FR'
-    utterance.rate = 1
-    utterance.onstart = () => setSpeaking(true)
+    utterance.rate = 0.84
+    utterance.pitch = 1.12
+    utterance.volume = 1
+
+    const basePause = 220
+    utterance.onstart = () => {
+      setSpeaking(true)
+      if (window.speechSynthesis && window.speechSynthesis.speak) {
+        const pause = new SpeechSynthesisUtterance('')
+        pause.lang = 'fr-FR'
+        pause.volume = 0
+        pause.text = ' '
+        pause.rate = 0.1
+        pause.pitch = 1
+        window.speechSynthesis.speak(pause)
+      }
+    }
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
+
     window.speechSynthesis.speak(utterance)
   }
 
@@ -55,6 +125,38 @@ function MounaAssistant() {
     window.speechSynthesis?.cancel?.()
   }, [])
 
+  const handleAction = (action, replyText) => {
+    if (!action) return
+
+    if (action.type === 'invoice_followup') {
+      const match = replyText.match(/WhatsApp|whatsapp|télécharger|telecharger/i)
+      if (match) {
+        setMessages((m) => [...m, { role: 'assistant', content: 'Tu peux répondre avec “télécharger” pour l’export PDF, ou “WhatsApp 221771234567” pour l’envoyer directement.' }])
+      }
+    }
+
+    if (action.type === 'report_followup') {
+      setMessages((m) => [...m, { role: 'assistant', content: 'Je peux aussi préparer le rapport PDF ou le partager sur WhatsApp. Réponds par “télécharger” ou “WhatsApp 221771234567”.' }])
+    }
+  }
+
+  const handleWhatsAppShare = (phoneNumber, messageText) => {
+    const clean = String(phoneNumber || '').replace(/\D/g, '')
+    if (!clean) return
+    const url = `https://wa.me/${clean}?text=${encodeURIComponent(messageText)}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleDownloadText = (filename, content) => {
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const sendMessage = async (forcedText) => {
     const text = (forcedText ?? input).trim()
     if (!text || busy) return
@@ -63,9 +165,24 @@ function MounaAssistant() {
     setBusy(true)
 
     try {
+      const headers = {
+        'Content-Type': 'application/json'
+      }
+
+      if (SUPABASE_ANON_KEY) {
+        headers.apikey = SUPABASE_ANON_KEY
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`
+      } else if (SUPABASE_ANON_KEY) {
+        headers.Authorization = `Bearer ${SUPABASE_ANON_KEY}`
+      }
+
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           message: text,
           history: messages.slice(-10)
@@ -75,6 +192,17 @@ function MounaAssistant() {
       if (!response.ok) throw new Error(`Mouna API: ${response.status}`)
       const data = await response.json()
       const reply = data.reply || 'Je n’ai pas reçu de réponse exploitable.'
+      handleAction(data.action, reply)
+
+      if (/télécharger|telecharger/i.test(text)) {
+        handleDownloadText('rapport-mouna.txt', `${reply}\n\nGénéré par Mouna.`)
+      }
+
+      const whatsappMatch = text.match(/whatsapp\s*(\d+)/i) || text.match(/(?:numero|numéro)\s*(\d+)/i)
+      if (whatsappMatch) {
+        handleWhatsAppShare(whatsappMatch[1], reply)
+      }
+
       setMessages((m) => [...m, { role: 'assistant', content: reply }])
       speak(reply)
     } catch (error) {
