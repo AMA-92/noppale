@@ -95,24 +95,68 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
 
   const speak = async (text, listenAfter = false) => {
     if (!text) return
+    console.log('🔊 TTS: Tentative de parler:', text)
     const session = speechSessionRef.current
     window.speechSynthesis?.cancel(); audioRef.current?.pause()
-    // Écoute immédiate : l’utilisateur peut couper la voix de l’assistant et parler sans attendre.
-    if (listenAfter) { keepListeningRef.current = true; window.setTimeout(() => { if (speechSessionRef.current === session) listenOnce() }, 80) }
+    
+    // Utiliser directement la synthèse vocale du navigateur (plus fiable sur mobile)
+    if (!('speechSynthesis' in window)) {
+      console.error('❌ Synthèse vocale non supportée')
+      if (listenAfter) { keepListeningRef.current = true; window.setTimeout(() => { if (speechSessionRef.current === session) listenOnce() }, 200) }
+      return
+    }
+    
+    if (speechSessionRef.current !== session) {
+      console.warn('⚠️ Session expirée, annulation TTS')
+      return
+    }
+    
     try {
-      const { data, error: ttsError } = await supabase.functions.invoke('tts', { body: { text, language: languageRef.current } })
-      if (!ttsError && data?.audio_base64 && speechSessionRef.current === session) {
-        const audio = new Audio(`data:${data.mime_type || 'audio/wav'};base64,${data.audio_base64}`)
-        audioRef.current = audio; audio.onended = () => { if (keepListeningRef.current) listenOnce() }; await audio.play(); return
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = languageRef.current
+      utterance.rate = 0.94
+      utterance.pitch = 1.0
+      utterance.volume = 1.0
+      
+      // Charger les voix de manière asynchrone pour mobile
+      const loadVoices = () => {
+        const voices = window.speechSynthesis.getVoices()
+        const languagePrefix = languageRef.current.toLowerCase().split('-')[0]
+        utterance.voice = voices.find((voice) => voice.lang?.toLowerCase().startsWith(languagePrefix)) || 
+                         voices.find((voice) => voice.lang?.toLowerCase().startsWith('fr')) || 
+                         voices[0] || null
+        console.log('🎤 Voix sélectionnée:', utterance.voice?.name || 'par défaut')
       }
-    } catch (ttsError) { console.warn('TTS indisponible, voix navigateur utilisée', ttsError) }
-    if (!('speechSynthesis' in window) || speechSessionRef.current !== session) return
-    const utterance = new SpeechSynthesisUtterance(text); utterance.lang = languageRef.current; utterance.rate = 0.94
-    const voices = window.speechSynthesis.getVoices()
-    const languagePrefix = languageRef.current.toLowerCase().split('-')[0]
-    utterance.voice = voices.find((voice) => voice.lang?.toLowerCase().startsWith(languagePrefix)) || voices.find((voice) => voice.lang?.toLowerCase().startsWith('fr')) || null
-    utterance.onend = () => { if (keepListeningRef.current) listenOnce() }
-    window.speechSynthesis.speak(utterance)
+      
+      // Sur certains navigateurs, getVoices est asynchrone
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = loadVoices
+      } else {
+        loadVoices()
+      }
+      
+      utterance.onstart = () => console.log('🔊 TTS: Démarrage de la synthèse')
+      utterance.onend = () => {
+        console.log('🔊 TTS: Fin de la synthèse')
+        if (keepListeningRef.current) {
+          console.log('🎤 Relance de l\'écoute après TTS')
+          window.setTimeout(() => { if (speechSessionRef.current === session) listenOnce() }, 200)
+        }
+      }
+      utterance.onerror = (error) => {
+        console.error('❌ Erreur TTS:', error)
+        if (keepListeningRef.current) {
+          window.setTimeout(() => { if (speechSessionRef.current === session) listenOnce() }, 200)
+        }
+      }
+      
+      window.speechSynthesis.speak(utterance)
+      console.log('✅ TTS: Commande speak envoyée')
+      
+    } catch (error) {
+      console.error('❌ Erreur critique TTS:', error)
+      if (listenAfter) { keepListeningRef.current = true; window.setTimeout(() => { if (speechSessionRef.current === session) listenOnce() }, 200) }
+    }
   }
 
   const sayAndListen = (text, step, data = stateRef.current.data) => {
@@ -123,17 +167,61 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
   const close = () => { speechSessionRef.current += 1; keepListeningRef.current = false; processingRef.current = false; window.clearTimeout(restartTimerRef.current); recognitionRef.current?.stop(); window.speechSynthesis?.cancel(); audioRef.current?.pause(); audioRef.current = null; setIsOpen(false); reset() }
 
   function listenOnce() {
-    if (!SpeechRecognition) { setError('La reconnaissance vocale nécessite Chrome ou Edge.'); return }
-    if (!keepListeningRef.current || recognitionRef.current || processingRef.current) return
-    setError(''); setPhase(stateRef.current.step || 'command')
+    console.log('🎤 listenOnce appelé')
+    if (!SpeechRecognition) { 
+      console.error('❌ SpeechRecognition non supporté')
+      setError('La reconnaissance vocale nécessite Chrome ou Edge.'); 
+      return 
+    }
+    if (!keepListeningRef.current) {
+      console.log('⏸️ Écoute désactivée (keepListeningRef = false)')
+      return
+    }
+    if (recognitionRef.current) {
+      console.log('⏸️ Reconnaissance déjà en cours')
+      return
+    }
+    if (processingRef.current) {
+      console.log('⏸️ Traitement en cours')
+      return
+    }
+    
+    console.log('🎤 Démarrage de la reconnaissance vocale')
+    setError(''); 
+    setPhase(stateRef.current.step || 'command')
+    
     const recognition = new SpeechRecognition(); 
     recognition.lang = languageRef.current === 'wo-SN' ? 'fr-FR' : languageRef.current; 
-    recognition.continuous = false; // Changé à false pour mobile (meilleure compatibilité)
+    recognition.continuous = false; // Meilleure compatibilité mobile
     recognition.interimResults = false; 
     recognition.maxAlternatives = 3
-    recognition.onstart = () => setPhase('listening')
-    recognition.onresult = (event) => { const result = event.results[event.results.length - 1]; const answer = result?.[0]?.transcript?.trim(); if (answer) { window.speechSynthesis?.cancel(); audioRef.current?.pause(); processingRef.current = true; recognition.stop(); handleAnswer(answer).finally(() => { processingRef.current = false }) } }
+    
+    recognition.onstart = () => {
+      console.log('🎤 Reconnaissance démarrée')
+      setPhase('listening')
+    }
+    
+    recognition.onresult = (event) => {
+      console.log('🎤 Résultat reçu:', event)
+      const result = event.results[event.results.length - 1]
+      const answer = result?.[0]?.transcript?.trim()
+      console.log('🎤 Texte reconnu:', answer)
+      
+      if (answer) { 
+        console.log('🎤 Traitement de la réponse:', answer)
+        window.speechSynthesis?.cancel(); 
+        audioRef.current?.pause(); 
+        processingRef.current = true; 
+        recognition.stop(); 
+        handleAnswer(answer).finally(() => { 
+          console.log('🎤 Traitement terminé')
+          processingRef.current = false 
+        }) 
+      }
+    }
+    
     recognition.onerror = (event) => { 
+      console.error('❌ Erreur reconnaissance:', event.error)
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') { 
         keepListeningRef.current = false; 
         setError('Autorisez le microphone dans votre navigateur.') 
@@ -144,18 +232,27 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
         setPhase(stateRef.current.step || 'command')
       }
     }
+    
     recognition.onend = () => { 
+      console.log('🎤 Reconnaissance terminée')
       recognitionRef.current = null; 
       setPhase((current) => current === 'listening' ? (stateRef.current.step || 'command') : current); 
       if (keepListeningRef.current && !processingRef.current) { 
+        console.log('🎤 Relance automatique de l\'écoute')
         window.clearTimeout(restartTimerRef.current); 
-        restartTimerRef.current = window.setTimeout(() => listenOnce(), 300) // Délai augmenté pour mobile
+        restartTimerRef.current = window.setTimeout(() => listenOnce(), 500) // Délai augmenté
       } 
     }
+    
     recognitionRef.current = recognition
-    try { recognition.start() } catch (error) { 
+    
+    try { 
+      recognition.start()
+      console.log('✅ Reconnaissance lancée')
+    } catch (error) { 
+      console.error('❌ Erreur démarrage reconnaissance:', error)
       recognitionRef.current = null; 
-      if (keepListeningRef.current) restartTimerRef.current = window.setTimeout(() => listenOnce(), 500) // Retry plus long
+      if (keepListeningRef.current) restartTimerRef.current = window.setTimeout(() => listenOnce(), 1000) // Retry plus long
     }
   }
 
@@ -527,24 +624,31 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
   }
 
   const chooseLanguage = async (code) => { 
+    console.log('🌍 Langue choisie:', code)
     languageRef.current = code; 
     stateRef.current = { flow: 'greeting', step: 'greeting', data: {} }; 
     setPhase('greeting'); 
     setStatus(code === 'en-US' ? 'Say hello to begin.' : code === 'wo-SN' ? 'Dites bonjour pour commencer.' : code === 'ar-SA' ? 'قل مرحباً للبدء.' : 'Dites bonjour pour commencer.'); 
     setError(''); 
+    
     // Demander la permission du microphone explicitement sur mobile
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        console.log('🎤 Demande de permission microphone')
         await navigator.mediaDevices.getUserMedia({ audio: true })
+        console.log('✅ Permission microphone accordée')
       }
     } catch (e) {
-      console.warn('Permission microphone non accordée ou non disponible', e)
+      console.warn('⚠️ Permission microphone non accordée ou non disponible', e)
     }
+    
     // Délai plus long pour mobile et retry automatique
     window.setTimeout(() => {
+      console.log('🎤 Activation de l\'écoute')
       keepListeningRef.current = true
       listenOnce()
-    }, 200); 
+    }, 500); // Délai augmenté pour mobile
+    
     try { await refreshData() } catch (e) { console.warn(e) } 
   }
   const start = async () => { speechSessionRef.current += 1; setIsOpen(true); setPhase('language'); setStatus('Choisissez votre langue'); setError(''); try { await refreshData() } catch (e) { console.warn(e) } }
