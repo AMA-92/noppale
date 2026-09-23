@@ -29,7 +29,12 @@
 - **Valeur** : `FCFA`
 - **Environnements** : Production, Preview, Development
 
-#### Variable 4 : VITE_ASSISTANT_FUNCTION_URL
+#### Variable 4 : VITE_ASSISTANT_BACKEND_URL
+- **Nom** : `VITE_ASSISTANT_BACKEND_URL`
+- **Valeur** : `https://noppale-assistant.vercel.app/api/assistant`
+- **Environnements** : Production, Preview, Development
+
+#### Variable 5 : VITE_ASSISTANT_FUNCTION_URL (fallback)
 - **Nom** : `VITE_ASSISTANT_FUNCTION_URL`
 - **Valeur** : `https://sewgwcxaenssloobnfjk.supabase.co/functions/v1/assistant`
 - **Environnements** : Production, Preview, Development

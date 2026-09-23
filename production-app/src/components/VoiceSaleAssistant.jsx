@@ -427,13 +427,56 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
   const askAssistant = async (answer) => {
     const { data: { session } = {} } = await supabase.auth.getSession()
     if (!session) throw new Error('Veuillez vous connecter à Noppalé avant d’utiliser l’assistant vocal.')
-    const messages = [...conversationRef.current, { role: 'user', content: answer }]
-    const { data, error } = await supabase.functions.invoke('assistant', { body: { messages, currency } })
-    if (error) throw new Error(data?.error || error.message || 'Erreur de connexion avec l’assistant IA.')
-    if (!data?.text) throw new Error('Réponse vide de l’assistant IA.')
-    conversationRef.current = [...messages, { role: 'assistant', content: data.text }].slice(-12)
-    if (data.language) languageRef.current = data.language === 'anglais' ? 'en-US' : data.language === 'wolof' ? 'wo-SN' : data.language === 'arabe' ? 'ar-SA' : 'fr-FR'
-    return data.text
+    
+    // Utiliser le nouveau backend Vercel au lieu de Supabase
+    const backendUrl = import.meta.env.VITE_ASSISTANT_BACKEND_URL || 'https://noppale-assistant.vercel.app/api/assistant'
+    
+    try {
+      console.log('🤖 Appel au backend:', backendUrl)
+      const response = await fetch(backendUrl, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ 
+          message: answer, 
+          context: { 
+            products: products.length > 0 ? products : undefined,
+            sales: sales.length > 0 ? sales : undefined,
+            expenses: expenses.length > 0 ? expenses : undefined
+          },
+          language: languageRef.current,
+          currency 
+        })
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Erreur HTTP ${response.status}`)
+      }
+      
+      const data = await response.json()
+      if (!data.response) throw new Error('Réponse vide du backend.')
+      
+      conversationRef.current = [...conversationRef.current, { role: 'user', content: answer }, { role: 'assistant', content: data.response }].slice(-12)
+      if (data.language) languageRef.current = data.language === 'anglais' ? 'en-US' : data.language === 'wolof' ? 'wo-SN' : data.language === 'arabe' ? 'ar-SA' : 'fr-FR'
+      
+      console.log('✅ Réponse backend reçue:', data.response)
+      return data.response
+      
+    } catch (error) {
+      console.error('❌ Erreur backend:', error)
+      // Fallback : essayer Supabase si le backend échoue
+      console.log('🔄 Tentative fallback vers Supabase...')
+      const messages = [...conversationRef.current, { role: 'user', content: answer }]
+      const { data: supabaseData, error: supabaseError } = await supabase.functions.invoke('assistant', { body: { messages, currency } })
+      if (supabaseError) throw new Error('Échec backend et Supabase: ' + error.message)
+      if (!supabaseData?.text) throw new Error('Réponse vide des assistants.')
+      conversationRef.current = [...messages, { role: 'assistant', content: supabaseData.text }].slice(-12)
+      if (supabaseData.language) languageRef.current = supabaseData.language === 'anglais' ? 'en-US' : supabaseData.language === 'wolof' ? 'wo-SN' : supabaseData.language === 'arabe' ? 'ar-SA' : 'fr-FR'
+      return supabaseData.text
+    }
   }
 
   const handleCommand = async (answer) => {
