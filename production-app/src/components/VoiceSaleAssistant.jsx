@@ -126,13 +126,37 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
     if (!SpeechRecognition) { setError('La reconnaissance vocale nécessite Chrome ou Edge.'); return }
     if (!keepListeningRef.current || recognitionRef.current || processingRef.current) return
     setError(''); setPhase(stateRef.current.step || 'command')
-    const recognition = new SpeechRecognition(); recognition.lang = languageRef.current === 'wo-SN' ? 'fr-FR' : languageRef.current; recognition.continuous = true; recognition.interimResults = false; recognition.maxAlternatives = 3
+    const recognition = new SpeechRecognition(); 
+    recognition.lang = languageRef.current === 'wo-SN' ? 'fr-FR' : languageRef.current; 
+    recognition.continuous = false; // Changé à false pour mobile (meilleure compatibilité)
+    recognition.interimResults = false; 
+    recognition.maxAlternatives = 3
     recognition.onstart = () => setPhase('listening')
     recognition.onresult = (event) => { const result = event.results[event.results.length - 1]; const answer = result?.[0]?.transcript?.trim(); if (answer) { window.speechSynthesis?.cancel(); audioRef.current?.pause(); processingRef.current = true; recognition.stop(); handleAnswer(answer).finally(() => { processingRef.current = false }) } }
-    recognition.onerror = (event) => { if (event.error === 'not-allowed' || event.error === 'service-not-allowed') { keepListeningRef.current = false; setError('Autorisez le microphone dans votre navigateur.') } else if (event.error === 'audio-capture') { setError('Aucun microphone n’est détecté. Branchez ou autorisez un microphone, puis réessayez.') } else if (event.error !== 'aborted' && event.error !== 'no-speech') setError(`Erreur de reconnaissance : ${event.error}`); setPhase(stateRef.current.step || 'command') }
-    recognition.onend = () => { recognitionRef.current = null; setPhase((current) => current === 'listening' ? (stateRef.current.step || 'command') : current); if (keepListeningRef.current && !processingRef.current) { window.clearTimeout(restartTimerRef.current); restartTimerRef.current = window.setTimeout(() => listenOnce(), 180) } }
+    recognition.onerror = (event) => { 
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') { 
+        keepListeningRef.current = false; 
+        setError('Autorisez le microphone dans votre navigateur.') 
+      } else if (event.error === 'audio-capture') { 
+        setError('Aucun microphone n’est détecté. Branchez ou autorisez un microphone, puis réessayez.') 
+      } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+        setError(`Erreur de reconnaissance : ${event.error}`); 
+        setPhase(stateRef.current.step || 'command')
+      }
+    }
+    recognition.onend = () => { 
+      recognitionRef.current = null; 
+      setPhase((current) => current === 'listening' ? (stateRef.current.step || 'command') : current); 
+      if (keepListeningRef.current && !processingRef.current) { 
+        window.clearTimeout(restartTimerRef.current); 
+        restartTimerRef.current = window.setTimeout(() => listenOnce(), 300) // Délai augmenté pour mobile
+      } 
+    }
     recognitionRef.current = recognition
-    try { recognition.start() } catch (error) { recognitionRef.current = null; if (keepListeningRef.current) restartTimerRef.current = window.setTimeout(() => listenOnce(), 250) }
+    try { recognition.start() } catch (error) { 
+      recognitionRef.current = null; 
+      if (keepListeningRef.current) restartTimerRef.current = window.setTimeout(() => listenOnce(), 500) // Retry plus long
+    }
   }
 
   const findProduct = (answer, list = products) => {
@@ -502,7 +526,27 @@ function VoiceSaleAssistant({ products: suppliedProducts = [], sales: suppliedSa
     }
   }
 
-  const chooseLanguage = async (code) => { languageRef.current = code; stateRef.current = { flow: 'greeting', step: 'greeting', data: {} }; setPhase('greeting'); setStatus(code === 'en-US' ? 'Say hello to begin.' : code === 'wo-SN' ? 'Dites bonjour pour commencer.' : code === 'ar-SA' ? 'قل مرحباً للبدء.' : 'Dites bonjour pour commencer.'); setError(''); window.setTimeout(() => listenOnce(), 80); try { await refreshData() } catch (e) { console.warn(e) } }
+  const chooseLanguage = async (code) => { 
+    languageRef.current = code; 
+    stateRef.current = { flow: 'greeting', step: 'greeting', data: {} }; 
+    setPhase('greeting'); 
+    setStatus(code === 'en-US' ? 'Say hello to begin.' : code === 'wo-SN' ? 'Dites bonjour pour commencer.' : code === 'ar-SA' ? 'قل مرحباً للبدء.' : 'Dites bonjour pour commencer.'); 
+    setError(''); 
+    // Demander la permission du microphone explicitement sur mobile
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+      }
+    } catch (e) {
+      console.warn('Permission microphone non accordée ou non disponible', e)
+    }
+    // Délai plus long pour mobile et retry automatique
+    window.setTimeout(() => {
+      keepListeningRef.current = true
+      listenOnce()
+    }, 200); 
+    try { await refreshData() } catch (e) { console.warn(e) } 
+  }
   const start = async () => { speechSessionRef.current += 1; setIsOpen(true); setPhase('language'); setStatus('Choisissez votre langue'); setError(''); try { await refreshData() } catch (e) { console.warn(e) } }
 
   if (isOpen && phase === 'language') return <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#080912] px-5 text-white"><div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(91,33,182,.30),transparent_30%),radial-gradient(circle_at_12%_90%,rgba(14,165,233,.12),transparent_28%)]" /><div className="relative w-full max-w-md rounded-3xl border border-white/10 bg-white/10 p-7 text-center shadow-2xl backdrop-blur-xl"><div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-300 via-blue-600 to-indigo-950 shadow-xl"><Mic size={28} /></div><p className="mb-2 text-xs uppercase tracking-[.28em] text-indigo-300/75">Assistant Noppalé</p><h1 className="mb-7 text-2xl font-medium">Choisissez votre langue</h1><div className="grid gap-3"><button type="button" onClick={() => chooseLanguage('fr-FR')} className="rounded-2xl bg-white/10 px-5 py-4 text-left font-semibold transition hover:bg-white/20">Français<span className="ml-2 text-sm font-normal text-white/50">Bonjour</span></button><button type="button" onClick={() => chooseLanguage('wo-SN')} className="rounded-2xl bg-white/10 px-5 py-4 text-left font-semibold transition hover:bg-white/20">Wolof<span className="ml-2 text-sm font-normal text-white/50">Nanga def</span></button><button type="button" onClick={() => chooseLanguage('ar-SA')} className="rounded-2xl bg-white/10 px-5 py-4 text-left font-semibold transition hover:bg-white/20">العربية<span className="ml-2 text-sm font-normal text-white/50">مرحباً</span></button><button type="button" onClick={() => chooseLanguage('en-US')} className="rounded-2xl bg-white/10 px-5 py-4 text-left font-semibold transition hover:bg-white/20">English<span className="ml-2 text-sm font-normal text-white/50">Hello</span></button></div><button type="button" onClick={close} className="mt-6 rounded-xl border border-white/10 px-4 py-2 text-sm text-white/60 hover:bg-white/10">Fermer</button></div></div>
