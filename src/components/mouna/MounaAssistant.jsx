@@ -166,14 +166,19 @@ function MounaAssistant() {
   const [inputMode, setInputMode] = useState('text')
   const recognitionRef = useRef(null)
 
+  const stopSpeech = () => {
+    window.speechSynthesis?.cancel?.()
+    setSpeaking(false)
+  }
+
   const speak = (text) => {
-    if (!('speechSynthesis' in window)) return
+    if (!open || !('speechSynthesis' in window)) return
     const raw = String(text || '').trim()
     if (!raw) return
 
+    stopSpeech()
     const shortText = raw.split(/(?<=[.!?])\s+/).find(Boolean) || raw
     const spokenText = makeSpeechFriendlyText(shortText.slice(0, 220))
-    window.speechSynthesis.cancel()
 
     const utterance = new SpeechSynthesisUtterance(spokenText)
     utterance.lang = 'fr-FR'
@@ -198,9 +203,11 @@ function MounaAssistant() {
     if (listening) {
       recognitionRef.current?.stop?.()
       setListening(false)
+      stopSpeech()
       return
     }
 
+    stopSpeech()
     if (recognitionRef.current) recognitionRef.current.abort()
     const recognition = new SpeechRecognition()
     recognition.lang = 'fr-FR'
@@ -218,9 +225,17 @@ function MounaAssistant() {
     recognition.start()
   }
 
+  useEffect(() => {
+    if (!open) {
+      recognitionRef.current?.abort?.()
+      setListening(false)
+      stopSpeech()
+    }
+  }, [open])
+
   useEffect(() => () => {
     recognitionRef.current?.abort?.()
-    window.speechSynthesis?.cancel?.()
+    stopSpeech()
   }, [])
 
   const handleAction = (action, replyText) => {
@@ -364,7 +379,12 @@ function MounaAssistant() {
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15"><Sparkles size={19} /></div>
               <div><div className="font-bold">Mouna</div><div className="text-xs text-white/80">Assistant vocal de Noppalé</div></div>
             </div>
-            <button onClick={() => setOpen(false)} className="rounded-lg p-2 hover:bg-white/10" aria-label="Fermer"><X size={18} /></button>
+            <button onClick={() => {
+              recognitionRef.current?.abort?.()
+              setListening(false)
+              stopSpeech()
+              setOpen(false)
+            }} className="rounded-lg p-2 hover:bg-white/10" aria-label="Fermer"><X size={18} /></button>
           </div>
 
           <div className="h-80 space-y-3 overflow-y-auto p-4 bg-slate-50">
