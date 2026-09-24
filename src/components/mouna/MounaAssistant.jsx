@@ -55,41 +55,133 @@ const makeSpeechFriendlyText = (text = '') => {
   return clean
 }
 
+const isGreeting = (text = '') => /^(bonjour|salut|bonsoir|hello|hi)$/i.test(String(text).trim())
+
+const getGuidedFlow = (text = '') => {
+  const value = String(text).toLowerCase().trim()
+  if (!value) return null
+
+  if (/ajout.*produit|cr[eé]e.*produit|cr[ée]er.*produit|nouveau produit|ajouter.*produit/i.test(value)) {
+    return {
+      type: 'add_product',
+      questions: [
+        'Quel est le nom du produit ?',
+        'Dans quelle catégorie va-t-il ?',
+        'Quel est le stock initial ?',
+        'Quel est le prix d’achat ?',
+        'Quel est le prix de vente ?',
+        'Quel est le stock minimum ?',
+      ],
+      keys: ['name', 'category', 'stock', 'buying_price', 'selling_price', 'min_stock']
+    }
+  }
+
+  if (/ajout.*d[eé]pense|ajoute.*d[eé]pense|nouvelle d[eé]pense|d[eé]pense/i.test(value)) {
+    return {
+      type: 'add_expense',
+      questions: [
+        'Quelle dépense veux-tu enregistrer ?',
+        'Quel est le montant ?',
+      ],
+      keys: ['name', 'amount']
+    }
+  }
+
+  if (/modif.*produit|modifier.*produit|change.*prix.*produit|met.*prix.*produit|maj.*produit|mise.*jour.*produit/i.test(value)) {
+    return {
+      type: 'update_product',
+      questions: [
+        'Quel est le produit à modifier ?',
+        'Quel est le nouveau prix de vente ?',
+      ],
+      keys: ['name', 'selling_price']
+    }
+  }
+
+  if (/ajout.*vente|ajoute.*vente|enregistre.*vente|vente.*produit|vend/i.test(value)) {
+    return {
+      type: 'add_sale',
+      questions: [
+        'Quel produit veux-tu vendre ?',
+        'Quelle quantité ?',
+      ],
+      keys: ['name', 'quantity']
+    }
+  }
+
+  return null
+}
+
+const parseFlowValue = (key, text) => {
+  const normalized = String(text).trim()
+  if (!normalized) return null
+
+  if (key === 'stock' || key === 'buying_price' || key === 'selling_price' || key === 'min_stock' || key === 'amount' || key === 'quantity') {
+    const match = normalized.match(/\d+(?:[.,]\d+)?/)
+    return match ? Number(match[0].replace(',', '.')) : null
+  }
+
+  if (key === 'name' || key === 'category') {
+    return normalized.replace(/^.*?(?:est|c'est|c est|est le|est la|le|la)\s+/i, '').trim()
+  }
+
+  return normalized
+}
+
+const buildFlowSentence = (type, values) => {
+  if (type === 'add_product') {
+    const name = values.name || 'produit'
+    const category = values.category || 'général'
+    const stock = values.stock || 0
+    const buying = values.buying_price || 0
+    const selling = values.selling_price || 0
+    const minStock = values.min_stock || 0
+    return `crée le produit ${name} dans la catégorie ${category} avec un stock initial de ${stock}, un prix d'achat de ${buying}, un prix de vente de ${selling} et un stock minimum de ${minStock}`
+  }
+
+  if (type === 'add_expense') {
+    return `ajoute une dépense ${values.name || 'générale'} de ${values.amount || 0}`
+  }
+
+  if (type === 'update_product') {
+    return `modifie le produit ${values.name || 'produit'} avec un prix de vente de ${values.selling_price || 0}`
+  }
+
+  if (type === 'add_sale') {
+    return `vend ${values.quantity || 0} ${values.name || 'produit'}`
+  }
+
+  return 'aide-moi sur cette demande'
+}
+
 function MounaAssistant() {
   const [open, setOpen] = useState(false)
   const [listening, setListening] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Bonjour, je suis Mouna. Dis-moi ce que tu veux faire dans Noppalé.' }
+    { role: 'assistant', content: 'Bonjour.' }
   ])
   const [busy, setBusy] = useState(false)
+  const [inputMode, setInputMode] = useState('text')
   const recognitionRef = useRef(null)
 
   const speak = (text) => {
     if (!('speechSynthesis' in window)) return
-    const spokenText = makeSpeechFriendlyText(text)
+    const raw = String(text || '').trim()
+    if (!raw) return
+
+    const shortText = raw.split(/(?<=[.!?])\s+/).find(Boolean) || raw
+    const spokenText = makeSpeechFriendlyText(shortText.slice(0, 220))
     window.speechSynthesis.cancel()
 
     const utterance = new SpeechSynthesisUtterance(spokenText)
     utterance.lang = 'fr-FR'
-    utterance.rate = 0.84
+    utterance.rate = 0.82
     utterance.pitch = 1.12
     utterance.volume = 1
 
-    const basePause = 220
-    utterance.onstart = () => {
-      setSpeaking(true)
-      if (window.speechSynthesis && window.speechSynthesis.speak) {
-        const pause = new SpeechSynthesisUtterance('')
-        pause.lang = 'fr-FR'
-        pause.volume = 0
-        pause.text = ' '
-        pause.rate = 0.1
-        pause.pitch = 1
-        window.speechSynthesis.speak(pause)
-      }
-    }
+    utterance.onstart = () => setSpeaking(true)
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
 
@@ -100,6 +192,12 @@ function MounaAssistant() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) {
       setMessages((m) => [...m, { role: 'assistant', content: "La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilise Chrome/Android ou le champ texte." }])
+      return
+    }
+
+    if (listening) {
+      recognitionRef.current?.stop?.()
+      setListening(false)
       return
     }
 
@@ -160,6 +258,49 @@ function MounaAssistant() {
   const sendMessage = async (forcedText) => {
     const text = (forcedText ?? input).trim()
     if (!text || busy) return
+
+    const source = forcedText ? 'voice' : 'text'
+    const isVoiceInput = source === 'voice'
+    setInputMode(isVoiceInput ? 'voice' : 'text')
+
+    if (isGreeting(text)) {
+      setInput('')
+      setMessages((m) => [...m, { role: 'assistant', content: 'Bonjour.' }])
+      return
+    }
+
+    if (guidedFlowRef.current) {
+      const flow = guidedFlowRef.current
+      const key = flow.keys[flow.index]
+      const value = parseFlowValue(key, text)
+
+      if (value !== null && key) {
+        flow.values[key] = value
+      }
+
+      flow.index += 1
+
+      if (flow.index < flow.questions.length) {
+        setInput('')
+        setMessages((m) => [...m, { role: 'assistant', content: flow.questions[flow.index] }])
+        return
+      }
+
+      const finalPrompt = buildFlowSentence(flow.type, flow.values)
+      guidedFlowRef.current = null
+      setInput('')
+      setMessages((m) => [...m, { role: 'assistant', content: 'Je mets ça en ordre.' }])
+      return sendMessage(finalPrompt)
+    }
+
+    const flow = getGuidedFlow(text)
+    if (flow) {
+      guidedFlowRef.current = { ...flow, index: 0, values: {} }
+      setInput('')
+      setMessages((m) => [...m, { role: 'assistant', content: flow.questions[0] }])
+      return
+    }
+
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: text }])
     setBusy(true)
@@ -204,7 +345,7 @@ function MounaAssistant() {
       }
 
       setMessages((m) => [...m, { role: 'assistant', content: reply }])
-      speak(reply)
+      if (isVoiceInput) speak(reply)
     } catch (error) {
       const message = 'Mouna est bien installée, mais son moteur IA n’est pas encore connecté. Consulte le guide MOUNA-GUIDE.md pour configurer le serveur IA.'
       setMessages((m) => [...m, { role: 'assistant', content: message }])
