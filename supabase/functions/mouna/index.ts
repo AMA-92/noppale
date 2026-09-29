@@ -13,7 +13,10 @@ import {
   runMounaTool as ee,
 } from "./agent-flow.mjs";
 import { selectMounaToolNames } from "./intent-tools.mjs";
-import { createMounaProviders } from "./provider-config.mjs";
+import {
+  createMounaProviders,
+  getMounaGlmCodingPlanBaseUrl,
+} from "./provider-config.mjs";
 import {
   localizeConfirmedActionReply,
   localizeMounaReply,
@@ -184,7 +187,7 @@ const U = {
       body: JSON.stringify(t),
     });
   },
-  he = async (e, n, t) => {
+  he = async (e, n, t, timeoutMs = 12e3) => {
     const s = `${e.replace(/\/$/, "")}/chat/completions`;
     return await fetch(s, {
       method: "POST",
@@ -193,7 +196,7 @@ const U = {
         Authorization: `Bearer ${n}`,
       },
       body: JSON.stringify(t),
-      signal: AbortSignal.timeout(12e3),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   },
   A = (e) => {
@@ -464,7 +467,12 @@ Y(async (e) => {
           for (let y = 0; y < I; y += 1) {
             const f = Date.now();
             try {
-              const l = await he(u.baseUrl, u.apiKey, { ...r, model: u.model }),
+              const l = await he(
+                  u.baseUrl,
+                  u.apiKey,
+                  { ...r, model: u.model },
+                  u.name === "CodeCraft" ? 20e3 : 12e3,
+                ),
                 _ = Date.now() - f;
               if (l.ok)
                 return (
@@ -489,6 +497,55 @@ Y(async (e) => {
                 ...(upstreamCode ? { upstream_error_code: upstreamCode } : {}),
                 fallback_used: c,
               });
+              const codingPlanBase =
+                u.name === "GLM" && l.status === 429 && upstreamCode === "1113"
+                  ? getMounaGlmCodingPlanBaseUrl(u.baseUrl)
+                  : null;
+              if (codingPlanBase) {
+                const codingStarted = Date.now();
+                try {
+                  const codingResponse = await he(
+                    codingPlanBase,
+                    u.apiKey,
+                    { ...r, model: u.model },
+                  );
+                  const codingLatency = Date.now() - codingStarted;
+                  if (codingResponse.ok)
+                    return (
+                      ce(u.name),
+                      A({
+                        provider: u.name,
+                        endpoint_variant: "coding_plan",
+                        request_id: i,
+                        status: codingResponse.status,
+                        latency: codingLatency,
+                        fallback_used: c,
+                      }),
+                      { response: codingResponse, brain: u }
+                    );
+                  const codingCode = await providerErrorCode(codingResponse);
+                  A({
+                    provider: u.name,
+                    endpoint_variant: "coding_plan",
+                    request_id: i,
+                    status: codingResponse.status,
+                    latency: codingLatency,
+                    error_code: `http_${codingResponse.status}`,
+                    ...(codingCode ? { upstream_error_code: codingCode } : {}),
+                    fallback_used: c,
+                  });
+                } catch {
+                  A({
+                    provider: u.name,
+                    endpoint_variant: "coding_plan",
+                    request_id: i,
+                    status: 0,
+                    latency: Date.now() - codingStarted,
+                    error_code: "network_or_timeout",
+                    fallback_used: c,
+                  });
+                }
+              }
               if (l.status === 401 || l.status === 403) {
                 S(u.name);
                 break;
