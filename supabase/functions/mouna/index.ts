@@ -44,7 +44,7 @@ const U = {
     "gemini-2.5-flash-native-audio-preview-12-2025",
   te = Deno.env.get("GEMINI_TEXT_MODEL") || "gemini-3.8-flash",
   ne = Deno.env.get("OPENAI_TEXT_MODEL") || "gpt-4o-mini",
-  re = Deno.env.get("CODECRAFT_MODEL") || "gpt-4o-mini",
+  re = "claude-sonnet-5",
   oe = () =>
     [
       {
