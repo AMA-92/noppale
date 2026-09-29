@@ -25,6 +25,11 @@ import { nextSaleIntakeQuestion } from '../supabase/functions/mouna/sale-intake.
 import {
   createMounaProviders,
 } from '../supabase/functions/mouna/provider-config.mjs'
+import {
+  MOUNA_DB_LIMITS,
+  formatMounaStockReply,
+  isValidMounaDate,
+} from '../supabase/functions/mouna/db-contracts.mjs'
 
 const saleTools = ['list_customers', 'list_products', 'list_sales', 'create_sale', 'record_sale_payment']
 
@@ -46,6 +51,23 @@ test('CodeCraft est le seul fournisseur conversationnel et Claude Sonnet 5 est l
   assert.deepEqual(providers.map(({ name }) => name), ['CodeCraft'])
   assert.equal(providers[0].baseUrl, 'https://codecraftapi.com/v1')
   assert.equal(providers[0].model, 'claude-sonnet-5')
+})
+
+test('les limites des champs reflètent le schéma Supabase et les dates sont calendaires', () => {
+  assert.equal(MOUNA_DB_LIMITS.customerPhone, 20)
+  assert.equal(MOUNA_DB_LIMITS.productBarcode, 50)
+  assert.equal(MOUNA_DB_LIMITS.productCategory, 100)
+  assert.equal(isValidMounaDate('2028-02-29'), true)
+  assert.equal(isValidMounaDate('2027-02-29'), false)
+  assert.equal(isValidMounaDate('2026-13-01'), false)
+  assert.equal(isValidMounaDate('2026-2-01'), false)
+})
+
+test('la réponse de stock est générée sans second appel IA et reste localisée', () => {
+  assert.equal(formatMounaStockReply('fr', { name: 'Sucre', stock: 2 }, 'sucre'), 'Il reste 2 unités de «Sucre».')
+  assert.equal(formatMounaStockReply('wo', { name: 'Sucre', stock: 2 }, 'sucre'), 'Des na 2 ci «Sucre».')
+  assert.equal(formatMounaStockReply('ar', { name: 'سكر', stock: 0 }, 'سكر'), 'المتبقي من «سكر»: 0.')
+  assert.match(formatMounaStockReply('fr', { found: false, candidates: ['Sucre blanc'] }, 'sucre'), /Voulez-vous dire/u)
 })
 
 test('le modèle CodeCraft peut être configuré et les fournisseurs secondaires ne remplacent jamais CodeCraft', () => {

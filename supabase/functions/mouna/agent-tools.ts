@@ -4,6 +4,7 @@ import {
   nextSaleIntakeQuestion as ne,
   SALE_PAYMENT_METHODS as z,
 } from "./sale-intake.mjs";
+import { MOUNA_DB_LIMITS, isValidMounaDate } from "./db-contracts.mjs";
 const T =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   y = (r, e = []) => ({
@@ -22,6 +23,7 @@ const T =
   B = {
     type: "integer",
     minimum: 1,
+    maximum: MOUNA_DB_LIMITS.maxInteger,
     description: "Quantit\xE9 enti\xE8re positive.",
   },
   ie = {
@@ -151,7 +153,7 @@ const T =
       description:
         "Utiliser cet outil d\xE8s que l\u2019utilisateur veut ajouter un produit, m\xEAme si des champs manquent. Envoyer seulement les valeurs explicitement connues; le serveur renverra une question unique pour le premier champ manquant, sans rien enregistrer. Ne devine jamais les valeurs absentes et ne les mets pas \xE0 z\xE9ro. Apr\xE8s les cinq champs explicitement recueillis, l\u2019outil pr\xE9pare l\u2019ajout et demande une confirmation.",
       input_schema: y({
-        name: m("Nom du produit, uniquement si fourni par l\u2019utilisateur."),
+        name: m("Nom du produit, uniquement si fourni par l\u2019utilisateur.", MOUNA_DB_LIMITS.productName),
         buying_price: {
           ...A,
           description:
@@ -166,12 +168,14 @@ const T =
         stock: {
           type: "integer",
           minimum: 0,
+          maximum: MOUNA_DB_LIMITS.maxInteger,
           description:
             "Stock initial entier, uniquement si explicitement fourni; z\xE9ro doit \xEAtre explicite.",
         },
         min_stock: {
           type: "integer",
           minimum: 0,
+          maximum: MOUNA_DB_LIMITS.maxInteger,
           description:
             "Seuil minimal entier, uniquement si explicitement fourni; z\xE9ro doit \xEAtre explicite.",
         },
@@ -184,12 +188,12 @@ const T =
       input_schema: y({
         product_id: m("Identifiant renvoy\xE9 par list_products.", 80),
         product_name: m("Nom exact lu dans le catalogue.", 200),
-        name: m("Nouveau nom."),
-        category: m("Nouvelle cat\xE9gorie.", 100),
+        name: m("Nouveau nom.", MOUNA_DB_LIMITS.productName),
+        category: m("Nouvelle cat\xE9gorie.", MOUNA_DB_LIMITS.productCategory),
         selling_price: A,
         buying_price: A,
-        min_stock: { type: "integer", minimum: 0 },
-        barcode: m("Nouveau code-barres ou unit\xE9.", 100),
+        min_stock: { type: "integer", minimum: 0, maximum: MOUNA_DB_LIMITS.maxInteger },
+        barcode: m("Nouveau code-barres ou unit\xE9.", MOUNA_DB_LIMITS.productBarcode),
         description: m("Nouvelle description.", 500),
       }),
     },
@@ -228,8 +232,8 @@ const T =
       input_schema: y(
         {
           name: m("Nom du client."),
-          phone: m("T\xE9l\xE9phone.", 40),
-          email: { type: "string", maxLength: 255 },
+          phone: m("T\xE9l\xE9phone.", MOUNA_DB_LIMITS.customerPhone),
+          email: { type: "string", maxLength: MOUNA_DB_LIMITS.customerEmail },
           address: m("Adresse.", 300),
         },
         ["name"],
@@ -243,8 +247,8 @@ const T =
         {
           customer_id: j("Identifiant retourn\xE9 par list_customers."),
           name: m("Nouveau nom."),
-          phone: m("Nouveau t\xE9l\xE9phone.", 40),
-          email: { type: "string", maxLength: 255 },
+          phone: m("Nouveau t\xE9l\xE9phone.", MOUNA_DB_LIMITS.customerPhone),
+          email: { type: "string", maxLength: MOUNA_DB_LIMITS.customerEmail },
           address: m("Nouvelle adresse.", 300),
         },
         ["customer_id"],
@@ -312,7 +316,7 @@ const T =
         register_customer: { type: "boolean" },
         customer_phone: m(
           "Num\xE9ro communiqu\xE9 explicitement, facultatif.",
-          40,
+          MOUNA_DB_LIMITS.customerPhone,
         ),
         items: oe,
         items_complete: { type: "boolean" },
@@ -451,7 +455,7 @@ const T =
         throw new Error(`${i} ne fait pas partie des valeurs autoris\xE9es.`);
       if (e.format === "uuid" && !T.test(r))
         throw new Error(`${i} doit \xEAtre un identifiant valide.`);
-      if (e.format === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(r))
+      if (e.format === "date" && !isValidMounaDate(r))
         throw new Error(`${i} doit \xEAtre une date AAAA-MM-JJ.`);
       return;
     }
@@ -1008,7 +1012,7 @@ async function le(r, e, i) {
       e[u] !== void 0 &&
         (c[u] = ["selling_price", "buying_price", "min_stock"].includes(u)
           ? P(e[u], u, { integer: u === "min_stock" })
-          : g(e[u], u === "description" ? 500 : 200));
+          : g(e[u], u === "description" ? 500 : u === "category" ? MOUNA_DB_LIMITS.productCategory : u === "barcode" ? MOUNA_DB_LIMITS.productBarcode : MOUNA_DB_LIMITS.productName));
     if (!Object.keys(c).length)
       throw new Error("Aucune modification n\u2019a \xE9t\xE9 fournie.");
     const l = c.name || n.name,
@@ -1077,7 +1081,7 @@ async function le(r, e, i) {
   if (r === "create_customer") {
     const t = {
       name: g(e.name, 200),
-      phone: g(e.phone, 40),
+      phone: g(e.phone, MOUNA_DB_LIMITS.customerPhone),
       email: g(e.email, 255),
       address: g(e.address, 300),
     };
@@ -1102,7 +1106,7 @@ async function le(r, e, i) {
             : c === "address"
               ? 300
               : c === "phone"
-                ? 40
+                ? MOUNA_DB_LIMITS.customerPhone
                 : 200,
         ));
     if (!Object.keys(o).length)
@@ -1342,7 +1346,7 @@ async function le(r, e, i) {
         customer_id: n,
         customer_name: t,
         create_customer: k,
-        customer_phone: g(e.customer_phone, 40),
+        customer_phone: g(e.customer_phone, MOUNA_DB_LIMITS.customerPhone),
         payment_method: h.payment_method,
         payments: h.payments,
         initial_payment: q === "credit" ? h.paid_amount : null,
