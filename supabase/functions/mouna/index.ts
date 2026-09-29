@@ -13,6 +13,7 @@ import {
   runMounaTool as ee,
 } from "./agent-flow.mjs";
 import { selectMounaToolNames } from "./intent-tools.mjs";
+import { createMounaProviders } from "./provider-config.mjs";
 import {
   localizeConfirmedActionReply,
   localizeMounaReply,
@@ -29,83 +30,10 @@ const U = {
       status: n,
       headers: { ...U, "Content-Type": "application/json" },
     }),
-  O = (e, n) => {
-    const t = (e || n).trim();
-    if (!t) return n;
-    const s = t.replace(/\/+$/, "");
-    return s.includes("generativelanguage.googleapis.com/v1beta/openai")
-      ? s
-      : s.endsWith("/v1")
-        ? s
-        : `${s}/v1`;
-  },
   q =
     Deno.env.get("GEMINI_MODEL") ||
     "gemini-2.5-flash-native-audio-preview-12-2025",
-  te = Deno.env.get("GEMINI_TEXT_MODEL") || "gemini-3.8-flash",
-  ne = Deno.env.get("OPENAI_TEXT_MODEL") || "gpt-4o-mini",
-  re = "claude-sonnet-5",
-  oe = () =>
-    [
-      {
-        name: "CodeCraft",
-        apiKey: Deno.env.get("CODECRAFT_API_KEY"),
-        baseUrl: O(
-          Deno.env.get("CODECRAFT_BASE_URL") ||
-            "https://www.codecraftapi.com/v1",
-          "https://www.codecraftapi.com/v1",
-        ),
-        model: re,
-      },
-      {
-        name: "Gemini",
-        apiKey: Deno.env.get("GEMINI_API_KEY"),
-        baseUrl: O(
-          Deno.env.get("GEMINI_BASE_URL") ||
-            "https://generativelanguage.googleapis.com/v1beta/openai",
-          "https://generativelanguage.googleapis.com/v1beta/openai",
-        ),
-        model: te,
-      },
-      {
-        name: "OpenAI",
-        apiKey: Deno.env.get("OPENAI_API_KEY"),
-        baseUrl: O(
-          Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1",
-          "https://api.openai.com/v1",
-        ),
-        model: ne,
-        realtimeModel:
-          Deno.env.get("OPENAI_REALTIME_MODEL") || "gpt-realtime-2.1-mini",
-      },
-      {
-        name: "AI",
-        apiKey: Deno.env.get("AI_API_KEY"),
-        baseUrl: O(
-          Deno.env.get("AI_BASE_URL") || "https://api.openai.com/v1",
-          "https://api.openai.com/v1",
-        ),
-        model: Deno.env.get("AI_MODEL") || "gpt-4o-mini",
-      },
-      {
-        name: "Mistral",
-        apiKey: Deno.env.get("MISTRAL_API_KEY"),
-        baseUrl: O(
-          Deno.env.get("MISTRAL_BASE_URL") || "https://api.mistral.ai/v1",
-          "https://api.mistral.ai/v1",
-        ),
-        model: Deno.env.get("MISTRAL_MODEL") || "mistral-small-latest",
-      },
-      {
-        name: "DeepSeek",
-        apiKey: Deno.env.get("DEEPSEEK_API_KEY"),
-        baseUrl: O(
-          Deno.env.get("DEEPSEEK_BASE_URL") || "https://api.deepseek.com/v1",
-          "https://api.deepseek.com/v1",
-        ),
-        model: Deno.env.get("DEEPSEEK_MODEL") || "deepseek-chat",
-      },
-    ].filter((e) => typeof e.apiKey == "string" && e.apiKey.trim()),
+  oe = () => createMounaProviders((name) => Deno.env.get(name)),
   E = new Map(),
   se = 2,
   ae = 3e4,

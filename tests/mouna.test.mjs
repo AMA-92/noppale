@@ -19,8 +19,24 @@ import {
 } from '../src/utils/mouna-ui.mjs'
 import { getProductIntakeNextStep } from '../supabase/functions/mouna/product-intake.mjs'
 import { nextSaleIntakeQuestion } from '../supabase/functions/mouna/sale-intake.mjs'
+import { createMounaProviders } from '../supabase/functions/mouna/provider-config.mjs'
 
 const saleTools = ['list_customers', 'list_products', 'list_sales', 'create_sale', 'record_sale_payment']
+
+test('GLM est le cerveau principal, CodeCraft le second, et GLM garde son URL /v4', () => {
+  const values = {
+    GLM_API_KEY: 'test-glm-key',
+    GLM_BASE_URL: 'https://api.z.ai/api/paas/v4',
+    GLM_MODEL: 'glm-5.3-flash',
+    CODECRAFT_API_KEY: 'test-codecraft-key',
+  }
+  const providers = createMounaProviders((name) => values[name])
+
+  assert.deepEqual(providers.map(({ name }) => name), ['GLM', 'CodeCraft'])
+  assert.equal(providers[0].baseUrl, 'https://api.z.ai/api/paas/v4')
+  assert.equal(providers[0].model, 'glm-5.3-flash')
+  assert.equal(providers[1].model, 'claude-sonnet-5')
+})
 
 const scenarios = [
   ['fr', 'Ajoute le produit TEST Mouna Café, prix d’achat 1000, prix de vente 1500, stock 8, seuil 2.', ['create_product']],
