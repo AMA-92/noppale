@@ -1,9 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Mic, MicOff, Send, X, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { supabase } from '../../supabase/config'
+import { appStorage } from '../../utils/storage'
+import { useUserPreferencesRealtime } from '../../hooks/useRealtime'
 
-const API_ENDPOINT = import.meta.env.VITE_MOUNA_API_URL || '/api/mouna'
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const MOUNA_LANGUAGES = {
+  fr: { name: 'Français', speechLocale: 'fr-FR', greeting: 'Bonjour.' },
+  ar: { name: 'العربية', speechLocale: 'ar-SA', greeting: 'مرحباً، كيف يمكنني مساعدتك؟' },
+  wo: { name: 'Wolof', speechLocale: 'wo-SN', greeting: 'Naka nga def? Lan nga bëgg ma la dimbali?' }
+}
+
+const getGreeting = (language) => MOUNA_LANGUAGES[language]?.greeting || MOUNA_LANGUAGES.fr.greeting
 
 const stripEmojiAndNoise = (text = '') => {
   return String(text)
@@ -55,7 +62,7 @@ const makeSpeechFriendlyText = (text = '') => {
   return clean
 }
 
-const isGreeting = (text = '') => /^(bonjour|salut|bonsoir|hello|hi)$/i.test(String(text).trim())
+const isGreeting = (text = '') => /^(bonjour|salut|bonsoir|hello|hi|salam|salaam|assalamu(?:\s+alaykum)?|naka nga def|nanga def|السلام عليكم|مرحبا|مرحباً)$/i.test(String(text).trim())
 
 const getGuidedFlow = (text = '') => {
   const value = String(text).toLowerCase().trim()
@@ -158,6 +165,7 @@ function MounaAssistant() {
   const [open, setOpen] = useState(false)
   const [listening, setListening] = useState(false)
   const [speaking, setSpeaking] = useState(false)
+  const [mounaLanguage, setMounaLanguage] = useState('fr')
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Bonjour.' }
@@ -165,38 +173,119 @@ function MounaAssistant() {
   const [busy, setBusy] = useState(false)
   const [inputMode, setInputMode] = useState('text')
   const recognitionRef = useRef(null)
+  const audioRef = useRef(null)
+  const guidedFlowRef = useRef(null)
+
+  const refreshMounaLanguage = useCallback(async () => {
+    try {
+      const preferences = await appStorage.getUserPreferences()
+      const nextLanguage = ['fr', 'ar', 'wo'].includes(preferences?.mouna_language)
+        ? preferences.mouna_language
+        : 'fr'
+      setMounaLanguage(nextLanguage)
+      setMessages((current) => current.length === 1 && current[0]?.role === 'assistant'
+        ? [{ role: 'assistant', content: getGreeting(nextLanguage) }]
+        : current)
+      if (nextLanguage !== 'fr') guidedFlowRef.current = null
+    } catch (error) {
+      console.error('Erreur de chargement de la langue de Mouna:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshMounaLanguage()
+  }, [refreshMounaLanguage])
+
+  useUserPreferencesRealtime(() => {
+    void refreshMounaLanguage()
+  })
 
   const stopSpeech = () => {
-    window.speechSynthesis?.cancel?.()
+    if (typeof window !== 'undefined') window.speechSynthesis?.cancel?.()
+    if (audioRef.current) {
+      audioRef.current.onended = null
+      audioRef.current.onerror = null
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      audioRef.current = null
+    }
     setSpeaking(false)
   }
 
-  const speak = (text) => {
-    if (!open || !('speechSynthesis' in window)) return
+  const speakInBrowser = (text, locale) => {
+    if (!('speechSynthesis' in window)) {
+      setSpeaking(false)
+      return
+    }
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = locale
+    utterance.rate = 0.86
+    utterance.pitch = 1.08
+    utterance.volume = 1
+    const localePrefix = locale.split('-')[0].toLowerCase()
+    const voices = window.speechSynthesis.getVoices()
+    utterance.voice = voices.find((voice) => voice.lang?.toLowerCase() === locale.toLowerCase())
+      || voices.find((voice) => voice.lang?.toLowerCase().startsWith(localePrefix))
+      || null
+    utterance.onstart = () => setSpeaking(true)
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = () => setSpeaking(false)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const speak = async (text) => {
+    if (!open || typeof window === 'undefined') return
     const raw = String(text || '').trim()
     if (!raw) return
 
     stopSpeech()
-    const shortText = raw.split(/(?<=[.!?])\s+/).find(Boolean) || raw
-    const spokenText = makeSpeechFriendlyText(shortText.slice(0, 220))
+    const locale = MOUNA_LANGUAGES[mounaLanguage]?.speechLocale || 'fr-FR'
+    const shortText = raw.split(/(?<=[.!?؟])\s+/).find(Boolean) || raw
+    const spokenText = (mounaLanguage === 'fr' ? makeSpeechFriendlyText(shortText) : stripEmojiAndNoise(shortText)).slice(0, 600)
+    if (!spokenText) {
+      setSpeaking(false)
+      return
+    }
 
-    const utterance = new SpeechSynthesisUtterance(spokenText)
-    utterance.lang = 'fr-FR'
-    utterance.rate = 0.82
-    utterance.pitch = 1.12
-    utterance.volume = 1
+    setSpeaking(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('tts', {
+        body: { text: spokenText, language: locale }
+      })
+      if (!error && data?.audio_base64) {
+        const audio = new Audio(`data:${data.mime_type || 'audio/wav'};base64,${data.audio_base64}`)
+        audioRef.current = audio
+        audio.onended = () => {
+          audioRef.current = null
+          setSpeaking(false)
+        }
+        audio.onerror = () => {
+          audioRef.current = null
+          speakInBrowser(spokenText, locale)
+        }
+        try {
+          await audio.play()
+          return
+        } catch {
+          audioRef.current = null
+        }
+      }
+    } catch (error) {
+      console.warn('Synthèse vocale serveur indisponible; utilisation de la voix du navigateur.')
+    }
 
-    utterance.onstart = () => setSpeaking(true)
-    utterance.onend = () => setSpeaking(false)
-    utterance.onerror = () => setSpeaking(false)
-
-    window.speechSynthesis.speak(utterance)
+    speakInBrowser(spokenText, locale)
   }
 
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) {
-      setMessages((m) => [...m, { role: 'assistant', content: "La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilise Chrome/Android ou le champ texte." }])
+      const unavailableMessages = {
+        fr: "La reconnaissance vocale n'est pas disponible dans ce navigateur. Utilise Chrome/Android ou le champ texte.",
+        ar: 'التعرّف على الصوت غير متاح في هذا المتصفح. استخدم متصفحاً آخر أو اكتب رسالتك.',
+        wo: 'Jàngat ci mikro bi amul ci navigateur bii. Jëfandikool beneen navigateur walla bind sa bataaxal.'
+      }
+      setMessages((m) => [...m, { role: 'assistant', content: unavailableMessages[mounaLanguage] || unavailableMessages.fr }])
       return
     }
 
@@ -210,7 +299,7 @@ function MounaAssistant() {
     stopSpeech()
     if (recognitionRef.current) recognitionRef.current.abort()
     const recognition = new SpeechRecognition()
-    recognition.lang = 'fr-FR'
+    recognition.lang = MOUNA_LANGUAGES[mounaLanguage]?.speechLocale || 'fr-FR'
     recognition.interimResults = false
     recognition.continuous = false
     recognition.onstart = () => setListening(true)
@@ -238,18 +327,25 @@ function MounaAssistant() {
     stopSpeech()
   }, [])
 
-  const handleAction = (action, replyText) => {
+  const handleAction = (action) => {
     if (!action) return
 
     if (action.type === 'invoice_followup') {
-      const match = replyText.match(/WhatsApp|whatsapp|télécharger|telecharger/i)
-      if (match) {
-        setMessages((m) => [...m, { role: 'assistant', content: 'Tu peux répondre avec “télécharger” pour l’export PDF, ou “WhatsApp 221771234567” pour l’envoyer directement.' }])
+      const followUps = {
+        fr: 'Tu peux répondre avec « télécharger » pour l’export PDF, ou « WhatsApp 221771234567 » pour l’envoyer directement.',
+        ar: 'يمكنك الرد بكلمة «تنزيل» لتصدير PDF، أو «WhatsApp 221771234567» لإرساله مباشرة.',
+        wo: 'Mën nga tontu « télécharger » ngir génne PDF, walla « WhatsApp 221771234567 » ngir yónnee ko.'
       }
+      setMessages((m) => [...m, { role: 'assistant', content: followUps[mounaLanguage] || followUps.fr }])
     }
 
     if (action.type === 'report_followup') {
-      setMessages((m) => [...m, { role: 'assistant', content: 'Je peux aussi préparer le rapport PDF ou le partager sur WhatsApp. Réponds par “télécharger” ou “WhatsApp 221771234567”.' }])
+      const followUps = {
+        fr: 'Je peux aussi préparer le rapport PDF ou le partager sur WhatsApp. Réponds par « télécharger » ou « WhatsApp 221771234567 ».',
+        ar: 'يمكنني أيضاً إعداد التقرير بصيغة PDF أو مشاركته عبر WhatsApp. أجب «تنزيل» أو «WhatsApp 221771234567».',
+        wo: 'Mën naa itam waajal raport PDF bi walla séddoo ko ci WhatsApp. Tontul « télécharger » walla « WhatsApp 221771234567 ».'
+      }
+      setMessages((m) => [...m, { role: 'assistant', content: followUps[mounaLanguage] || followUps.fr }])
     }
   }
 
@@ -280,7 +376,9 @@ function MounaAssistant() {
 
     if (isGreeting(text)) {
       setInput('')
-      setMessages((m) => [...m, { role: 'assistant', content: 'Bonjour.' }])
+      const greeting = getGreeting(mounaLanguage)
+      setMessages((m) => [...m, { role: 'assistant', content: greeting }])
+      if (isVoiceInput) void speak(greeting)
       return
     }
 
@@ -297,7 +395,9 @@ function MounaAssistant() {
 
       if (flow.index < flow.questions.length) {
         setInput('')
-        setMessages((m) => [...m, { role: 'assistant', content: flow.questions[flow.index] }])
+        const question = flow.questions[flow.index]
+        setMessages((m) => [...m, { role: 'assistant', content: question }])
+        if (isVoiceInput) void speak(question)
         return
       }
 
@@ -308,11 +408,12 @@ function MounaAssistant() {
       return sendMessage(finalPrompt)
     }
 
-    const flow = getGuidedFlow(text)
+    const flow = mounaLanguage === 'fr' ? getGuidedFlow(text) : null
     if (flow) {
       guidedFlowRef.current = { ...flow, index: 0, values: {} }
       setInput('')
       setMessages((m) => [...m, { role: 'assistant', content: flow.questions[0] }])
+      if (isVoiceInput) void speak(flow.questions[0])
       return
     }
 
@@ -321,34 +422,27 @@ function MounaAssistant() {
     setBusy(true)
 
     try {
-      const headers = {
-        'Content-Type': 'application/json'
-      }
-
-      if (SUPABASE_ANON_KEY) {
-        headers.apikey = SUPABASE_ANON_KEY
-      }
-
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`
-      } else if (SUPABASE_ANON_KEY) {
-        headers.Authorization = `Bearer ${SUPABASE_ANON_KEY}`
-      }
-
-      const response = await fetch(API_ENDPOINT, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('mouna', {
+        body: {
           message: text,
           history: messages.slice(-10)
-        })
+        }
       })
-
-      if (!response.ok) throw new Error(`Mouna API: ${response.status}`)
-      const data = await response.json()
+      if (error) {
+        const status = error.context?.status
+        let serviceMessage = ''
+        if (error.context instanceof Response) {
+          try {
+            const payload = await error.context.clone().json()
+            serviceMessage = payload?.error || ''
+          } catch {
+            // Le message générique ci-dessous suffit si la réponse n'est pas JSON.
+          }
+        }
+        throw new Error(serviceMessage || `Mouna API: ${status || error.message || 'erreur réseau'}`)
+      }
       const reply = data.reply || 'Je n’ai pas reçu de réponse exploitable.'
-      handleAction(data.action, reply)
+      handleAction(data.action)
 
       if (/télécharger|telecharger/i.test(text)) {
         handleDownloadText('rapport-mouna.txt', `${reply}\n\nGénéré par Mouna.`)
@@ -362,9 +456,14 @@ function MounaAssistant() {
       setMessages((m) => [...m, { role: 'assistant', content: reply }])
       if (isVoiceInput) speak(reply)
     } catch (error) {
-      const message = 'Mouna est bien installée, mais son moteur IA n’est pas encore connecté. Consulte le guide MOUNA-GUIDE.md pour configurer le serveur IA.'
+      const errorMessages = {
+        fr: 'Je n’arrive pas à joindre le moteur de Mouna. Vérifie ta connexion ou reconnecte-toi, puis réessaie.',
+        ar: 'تعذّر على منى الاتصال بمحرك الذكاء الاصطناعي. تحقق من الاتصال أو سجّل الدخول مجدداً ثم حاول مرة أخرى.',
+        wo: 'Mouna mënul jokkoo ak xel mu màndarga. Seetal sa jokkoo walla duggwaat, nga jéemaat.'
+      }
+      const message = errorMessages[mounaLanguage] || errorMessages.fr
       setMessages((m) => [...m, { role: 'assistant', content: message }])
-      console.error(error)
+      console.error('Erreur Edge Function Mouna:', error)
     } finally {
       setBusy(false)
     }
@@ -390,7 +489,7 @@ function MounaAssistant() {
           <div className="h-80 space-y-3 overflow-y-auto p-4 bg-slate-50">
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}>
+                <div dir="auto" lang={message.role === 'assistant' ? mounaLanguage : undefined} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}>
                   {message.content}
                 </div>
               </div>
@@ -403,7 +502,7 @@ function MounaAssistant() {
               <button onClick={startListening} disabled={busy} className={`rounded-xl p-3 text-white shadow ${listening ? 'bg-red-500' : 'bg-violet-600'} disabled:opacity-50`} aria-label="Parler">
                 {listening ? <MicOff size={19} /> : <Mic size={19} />}
               </button>
-              <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} placeholder="Parle à Mouna…" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-indigo-400" />
+              <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && sendMessage()} placeholder={mounaLanguage === 'ar' ? 'تحدث إلى منى…' : mounaLanguage === 'wo' ? 'Wax ak Mouna…' : 'Parle à Mouna…'} className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-indigo-400" />
               <button onClick={() => sendMessage()} disabled={!input.trim() || busy} className="rounded-xl bg-slate-900 p-3 text-white disabled:opacity-40" aria-label="Envoyer"><Send size={18} /></button>
             </div>
             <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
@@ -415,7 +514,7 @@ function MounaAssistant() {
       )}
 
       {!open && (
-        <button onClick={() => setOpen(true)} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-4 font-bold text-white shadow-2xl shadow-indigo-500/30 transition hover:scale-105" aria-label="Ouvrir Mouna">
+        <button onClick={() => { void refreshMounaLanguage(); setOpen(true) }} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-4 font-bold text-white shadow-2xl shadow-indigo-500/30 transition hover:scale-105" aria-label="Ouvrir Mouna">
           <Sparkles size={20} /> Mouna
         </button>
       )}

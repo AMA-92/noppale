@@ -1229,17 +1229,23 @@ export const appStorage = {
         .eq('user_id', userId)
         .maybeSingle()
 
+      const updates = { updated_at: new Date().toISOString() }
+      if ('language' in preferences) updates.language = preferences.language || 'fr'
+      if ('currency' in preferences) updates.currency = preferences.currency || 'FCFA'
+      if ('darkMode' in preferences || 'dark_mode' in preferences) {
+        updates.dark_mode = preferences.darkMode ?? preferences.dark_mode ?? false
+      }
+      if ('notifications' in preferences) updates.notifications = preferences.notifications !== false
+      const mounaLanguage = preferences.mounaLanguage ?? preferences.mouna_language
+      if (mounaLanguage !== undefined) {
+        updates.mouna_language = ['fr', 'ar', 'wo'].includes(mounaLanguage) ? mounaLanguage : 'fr'
+      }
+
       if (existing) {
         // Mettre à jour
         const { data, error } = await supabase
           .from('user_preferences')
-          .update({
-            language: preferences.language || 'fr',
-            currency: preferences.currency || 'FCFA',
-            dark_mode: preferences.darkMode || false,
-            notifications: preferences.notifications !== false,
-            updated_at: new Date().toISOString()
-          })
+          .update(updates)
           .eq('id', existing.id)
           .select()
           .single()
@@ -1254,8 +1260,9 @@ export const appStorage = {
             user_id: userId,
             language: preferences.language || 'fr',
             currency: preferences.currency || 'FCFA',
-            dark_mode: preferences.darkMode || false,
-            notifications: preferences.notifications !== false
+            dark_mode: preferences.darkMode ?? preferences.dark_mode ?? false,
+            notifications: preferences.notifications !== false,
+            mouna_language: ['fr', 'ar', 'wo'].includes(mounaLanguage) ? mounaLanguage : 'fr'
           })
           .select()
           .single()

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { authStorage, usersStorage, appStorage } from '../utils/storage'
-import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload, Mail, Phone, Users } from 'lucide-react'
+import { Settings as SettingsIcon, User, Bell, Shield, Database, LogOut, X, Eye, EyeOff, Trash2, Moon, Sun, Store, Upload, Mail, Phone, Users, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useI18n } from '../hooks/useI18n.jsx'
 import { useShopInfoRealtime, useUserPreferencesRealtime, useSecretCodeRealtime } from '../hooks/useRealtime.jsx'
@@ -50,7 +50,8 @@ export default function Settings() {
     darkMode: document.documentElement.classList.contains('dark'),
     notifications: true,
     language: language,
-    currency: currency
+    currency: currency,
+    mounaLanguage: 'fr'
   })
   const [shopInfo, setShopInfo] = useState({
     name: '',
@@ -108,7 +109,8 @@ export default function Settings() {
           darkMode: savedPreferences.dark_mode || false,
           notifications: savedPreferences.notifications !== false,
           language: savedPreferences.language || 'fr',
-          currency: savedPreferences.currency || 'FCFA'
+          currency: savedPreferences.currency || 'FCFA',
+          mounaLanguage: savedPreferences.mouna_language || 'fr'
         }
         setPreferences(prefs)
         applyPreferences(prefs)
@@ -117,7 +119,8 @@ export default function Settings() {
           darkMode: document.documentElement.classList.contains('dark'),
           notifications: true,
           language: language,
-          currency: currency
+          currency: currency,
+          mounaLanguage: 'fr'
         })
       }
     } catch (error) {
@@ -798,6 +801,41 @@ export default function Settings() {
                   </div>
                 </div>
               </div>
+
+              <fieldset>
+                <legend className="font-semibold text-slate-800 mb-2">Changer la langue de Mouna</legend>
+                <p className="text-sm text-slate-500 mb-4">
+                  Choisissez la langue de ses réponses et de sa voix. La langue générale de l’application ne change pas.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[
+                    { code: 'fr', label: 'Français' },
+                    { code: 'ar', label: 'العربية' },
+                    { code: 'wo', label: 'Wolof' }
+                  ].map((option) => (
+                    <label
+                      key={option.code}
+                      className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                        preferences.mounaLanguage === option.code
+                          ? 'border-violet-500 bg-violet-50 ring-1 ring-violet-500'
+                          : 'border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="mouna-language"
+                        value={option.code}
+                        checked={preferences.mounaLanguage === option.code}
+                        onChange={() => setPreferences({ ...preferences, mounaLanguage: option.code })}
+                        className="h-4 w-4 accent-violet-600"
+                      />
+                      <span lang={option.code} dir={option.code === 'ar' ? 'rtl' : 'ltr'} className="font-medium text-slate-800">
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
 
               <div className="flex gap-3 pt-4">
                 <button
