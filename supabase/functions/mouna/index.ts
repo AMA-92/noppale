@@ -21,6 +21,7 @@ import {
   localizeMounaReply,
   localizePendingConfirmation,
 } from "./mouna-i18n.mjs";
+import { formatMounaStockReply } from "./db-contracts.mjs";
 const U = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers":
@@ -530,6 +531,20 @@ Y(async (e) => {
               ...pendingResponse,
               reply: localizePendingConfirmation(N, v.pendingConfirmation),
             });
+          }
+          if (D === "get_product_stock") {
+            let stockData = null;
+            try {
+              stockData = JSON.parse(v?.content || "null");
+            } catch {
+              stockData = null;
+            }
+            const quickReply = formatMounaStockReply(
+              N,
+              stockData,
+              H.product_name,
+            );
+            if (quickReply) return p({ reply: quickReply, ok: !0 });
           }
           r.push({
             role: "tool",

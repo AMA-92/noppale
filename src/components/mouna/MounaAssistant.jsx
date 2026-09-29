@@ -12,6 +12,7 @@ import {
 import {
   getMounaErrorMessage,
   getMounaGreeting,
+  getMounaProgressMessage,
 } from '../../utils/mouna-ui.mjs'
 
 const MOUNA_LANGUAGES = {
@@ -103,6 +104,7 @@ function MounaAssistant() {
   const [operationState, setOperationState] = useState(null)
   const recognitionRef = useRef(null)
   const audioRef = useRef(null)
+  const voiceListRef = useRef([])
 
   const refreshMounaLanguage = useCallback(async () => {
     try {
@@ -131,6 +133,17 @@ function MounaAssistant() {
     void refreshMounaLanguage()
   }, [refreshMounaLanguage])
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return undefined
+    const synthesis = window.speechSynthesis
+    const cacheVoices = () => {
+      voiceListRef.current = synthesis.getVoices() || []
+    }
+    cacheVoices()
+    synthesis.addEventListener?.('voiceschanged', cacheVoices)
+    return () => synthesis.removeEventListener?.('voiceschanged', cacheVoices)
+  }, [])
+
   useUserPreferencesRealtime(() => {
     void refreshMounaLanguage()
   })
@@ -154,17 +167,21 @@ function MounaAssistant() {
     }
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = locale
-    utterance.rate = 0.86
+    utterance.rate = 0.96
     utterance.pitch = 1.08
     utterance.volume = 1
     const localePrefix = locale.split('-')[0].toLowerCase()
-    const voices = window.speechSynthesis.getVoices()
+    const voices = voiceListRef.current.length
+      ? voiceListRef.current
+      : window.speechSynthesis.getVoices()
+    voiceListRef.current = voices
     utterance.voice = voices.find((voice) => voice.lang?.toLowerCase() === locale.toLowerCase())
       || voices.find((voice) => voice.lang?.toLowerCase().startsWith(localePrefix))
       || null
     utterance.onstart = () => setSpeaking(true)
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
+    window.speechSynthesis.resume?.()
     window.speechSynthesis.speak(utterance)
   }
 
@@ -377,6 +394,7 @@ function MounaAssistant() {
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: text }])
     setBusy(true)
+    if (isVoiceInput) void speak(getMounaProgressMessage(mounaLanguage), mounaLanguage)
 
     try {
       const { data, error } = await supabase.functions.invoke('mouna', {
