@@ -1,6 +1,5 @@
 import { serve as Y } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient as z } from "https://esm.sh/@supabase/supabase-js@2";
-import { GoogleGenAI as X } from "https://esm.sh/@google/genai@2.24.0";
 import {
   MOUNA_TOOLS as C,
   executeMounaTool as k,
@@ -16,10 +15,7 @@ import {
   isMounaWolofMessage,
   selectMounaToolNames,
 } from "./intent-tools.mjs";
-import {
-  createMounaProviders,
-  getMounaGlmCodingPlanBaseUrl,
-} from "./provider-config.mjs";
+import { createMounaProviders } from "./provider-config.mjs";
 import {
   localizeConfirmedActionReply,
   localizeMounaReply,
@@ -36,9 +32,6 @@ const U = {
       status: n,
       headers: { ...U, "Content-Type": "application/json" },
     }),
-  q =
-    Deno.env.get("GEMINI_MODEL") ||
-    "gemini-2.5-flash-native-audio-preview-12-2025",
   oe = () => createMounaProviders((name) => Deno.env.get(name)),
   E = new Map(),
   se = 2,
@@ -64,37 +57,6 @@ const U = {
     ((n.failures += 1),
       n.failures >= se &&
         ((n.openedUntil = Date.now() + ae), (n.halfOpen = !1)));
-  },
-  ue = async (e) => {
-    const n = Deno.env.get("GEMINI_API_KEY");
-    if (!n)
-      throw new Error(
-        "GEMINI_API_KEY n\u2019est pas configur\xE9e c\xF4t\xE9 serveur Supabase.",
-      );
-    const t = Date.now(),
-      a = await new X({
-        apiKey: n,
-        httpOptions: { apiVersion: "v1alpha" },
-      }).tokens.create({
-        config: {
-          uses: 1,
-          expireTime: new Date(t + 1800 * 1e3).toISOString(),
-          newSessionExpireTime: new Date(t + 60 * 1e3).toISOString(),
-          liveConnectConstraints: {
-            model: q,
-            config: {
-              responseModalities: ["AUDIO"],
-              inputAudioTranscription: {},
-              outputAudioTranscription: {},
-              sessionResumption: {},
-              systemInstruction: `Tu es Mouna, l\u2019agent vocal de gestion de la boutique Noppal\xE9. ${e} N\u2019invente jamais une donn\xE9e. Utilise exclusivement les outils Mouna. Les montants restent en chiffres.`,
-            },
-          },
-        },
-      });
-    if (!a?.name)
-      throw new Error("Gemini Live n\u2019a pas d\xE9livr\xE9 de jeton.");
-    return a.name;
   },
   le = (e) =>
     e === 408 ||
@@ -279,36 +241,6 @@ Y(async (e) => {
           : N === "ar"
             ? "R\xE9ponds principalement en arabe. Ne traduis jamais les noms de produits, clients, unit\xE9s, montants ou devises; garde les prix et nombres en chiffres."
             : "R\xE9ponds en fran\xE7ais.";
-    if (t?.live_token === !0) {
-      const r = await ue(T);
-      return p({ token: r, model: q, expires_in_seconds: 1800 });
-    }
-    if (t?.live_tool_call && typeof t.live_tool_call == "object") {
-      const r = t.live_tool_call;
-      if (typeof r.name != "string" || !C.some((c) => c.name === r.name))
-        return p({ error: "Outil Live Mouna non autoris\xE9." }, 400);
-      const i = await k(
-        r.name,
-        r.input && typeof r.input == "object" ? r.input : {},
-        {
-          userClient: a.userClient,
-          userId: a.user.id,
-          requestId:
-            typeof t?.request_id == "string" &&
-            /^[0-9a-f-]{36}$/i.test(t.request_id)
-              ? t.request_id
-              : null,
-          currency_code: d,
-          pendingCreated: null,
-        },
-      );
-      let o = i?.content ?? i;
-      if (typeof o == "string")
-        try {
-          o = JSON.parse(o);
-        } catch {}
-      return p({ ok: !0, result: o });
-    }
     if (t?.confirm_action_id && t?.cancel_action_id)
       return p(
         {
@@ -508,55 +440,6 @@ Y(async (e) => {
                 ...(upstreamCode ? { upstream_error_code: upstreamCode } : {}),
                 fallback_used: c,
               });
-              const codingPlanBase =
-                u.name === "GLM" && l.status === 429 && upstreamCode === "1113"
-                  ? getMounaGlmCodingPlanBaseUrl(u.baseUrl)
-                  : null;
-              if (codingPlanBase) {
-                const codingStarted = Date.now();
-                try {
-                  const codingResponse = await he(
-                    codingPlanBase,
-                    u.apiKey,
-                    { ...r, model: u.model },
-                  );
-                  const codingLatency = Date.now() - codingStarted;
-                  if (codingResponse.ok)
-                    return (
-                      ce(u.name),
-                      A({
-                        provider: u.name,
-                        endpoint_variant: "coding_plan",
-                        request_id: i,
-                        status: codingResponse.status,
-                        latency: codingLatency,
-                        fallback_used: c,
-                      }),
-                      { response: codingResponse, brain: u }
-                    );
-                  const codingCode = await providerErrorCode(codingResponse);
-                  A({
-                    provider: u.name,
-                    endpoint_variant: "coding_plan",
-                    request_id: i,
-                    status: codingResponse.status,
-                    latency: codingLatency,
-                    error_code: `http_${codingResponse.status}`,
-                    ...(codingCode ? { upstream_error_code: codingCode } : {}),
-                    fallback_used: c,
-                  });
-                } catch {
-                  A({
-                    provider: u.name,
-                    endpoint_variant: "coding_plan",
-                    request_id: i,
-                    status: 0,
-                    latency: Date.now() - codingStarted,
-                    error_code: "network_or_timeout",
-                    fallback_used: c,
-                  });
-                }
-              }
               if (l.status === 401 || l.status === 403) {
                 S(u.name);
                 break;
