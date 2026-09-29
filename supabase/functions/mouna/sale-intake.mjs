@@ -50,16 +50,11 @@ export function nextSaleIntakeQuestion(state) {
       return "Quel produit voulez-vous vendre ?";
     return `Combien d’unités de « ${String(incomplete.product_name).trim()} » voulez-vous vendre ?`;
   }
-  if (state.awaiting_next_product === true)
+  if (state.awaiting_next_product === true || state.items_complete === false)
     return "Quel autre produit voulez-vous ajouter ?";
   if (state.items_complete !== true) return "Est-ce tout pour cette vente ?";
-  if (state.sale_total_confirmed === false)
-    return "D’accord, cette vente est annulée et ne sera pas enregistrée.";
-  if (state.sale_total_confirmed !== true) {
-    return `Le panier pour ${customerName}, d’un total de ${money(state.total)} ${currencyLabel(state.currency_code || state.currency_label)}, est prêt. Voulez-vous enregistrer cette vente ?`;
-  }
   if (!state.payment_method)
-    return "Comment le client souhaite-t-il payer : espèces, Mobile Money ou à crédit ?";
+    return `Total du panier : ${money(state.total)} ${currencyLabel(state.currency_code || state.currency_label)}. Quel mode de paiement : espèces, Wave, Orange Money, Mobile Money, carte bancaire ou crédit ?`;
 
   const method = state.payment_method;
   const payments = Array.isArray(state.payments) ? state.payments : [];

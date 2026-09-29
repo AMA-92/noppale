@@ -12,7 +12,6 @@ import {
 import {
   getMounaErrorMessage,
   getMounaGreeting,
-  getMounaProgressMessage
 } from '../../utils/mouna-ui.mjs'
 
 const MOUNA_LANGUAGES = {
@@ -84,6 +83,7 @@ const makeSpeechFriendlyText = (text = '') => {
 }
 
 const isGreeting = (text = '') => /^(bonjour|salut|bonsoir|hello|hi|salam|salaam|assalamu(?:\s+alaykum)?|naka nga def|nanga def|السلام عليكم|مرحبا|مرحباً)$/i.test(String(text).trim())
+const isActiveFlowCancellation = (text = '') => /^(?:annule|annuler|stop|laisse tomber|j['’]abandonne|non|إلغاء|ألغ|nekkal|deedeet)(?:[.!?,;\s]|$)/iu.test(String(text).trim())
 
 function MounaAssistant() {
   const [open, setOpen] = useState(false)
@@ -99,6 +99,8 @@ function MounaAssistant() {
   const [inputMode, setInputMode] = useState('text')
   const [pendingConfirmation, setPendingConfirmation] = useState(null)
   const [saleState, setSaleState] = useState(null)
+  const [productState, setProductState] = useState(null)
+  const [operationState, setOperationState] = useState(null)
   const recognitionRef = useRef(null)
   const audioRef = useRef(null)
 
@@ -267,28 +269,6 @@ function MounaAssistant() {
     stopSpeech()
   }, [])
 
-  const handleAction = (action) => {
-    if (!action) return
-
-    if (action.type === 'invoice_followup') {
-      const followUps = {
-        fr: 'Tu peux répondre avec « télécharger » pour l’export PDF, ou « WhatsApp 221771234567 » pour l’envoyer directement.',
-        ar: 'يمكنك الرد بكلمة «تنزيل» لتصدير PDF، أو «WhatsApp 221771234567» لإرساله مباشرة.',
-        wo: 'Mën nga tontu « télécharger » ngir génne PDF, walla « WhatsApp 221771234567 » ngir yónnee ko.'
-      }
-      setMessages((m) => [...m, { role: 'assistant', content: followUps[mounaLanguage] || followUps.fr }])
-    }
-
-    if (action.type === 'report_followup') {
-      const followUps = {
-        fr: 'Je peux aussi préparer le rapport PDF ou le partager sur WhatsApp. Réponds par « télécharger » ou « WhatsApp 221771234567 ».',
-        ar: 'يمكنني أيضاً إعداد التقرير بصيغة PDF أو مشاركته عبر WhatsApp. أجب «تنزيل» أو «WhatsApp 221771234567».',
-        wo: 'Mën naa itam waajal raport PDF bi walla séddoo ko ci WhatsApp. Tontul « télécharger » walla « WhatsApp 221771234567 ».'
-      }
-      setMessages((m) => [...m, { role: 'assistant', content: followUps[mounaLanguage] || followUps.fr }])
-    }
-  }
-
   const handleWhatsAppShare = (phoneNumber, messageText) => {
     const clean = String(phoneNumber || '').replace(/\D/g, '')
     if (!clean) return
@@ -340,6 +320,8 @@ function MounaAssistant() {
       setMessages((m) => [...m, { role: 'assistant', content: reply }])
       setPendingConfirmation(null)
       setSaleState(null)
+      setProductState(null)
+      setOperationState(null)
       void speak(reply)
     } catch (error) {
       const message = getMounaErrorMessage(mounaLanguage, error)
@@ -378,12 +360,22 @@ function MounaAssistant() {
       return
     }
 
+    if ((productState || operationState) && isActiveFlowCancellation(text)) {
+      const cancelled = {
+        fr: 'D’accord, demande annulée.',
+        ar: 'حسنًا، أُلغيت العملية.',
+        wo: 'Baax na, nekk na.',
+      }[mounaLanguage] || 'D’accord, demande annulée.'
+      setInput('')
+      setProductState(null)
+      setOperationState(null)
+      setMessages((m) => [...m, { role: 'user', content: text }, { role: 'assistant', content: cancelled }])
+      void speak(cancelled)
+      return
+    }
+
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: text }])
-    const progressId = globalThis.crypto?.randomUUID?.() || `mouna-${Date.now()}`
-    const progressMessage = getMounaProgressMessage(mounaLanguage)
-    setMessages((m) => [...m, { id: progressId, role: 'assistant', content: progressMessage }])
-    void speak(progressMessage, mounaLanguage)
     setBusy(true)
 
     try {
@@ -391,7 +383,9 @@ function MounaAssistant() {
         body: makeMounaRequestBody({
           message: text,
           history: messages,
-          saleState
+          saleState,
+          productState,
+          operationState
         })
       })
       if (error) {
@@ -413,15 +407,18 @@ function MounaAssistant() {
       const reply = data.reply || 'Je n’ai pas reçu de réponse exploitable.'
       const pending = getMounaPendingConfirmation(data)
       setPendingConfirmation(pending)
+      setProductState(data?.product_state && typeof data.product_state === 'object' && !Array.isArray(data.product_state)
+        ? data.product_state
+        : null)
+      setOperationState(data?.operation_state && typeof data.operation_state === 'object' && Array.isArray(data.operation_state.tools)
+        ? data.operation_state
+        : null)
       if (data?.sale_state && typeof data.sale_state === 'object' && !Array.isArray(data.sale_state)) {
         setSaleState(data.sale_state)
       } else if (pending) {
         setSaleState(null)
       }
-      setMessages((m) => m.map((message) => message.id === progressId
-        ? { ...message, content: reply }
-        : message))
-      handleAction(data.action)
+      setMessages((m) => [...m, { role: 'assistant', content: reply }])
 
       if (/télécharger|telecharger/i.test(text)) {
         handleDownloadText('rapport-mouna.txt', `${reply}\n\nGénéré par Mouna.`)
@@ -435,9 +432,7 @@ function MounaAssistant() {
       void speak(reply)
     } catch (error) {
       const message = getMounaErrorMessage(mounaLanguage, error)
-      setMessages((m) => m.map((item) => item.id === progressId
-        ? { ...item, content: message }
-        : item))
+      setMessages((m) => [...m, { role: 'assistant', content: message }])
       void speak(message)
       console.error('Erreur Edge Function Mouna:', error)
     } finally {
