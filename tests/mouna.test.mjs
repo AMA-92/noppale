@@ -70,6 +70,14 @@ test('la réponse de stock est générée sans second appel IA et reste localis�
   assert.match(formatMounaStockReply('fr', { found: false, candidates: ['Sucre blanc'] }, 'sucre'), /Voulez-vous dire/u)
 })
 
+test('les questions générales de stock et de prix sont routées vers la base', () => {
+  assert.deepEqual(selectMounaToolNames('Quel est mon stock ?'), ['list_products'])
+  assert.deepEqual(selectMounaToolNames('Quel est le stock de Chargeur ?'), ['get_product_stock'])
+  assert.deepEqual(selectMounaToolNames('Quel est le prix du Chargeur ?'), ['list_products'])
+  assert.deepEqual(selectMounaToolNames('Combien coûte le Chargeur ?'), ['list_products'])
+  assert.deepEqual(selectMounaToolNames('Modifie le prix de vente du Chargeur à 7000.'), ['list_products', 'update_product'])
+})
+
 test('le modèle CodeCraft peut être configuré et les fournisseurs secondaires ne remplacent jamais CodeCraft', () => {
   const values = {
     CODECRAFT_API_KEY: 'test-codecraft-key',

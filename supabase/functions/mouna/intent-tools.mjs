@@ -29,9 +29,11 @@ export function selectMounaToolNames(message, history = [], { hasSaleState = fal
     && !/\b(depense|frais|charge)\b/.test(text)
   if (stockMutation) return ['list_products', 'adjust_stock']
 
+  const stockOverviewQuestion = /\b(?:quel(?:le)? est|donne(?:-moi| moi)|montre(?:-moi| moi)|affiche)\s+(?:mon|le|la|les)?\s*(?:stock|inventaire)\b(?!\s+(?:de|du|pour|d'|des)\b)/.test(text)
   const stockQuestion = /\b(stock (?:de|du|d'|pour)|reste|restant|quantite|combien.*(sucre|produit|unite))\b/.test(text)
     || (/\bnata\b/.test(text) && /\b(?:des|stock)\b/.test(text))
     || /(?:كم بقي|كم المتبقي|ما كمية|كمية المنتج|ما هو المخزون|كم وحدة متاحة)/u.test(raw)
+  if (stockOverviewQuestion) return ['list_products']
   if (stockQuestion) return ['get_product_stock']
 
   if (/(chiffre d'affaires|chiffre affaire|recette|ventes? aujourd|ventes? du mois|tableau de bord|indicateurs)/.test(text)
@@ -43,8 +45,11 @@ export function selectMounaToolNames(message, history = [], { hasSaleState = fal
     || /\bdu\s+\d{1,2}\b.*\bau\s+\d{1,2}\b/u.test(text)
     || /(?:تقرير|ملخص الفترة|من .* إلى)/u.test(raw)) return ['read_period_summary']
 
-  const productPriceQuery = /\b(?:prixu|prix bi)\b/.test(text)
-    && !/\b(soppi|modif(?:ie|ier|ication)?|change(?:r)?|mise a jour)\b/.test(text)
+  const productPriceQuery = (
+    /\b(?:prixu|prix bi)\b/.test(text)
+    || /\bprix\s+(?:du|de la|de l'|des|d')\b/.test(text)
+    || /\bcombien\s+(?:co[uû]te|vaut)\b/.test(text)
+  ) && !/\b(soppi|modif(?:ie|ier|ication)?|change(?:r)?|mise a jour)\b/.test(text)
   if (productPriceQuery) return ['list_products']
 
   const hasProduct = /\b(produit|produits|article|articles|marchandise|reference)\b/.test(text)
@@ -58,6 +63,9 @@ export function selectMounaToolNames(message, history = [], { hasSaleState = fal
     || /(?:احذف|حذف|إزالة|ازالة)/u.test(raw)
   const adjustStockAction = /\b(ajout(?:e|er)?|augmente|diminue|retire|ajuster|corrige)\b/.test(text)
     || /(?:زد|زِد|أنقص|انقص|عدّل المخزون|عدل المخزون)/u.test(raw)
+  const explicitPriceUpdate = /\b(modif(?:ie|ier|ication)?|change(?:r)?|mise a jour|soppi)\b/.test(text)
+    && /\bprix\s+de\s+vente\b/.test(text)
+  if (explicitPriceUpdate) return ['list_products', 'update_product']
 
   // “Prix de vente” is a product-price field, not a request to record a sale.
   const isPriceChange = hasProduct && updateAction
