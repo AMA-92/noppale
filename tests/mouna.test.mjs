@@ -29,12 +29,14 @@ test('GLM est le cerveau principal, CodeCraft le second, et GLM garde son URL /v
     GLM_BASE_URL: 'https://api.z.ai/api/paas/v4',
     GLM_MODEL: 'glm-5.3-flash',
     CODECRAFT_API_KEY: 'test-codecraft-key',
+    CODECRAFT_BASE_URL: 'https://www.codecraftapi.com/v1',
   }
   const providers = createMounaProviders((name) => values[name])
 
   assert.deepEqual(providers.map(({ name }) => name), ['GLM', 'CodeCraft'])
   assert.equal(providers[0].baseUrl, 'https://api.z.ai/api/paas/v4')
   assert.equal(providers[0].model, 'glm-5.3-flash')
+  assert.equal(providers[1].baseUrl, 'https://codecraftapi.com/v1')
   assert.equal(providers[1].model, 'claude-sonnet-5')
 })
 

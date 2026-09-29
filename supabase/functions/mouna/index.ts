@@ -205,6 +205,17 @@ const U = {
       }),
     );
   },
+  providerErrorCode = async (response) => {
+    try {
+      const body = await response.clone().json();
+      const code = body?.error?.code ?? body?.code;
+      return typeof code === "string" || typeof code === "number"
+        ? String(code).slice(0, 40)
+        : null;
+    } catch {
+      return null;
+    }
+  },
   x = (e) => new Promise((n) => setTimeout(n, e));
 Y(async (e) => {
   if (e.method === "OPTIONS") return new Response("ok", { headers: U });
@@ -467,18 +478,18 @@ Y(async (e) => {
                   }),
                   { response: l, brain: u }
                 );
-              if (
-                (o.push({ name: u.name, status: l.status }),
-                A({
-                  provider: u.name,
-                  request_id: i,
-                  status: l.status,
-                  latency: _,
-                  error_code: `http_${l.status}`,
-                  fallback_used: c,
-                }),
-                l.status === 401 || l.status === 403)
-              ) {
+              const upstreamCode = await providerErrorCode(l);
+              o.push({ name: u.name, status: l.status });
+              A({
+                provider: u.name,
+                request_id: i,
+                status: l.status,
+                latency: _,
+                error_code: `http_${l.status}`,
+                ...(upstreamCode ? { upstream_error_code: upstreamCode } : {}),
+                fallback_used: c,
+              });
+              if (l.status === 401 || l.status === 403) {
                 S(u.name);
                 break;
               }
