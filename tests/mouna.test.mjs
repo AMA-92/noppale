@@ -19,7 +19,10 @@ import {
 } from '../src/utils/mouna-ui.mjs'
 import { getProductIntakeNextStep } from '../supabase/functions/mouna/product-intake.mjs'
 import { nextSaleIntakeQuestion } from '../supabase/functions/mouna/sale-intake.mjs'
-import { createMounaProviders } from '../supabase/functions/mouna/provider-config.mjs'
+import {
+  createMounaProviders,
+  getMounaGlmCodingPlanBaseUrl,
+} from '../supabase/functions/mouna/provider-config.mjs'
 
 const saleTools = ['list_customers', 'list_products', 'list_sales', 'create_sale', 'record_sale_payment']
 
@@ -36,8 +39,10 @@ test('GLM est le cerveau principal, CodeCraft le second, et GLM garde son URL /v
   assert.deepEqual(providers.map(({ name }) => name), ['GLM', 'CodeCraft'])
   assert.equal(providers[0].baseUrl, 'https://api.z.ai/api/paas/v4')
   assert.equal(providers[0].model, 'glm-5.3-flash')
+  assert.equal(getMounaGlmCodingPlanBaseUrl(providers[0].baseUrl), 'https://api.z.ai/api/coding/paas/v4')
   assert.equal(providers[1].baseUrl, 'https://codecraftapi.com/v1')
   assert.equal(providers[1].model, 'claude-sonnet-5')
+  assert.equal(getMounaGlmCodingPlanBaseUrl('https://example.com/v1'), null)
 })
 
 const scenarios = [

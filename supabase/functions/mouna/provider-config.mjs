@@ -8,6 +8,13 @@ export function normalizeMounaProviderBaseUrl(configured, fallback) {
   return `${baseUrl}/v1`
 }
 
+export function getMounaGlmCodingPlanBaseUrl(baseUrl) {
+  const value = String(baseUrl || '').replace(/\/+$/, '')
+  return value === 'https://api.z.ai/api/paas/v4'
+    ? 'https://api.z.ai/api/coding/paas/v4'
+    : null
+}
+
 export function createMounaProviders(getEnv) {
   const env = (name) => getEnv(name)
 
