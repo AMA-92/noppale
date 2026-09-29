@@ -12,7 +12,10 @@ import {
   makePendingConfirmationResponse as Q,
   runMounaTool as ee,
 } from "./agent-flow.mjs";
-import { selectMounaToolNames } from "./intent-tools.mjs";
+import {
+  isMounaWolofMessage,
+  selectMounaToolNames,
+} from "./intent-tools.mjs";
 import {
   createMounaProviders,
   getMounaGlmCodingPlanBaseUrl,
@@ -414,6 +417,14 @@ Y(async (e) => {
         "Ne donne les coordonn\xE9es d'un client que si elles sont explicitement demand\xE9es.",
         "Pour un nouveau produit, collecte dans l'ordre le nom, le prix d'achat, le prix de vente, le stock et le stock minimum. Réutilise toutes les valeurs données explicitement dans la demande ou les réponses précédentes; ne redemande pas une valeur connue et n'en déduis aucune. Demande seulement le premier champ manquant. Quand tout est fourni, affiche un récapitulatif exact avant de demander confirmation.",
         "Pour modifier un produit, demande ce qu'il faut changer si ce n'est pas précisé; résume les changements exacts et attends la confirmation. Pour supprimer, identifie le produit par son nom, puis demande confirmation avant l'action.",
+        ...(isMounaWolofMessage(s)
+          ? [
+              "Comprends le wolof oral et le mélange wolof/français; ignore les interjections sans perdre les noms, nombres, montants ni moyens de paiement.",
+              "Repères wolof: ‘yokk … ci stock bi’ augmente le stock; ‘bay/dindi … ci stock bi’ le diminue; ‘ñata … yi des?’ demande le stock; ‘jox ma prixu [produit]’ demande le prix; ‘defal vente bi’ lance une vente; ‘defal dépense’ lance une dépense.",
+              "Exemples courts: ‘Yokk 3 [produit] ci stock bi’ → adjust_stock (+3); ‘Bay 1 [produit] ci stock bi’ → adjust_stock (-1); ‘Ñata [produit] yi des?’ → get_product_stock; ‘Jox ma prixu [produit]’ → list_products.",
+              "Garde les nombres et montants exacts; si un nombre oral ou le sens d’une action est ambigu, pose une seule question au lieu de deviner. Les confirmations restent obligatoires pour toute écriture.",
+            ]
+          : []),
       ].join(`
 `),
       B = [

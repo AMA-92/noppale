@@ -1,6 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { selectMounaToolNames } from '../supabase/functions/mouna/intent-tools.mjs'
+import {
+  isMounaWolofMessage,
+  selectMounaToolNames,
+} from '../supabase/functions/mouna/intent-tools.mjs'
 import {
   localizeMounaReply,
   localizePendingConfirmation,
@@ -62,6 +65,39 @@ test('les neuf intentions de gestion sélectionnent les bons outils dans les tro
     const actual = selectMounaToolNames(message, [], { language })
     assert.deepEqual(actual, expected, `${language}: ${message}`)
   }
+})
+
+test('les repères du wolof et du code-switching sont détectés même si la réponse reste en français', () => {
+  assert.equal(isMounaWolofMessage('Yokk ñett iPhone 15 ci stock bi'), true)
+  assert.equal(isMounaWolofMessage('Jox ma prixu iPhone 13'), true)
+  assert.equal(isMounaWolofMessage('Ajoute trois unités au stock du produit'), false)
+})
+
+test('les formulations orales wolof du dataset routent vers les outils boutique attendus', () => {
+  const wolofDatasetScenarios = [
+    ['Yokk ñett iPhone 15 ci stock bi', ['list_products', 'adjust_stock']],
+    ['Bay benn Samsung A15 ci stock bi', ['list_products', 'adjust_stock']],
+    ['Mets fukk iPhone 13 dans le stock', ['list_products', 'adjust_stock']],
+    ['Ñata chargeur Type C yi des ?', ['get_product_stock']],
+    ['Jox ma prixu iPhone 13', ['list_products']],
+    ['Defal vente ñeent Samsung A15 pour Awa, carte', saleTools],
+    ['Awa dafa jënd ñaar iPhone 13, Wave la fay', saleTools],
+    ['Jox Serigne ñeent chargeur Type C, fay na ci carte', saleTools],
+    ['Defal dépense 9000 ci eau', ['list_expenses', 'create_expense']],
+    ['Ñata la ma jaay tey ?', ['read_dashboard']],
+    ['Lan mooy produit bi gën a jaay ?', ['read_dashboard']],
+    ['Jox ma bilan bi ci weer wi', ['read_period_summary']],
+  ]
+
+  for (const [message, expected] of wolofDatasetScenarios) {
+    assert.deepEqual(selectMounaToolNames(message, [], { language: 'wo' }), expected, message)
+  }
+})
+
+test('une demande d’ajout de produit wolof ne devient pas un mouvement de stock', () => {
+  const tools = selectMounaToolNames('Yokk ma benn produit', [], { language: 'wo' })
+  assert.ok(tools.includes('create_product'))
+  assert.ok(!tools.includes('adjust_stock'))
 })
 
 test('le langage de prix de vente reste une modification, pas une nouvelle vente', () => {
