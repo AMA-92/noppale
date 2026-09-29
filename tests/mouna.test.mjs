@@ -24,28 +24,42 @@ import { getProductIntakeNextStep } from '../supabase/functions/mouna/product-in
 import { nextSaleIntakeQuestion } from '../supabase/functions/mouna/sale-intake.mjs'
 import {
   createMounaProviders,
-  getMounaGlmCodingPlanBaseUrl,
 } from '../supabase/functions/mouna/provider-config.mjs'
 
 const saleTools = ['list_customers', 'list_products', 'list_sales', 'create_sale', 'record_sale_payment']
 
-test('GLM est le cerveau principal, CodeCraft le second, et GLM garde son URL /v4', () => {
+test('CodeCraft est le seul fournisseur conversationnel et Claude Sonnet 5 est le modèle par défaut', () => {
   const values = {
     GLM_API_KEY: 'test-glm-key',
     GLM_BASE_URL: 'https://api.z.ai/api/paas/v4',
     GLM_MODEL: 'glm-5.3-flash',
     CODECRAFT_API_KEY: 'test-codecraft-key',
     CODECRAFT_BASE_URL: 'https://www.codecraftapi.com/v1',
+    GEMINI_API_KEY: 'test-gemini-key',
+    OPENAI_API_KEY: 'test-openai-key',
+    AI_API_KEY: 'test-ai-key',
+    MISTRAL_API_KEY: 'test-mistral-key',
+    DEEPSEEK_API_KEY: 'test-deepseek-key',
   }
   const providers = createMounaProviders((name) => values[name])
 
-  assert.deepEqual(providers.map(({ name }) => name), ['GLM', 'CodeCraft'])
-  assert.equal(providers[0].baseUrl, 'https://api.z.ai/api/paas/v4')
-  assert.equal(providers[0].model, 'glm-5.3-flash')
-  assert.equal(getMounaGlmCodingPlanBaseUrl(providers[0].baseUrl), 'https://api.z.ai/api/coding/paas/v4')
-  assert.equal(providers[1].baseUrl, 'https://codecraftapi.com/v1')
-  assert.equal(providers[1].model, 'claude-sonnet-5')
-  assert.equal(getMounaGlmCodingPlanBaseUrl('https://example.com/v1'), null)
+  assert.deepEqual(providers.map(({ name }) => name), ['CodeCraft'])
+  assert.equal(providers[0].baseUrl, 'https://codecraftapi.com/v1')
+  assert.equal(providers[0].model, 'claude-sonnet-5')
+})
+
+test('le modèle CodeCraft peut être configuré et les fournisseurs secondaires ne remplacent jamais CodeCraft', () => {
+  const values = {
+    CODECRAFT_API_KEY: 'test-codecraft-key',
+    CODECRAFT_MODEL: 'deepseek-v4-flash-0731',
+    GLM_API_KEY: 'test-glm-key',
+    GEMINI_API_KEY: 'test-gemini-key',
+  }
+  const providers = createMounaProviders((name) => values[name])
+
+  assert.deepEqual(providers.map(({ name }) => name), ['CodeCraft'])
+  assert.equal(providers[0].model, 'deepseek-v4-flash-0731')
+  assert.deepEqual(createMounaProviders((name) => name === 'GLM_API_KEY' ? 'test-glm-key' : undefined), [])
 })
 
 const scenarios = [
