@@ -21,7 +21,8 @@ export function createMounaProviders(getEnv) {
     {
       name: 'CodeCraft',
       apiKey: env('CODECRAFT_API_KEY'),
-      baseUrl: normalizeMounaProviderBaseUrl(env('CODECRAFT_BASE_URL'), 'https://www.codecraftapi.com/v1'),
+      baseUrl: normalizeMounaProviderBaseUrl(env('CODECRAFT_BASE_URL'), 'https://codecraftapi.com/v1')
+        .replace(/^https:\/\/www\.codecraftapi\.com(?=\/|$)/i, 'https://codecraftapi.com'),
       model: 'claude-sonnet-5',
     },
     {
