@@ -11,8 +11,7 @@ const exactReplies = {
     ['Quel produit voulez-vous vendre ?', 'ما المنتج الذي تريد بيعه؟'],
     ['Quel autre produit voulez-vous ajouter ?', 'ما المنتج الآخر الذي تريد إضافته؟'],
     ['Est-ce tout pour cette vente ?', 'هل اكتملت هذه البيعة؟'],
-    ['D’accord, cette vente est annulée et ne sera pas enregistrée.', 'حسنًا، أُلغيت هذه البيعة ولن تُسجّل.'],
-    ['Comment le client souhaite-t-il payer : espèces, Mobile Money ou à crédit ?', 'كيف يريد العميل الدفع: نقدًا، عبر الهاتف المحمول، أم بالدَّين؟'],
+    ['Comment le client souhaite-t-il payer : espèces, Wave, Orange Money, Mobile Money, carte bancaire ou crédit ?', 'كيف يريد العميل الدفع: نقدًا، أو عبر Wave، أو Orange Money، أو Mobile Money، أو بطاقة مصرفية، أم بالدَّين؟'],
     ['Le client a-t-il versé une avance ?', 'هل دفع العميل عربونًا؟'],
     ['Quel montant a-t-il versé en avance ?', 'ما مبلغ العربون الذي دفعه؟'],
     ['Par quel moyen a-t-il payé l’avance ?', 'بأي وسيلة دفع العربون؟'],
@@ -31,8 +30,7 @@ const exactReplies = {
     ['Quel produit voulez-vous vendre ?', 'Ban produit nga bëgg jaay?'],
     ['Quel autre produit voulez-vous ajouter ?', 'Ban beneen produit nga bëgg yokk?'],
     ['Est-ce tout pour cette vente ?', 'Lii yépp la ci vente bi?'],
-    ['D’accord, cette vente est annulée et ne sera pas enregistrée.', 'Baax na, vente bi nekkatul te duñu ko bind.'],
-    ['Comment le client souhaite-t-il payer : espèces, Mobile Money ou à crédit ?', 'Naka la klient bi bëgg fey: cash, Mobile Money, walla crédit?'],
+    ['Comment le client souhaite-t-il payer : espèces, Wave, Orange Money, Mobile Money, carte bancaire ou crédit ?', 'Ban yoon la klient bi bëgg fey: cash, Wave, Orange Money, Mobile Money, carte bancaire walla crédit?'],
     ['Le client a-t-il versé une avance ?', 'Ndax klient bi joxe na avance?'],
     ['Quel montant a-t-il versé en avance ?', 'Ñaata la klient bi joxe ci avance?'],
     ['Par quel moyen a-t-il payé l’avance ?', 'Ban yoon la fayee avance bi?'],
@@ -44,7 +42,12 @@ const exactReplies = {
 }
 
 function translateDynamicQuestion(language, reply) {
-  let match = reply.match(/^Le client « (.+) » n’est pas enregistré\. Voulez-vous l’ajouter à la liste des clients \?$/u)
+  let match = reply.match(/^Total du panier : (.+?) (.+?)\. Quel mode de paiement : espèces, Wave, Orange Money, Mobile Money, carte bancaire ou crédit \?$/u)
+  if (match) return language === 'ar'
+    ? `إجمالي السلة: ${match[1]} ${match[2]}. ما طريقة الدفع: نقدًا، أو عبر Wave، أو Orange Money، أو Mobile Money، أو بطاقة مصرفية، أم بالدَّين؟`
+    : `Total bi ci panier: ${match[1]} ${match[2]}. Ban yoon nga fay: cash, Wave, Orange Money, Mobile Money, carte bancaire walla crédit?`
+
+  match = reply.match(/^Le client « (.+) » n’est pas enregistré\. Voulez-vous l’ajouter à la liste des clients \?$/u)
   if (match) return language === 'ar'
     ? `العميل «${match[1]}» غير مسجّل. هل تريد إضافته إلى قائمة العملاء؟`
     : `Klient «${match[1]}» binduñu ko. Ndax bëgg nga yokk ko ci limu klien yi?`
@@ -114,7 +117,10 @@ export function localizePendingConfirmation(language, pendingConfirmation) {
   const summary = String(pendingConfirmation?.summary || '').trim()
   if (lang === 'fr') {
     if (/^Créer la vente pour /iu.test(summary)) return `${summary} Confirmez-vous cette vente ?`
-    return 'Action préparée. Elle attend votre confirmation.'
+    if (/^Créer le produit /iu.test(summary)) return `${summary} Confirmez-vous l’ajout ?`
+    if (/^Modifier le produit /iu.test(summary)) return `${summary} Confirmez-vous la modification ?`
+    if (/^Supprimer le produit /iu.test(summary)) return `${summary} Confirmez-vous la suppression ?`
+    return summary ? `${summary} Confirmez-vous cette action ?` : 'Confirmez-vous cette action ?'
   }
 
   let match = summary.match(/^Créer le produit « (.+?) » — prix de vente (.+?), prix d’achat (.+?), stock initial (.+?), alerte à (.+?)\.$/u)

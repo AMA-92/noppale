@@ -1,6 +1,6 @@
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-export function makeMounaRequestBody({ message, history = [], saleState = null }) {
+export function makeMounaRequestBody({ message, history = [], saleState = null, productState = null, operationState = null }) {
   const body = {
     message: String(message || ''),
     history: Array.isArray(history) ? history.slice(-10) : [],
@@ -9,6 +9,12 @@ export function makeMounaRequestBody({ message, history = [], saleState = null }
   if (requestId) body.request_id = requestId
   if (saleState && typeof saleState === 'object' && !Array.isArray(saleState)) {
     body.sale_state = saleState
+  }
+  if (productState && typeof productState === 'object' && !Array.isArray(productState)) {
+    body.product_state = productState
+  }
+  if (operationState && typeof operationState === 'object' && !Array.isArray(operationState)) {
+    body.operation_state = operationState
   }
   return body
 }

@@ -17,6 +17,8 @@ import {
   getMounaGreeting,
   getMounaProgressMessage,
 } from '../src/utils/mouna-ui.mjs'
+import { getProductIntakeNextStep } from '../supabase/functions/mouna/product-intake.mjs'
+import { nextSaleIntakeQuestion } from '../supabase/functions/mouna/sale-intake.mjs'
 
 const saleTools = ['list_customers', 'list_products', 'list_sales', 'create_sale', 'record_sale_payment']
 
@@ -47,6 +49,52 @@ test('un état de panier conserve les outils de vente après une question interm
   assert.deepEqual(selectMounaToolNames('Wave', [], { hasSaleState: true }), saleTools)
 })
 
+test('les formulations simples de modification produit et les réponses après clarification sont routées', () => {
+  assert.deepEqual(selectMounaToolNames('Je veux modifier un produit.', []), ['list_products', 'update_product'])
+  assert.deepEqual(selectMounaToolNames('Sucre', [], { operationState: ['list_products', 'delete_product'] }), ['list_products', 'delete_product'])
+  assert.deepEqual(selectMounaToolNames('Affiche le catalogue des produits.', []), ['list_products'])
+  assert.deepEqual(selectMounaToolNames('Ajoute 5 au stock du produit Sucre.', []), ['list_products', 'adjust_stock'])
+  assert.deepEqual(selectMounaToolNames('raconte-moi une blague', [{ role: 'user', content: 'Supprime un produit' }]), [])
+})
+
+test('la saisie produit conserve les champs connus et reprend sur une réponse courte', () => {
+  const state = { name: 'Sucre', buying_price: 100 }
+  assert.deepEqual(getProductIntakeNextStep(state), {
+    kind: 'question',
+    field: 'selling_price',
+    question: 'Quel est son prix de vente ?',
+  })
+  assert.deepEqual(getProductIntakeNextStep({ name: 'Sucre', buying_price: 100, selling_price: 300, stock: 20 }), {
+    kind: 'question',
+    field: 'min_stock',
+    question: 'Quel est son seuil de stock minimal ?',
+  })
+  assert.deepEqual(getProductIntakeNextStep({ name: 'Sucre', buying_price: 100, selling_price: 300, stock: 20, min_stock: 2 }), { kind: 'ready' })
+  assert.deepEqual(makeMounaRequestBody({ message: '300 FCFA', productState: state }).product_state, state)
+  assert.deepEqual(selectMounaToolNames('300 FCFA', [], { hasProductState: true }), ['create_product'])
+})
+
+test('une suppression reste routée vers les produits même après la question du nom', () => {
+  const operationState = ['list_products', 'delete_product']
+  assert.deepEqual(selectMounaToolNames('Sucre', [], { operationState }), operationState)
+})
+
+test('le panier terminé annonce son total puis demande le mode de paiement', () => {
+  const question = nextSaleIntakeQuestion({
+    customer_name: 'Awa',
+    items: [{ product_name: 'Sucre', quantity: 2 }],
+    items_complete: true,
+    total: 6000,
+    currency_code: 'FCFA',
+  })
+  assert.match(question, /6 000/u)
+  assert.match(question, /Quel mode de paiement/u)
+  assert.match(question, /Wave.*Orange Money.*Mobile Money.*carte bancaire.*crédit/u)
+  assert.match(localizeMounaReply('ar', question), /إجمالي.*Wave/u)
+  assert.match(localizeMounaReply('wo', question), /Total bi.*Orange Money/u)
+  assert.equal(nextSaleIntakeQuestion({ customer_name: 'Awa', items: [{ product_name: 'Sucre', quantity: 2 }], items_complete: false }), 'Quel autre produit voulez-vous ajouter ?')
+})
+
 test('les questions directes de collecte produit sont localisées', () => {
   assert.equal(localizeMounaReply('ar', 'Quel est le nom du produit ?'), 'ما اسم المنتج؟')
   assert.equal(localizeMounaReply('wo', 'Quel est son prix de vente ?'), 'Ñaata lañu koy jaay?')
@@ -62,6 +110,12 @@ test('la confirmation d’ajout conserve les champs et valeurs du produit TEST',
     assert.match(text, /1 000/)
     assert.match(text, /stock|المخزون/u)
   }
+})
+
+test('la confirmation française récapitule clairement la création, la modification et la suppression', () => {
+  assert.match(localizePendingConfirmation('fr', { summary: 'Créer le produit « Sucre » — prix de vente 300, prix d’achat 100, stock initial 20, alerte à 2.' }), /Confirmez-vous l’ajout/u)
+  assert.match(localizePendingConfirmation('fr', { summary: 'Modifier le produit « Sucre » (prix de vente : 400 FCFA).' }), /Confirmez-vous la modification/u)
+  assert.match(localizePendingConfirmation('fr', { summary: 'Supprimer le produit « Sucre » (stock actuel : 20).' }), /Confirmez-vous la suppression/u)
 })
 
 test('la confirmation de modification et de vente affiche le détail et la question dans la langue choisie', () => {
@@ -91,6 +145,7 @@ test('le frontend transporte le panier sans inventer d’état et limite l’his
   assert.equal(body.history.length, 10)
   assert.equal(body.history[0].content, '2')
   assert.deepEqual(body.sale_state, saleState)
+  assert.deepEqual(makeMounaRequestBody({ message: 'Sucre', operationState: { tools: ['list_products', 'delete_product'] } }).operation_state.tools, ['list_products', 'delete_product'])
   assert.match(body.request_id, /^[0-9a-f-]{36}$/i)
   assert.equal(Object.hasOwn(makeMounaRequestBody({ message: 'Bonjour' }), 'sale_state'), false)
 })

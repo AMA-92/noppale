@@ -691,6 +691,11 @@ async function le(r, e, i) {
         }),
         needsInfo: !0,
         question: t.question,
+        product_state: Object.fromEntries(
+          ["name", "buying_price", "selling_price", "stock", "min_stock"]
+            .filter((key) => e[key] !== undefined)
+            .map((key) => [key, e[key]]),
+        ),
       };
   }
   const a = i.userClient,
@@ -1008,7 +1013,21 @@ async function le(r, e, i) {
       throw new Error("Aucune modification n\u2019a \xE9t\xE9 fournie.");
     const l = c.name || n.name,
       _ = Object.entries(c)
-        .map(([u, N]) => `${u} : ${N}`)
+        .map(([u, N]) => {
+          const label = {
+            name: "nom",
+            category: "catégorie",
+            selling_price: "prix de vente",
+            buying_price: "prix d’achat",
+            min_stock: "stock minimum",
+            barcode: "code-barres",
+            description: "description",
+          }[u] || u;
+          const value = ["selling_price", "buying_price"].includes(u)
+            ? `${b(N)} FCFA`
+            : N;
+          return `${label} : ${value}`;
+        })
         .join(", ");
     return await v(
       r,
@@ -1297,10 +1316,6 @@ async function le(r, e, i) {
       };
     if (!_.length)
       throw new Error("Ajoutez au moins un article complet au panier.");
-    if (e.sale_total_confirmed !== !0)
-      throw new Error(
-        "Le total doit \xEAtre accept\xE9 explicitement avant le paiement.",
-      );
     const q = e.payment_method,
       h = re({
         total: u,
@@ -1606,7 +1621,7 @@ async function pe(r, e) {
   return {
     reply:
       i.operation === "create_sale"
-        ? `Vente enregistr\xE9e${a > 0 ? `. Monnaie \xE0 rendre : ${b(a, e.currency_code)}` : ""}. Souhaitez-vous envoyer la facture sur WhatsApp ?`
+        ? `Vente enregistr\xE9e${a > 0 ? `. Monnaie \xE0 rendre : ${b(a, e.currency_code)}` : ""}.`
         : i.summary
           ? `Action effectu\xE9e : ${i.summary}`
           : "Action confirm\xE9e et effectu\xE9e.",
