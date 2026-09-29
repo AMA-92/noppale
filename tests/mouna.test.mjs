@@ -12,6 +12,11 @@ import {
   makeMounaConfirmationBody,
   makeMounaRequestBody,
 } from '../src/utils/mounaConversation.mjs'
+import {
+  getMounaErrorMessage,
+  getMounaGreeting,
+  getMounaProgressMessage,
+} from '../src/utils/mouna-ui.mjs'
 
 const saleTools = ['list_customers', 'list_products', 'list_sales', 'create_sale', 'record_sale_payment']
 
@@ -86,7 +91,27 @@ test('le frontend transporte le panier sans inventer d’état et limite l’his
   assert.equal(body.history.length, 10)
   assert.equal(body.history[0].content, '2')
   assert.deepEqual(body.sale_state, saleState)
+  assert.match(body.request_id, /^[0-9a-f-]{36}$/i)
   assert.equal(Object.hasOwn(makeMounaRequestBody({ message: 'Bonjour' }), 'sale_state'), false)
+})
+
+test('les salutations personnalisées et prises en charge sont localisées', () => {
+  assert.equal(getMounaGreeting('fr', 'Awa'), 'Bonjour, Awa, je suis Mouna. Que puis-je faire pour vous ?')
+  assert.match(getMounaGreeting('ar', 'Awa'), /Awa/u)
+  assert.match(getMounaGreeting('wo', 'Awa'), /Awa/u)
+  assert.match(getMounaProgressMessage('ar'), /أتحقق/u)
+  assert.match(getMounaProgressMessage('wo'), /seet/u)
+})
+
+test('une erreur de fournisseur montre le diagnostic non sensible au lieu du message générique', () => {
+  const error = {
+    status: 503,
+    message: 'Mouna est temporairement indisponible : aucun fournisseur IA n’a accepté la requête (CodeCraft: erreur réseau, Gemini: 400).',
+  }
+  const result = getMounaErrorMessage('fr', error)
+  assert.match(result, /CodeCraft/u)
+  assert.match(result, /Gemini: 400/u)
+  assert.match(getMounaErrorMessage('ar', { status: 401 }), /سجّل الدخول/u)
 })
 
 test('une confirmation serveur utilise l’UUID de l’action, pas un nouveau message de vente', () => {

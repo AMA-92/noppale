@@ -5,6 +5,8 @@ export function makeMounaRequestBody({ message, history = [], saleState = null }
     message: String(message || ''),
     history: Array.isArray(history) ? history.slice(-10) : [],
   }
+  const requestId = globalThis.crypto?.randomUUID?.()
+  if (requestId) body.request_id = requestId
   if (saleState && typeof saleState === 'object' && !Array.isArray(saleState)) {
     body.sale_state = saleState
   }

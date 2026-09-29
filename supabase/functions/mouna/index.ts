@@ -109,7 +109,7 @@ const U = {
   E = new Map(),
   se = 2,
   ae = 3e4,
-  I = 2,
+  I = 1,
   j = (e) => {
     const n = E.get(e) || { failures: 0, openedUntil: 0, halfOpen: !1 };
     return (E.set(e, n), n);
@@ -163,11 +163,7 @@ const U = {
     return a.name;
   },
   le = (e) =>
-    e === 400 ||
-    e === 402 ||
-    e === 404 ||
     e === 408 ||
-    e === 422 ||
     e === 425 ||
     e === 429 ||
     e === 500 ||
@@ -536,11 +532,9 @@ Y(async (e) => {
                 S(u.name);
                 break;
               }
-              if (!le(l.status))
-                throw new Error(
-                  `Le cerveau ${u.name} a refus\xE9 la requ\xEAte (${l.status}).`,
-                );
-              (S(u.name), y + 1 < I && (await x(150 * 2 ** y)));
+              S(u.name);
+              if (le(l.status) && y + 1 < I) await x(150 * 2 ** y);
+              else break;
             } catch (l) {
               if (l instanceof Error && /^Le cerveau /.test(l.message)) throw l;
               (o.push({ name: u.name, network: !0 }),
@@ -570,7 +564,6 @@ Y(async (e) => {
               messages: [{ role: "system", content: $ }, ...r],
               tools: K,
               tool_choice: "auto",
-              parallel_tool_calls: !1,
               temperature: 0.2,
               max_tokens: ye,
             },

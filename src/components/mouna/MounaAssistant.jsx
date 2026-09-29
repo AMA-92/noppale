@@ -9,14 +9,17 @@ import {
   makeMounaConfirmationBody,
   makeMounaRequestBody
 } from '../../utils/mounaConversation.mjs'
+import {
+  getMounaErrorMessage,
+  getMounaGreeting,
+  getMounaProgressMessage
+} from '../../utils/mouna-ui.mjs'
 
 const MOUNA_LANGUAGES = {
-  fr: { name: 'Français', speechLocale: 'fr-FR', greeting: 'Bonjour.' },
-  ar: { name: 'العربية', speechLocale: 'ar-SA', greeting: 'مرحباً، كيف يمكنني مساعدتك؟' },
-  wo: { name: 'Wolof', speechLocale: 'wo-SN', greeting: 'Naka nga def? Lan nga bëgg ma la dimbali?' }
+  fr: { name: 'Français', speechLocale: 'fr-FR' },
+  ar: { name: 'العربية', speechLocale: 'ar-SA' },
+  wo: { name: 'Wolof', speechLocale: 'wo-SN' }
 }
-
-const getGreeting = (language) => MOUNA_LANGUAGES[language]?.greeting || MOUNA_LANGUAGES.fr.greeting
 
 const CONFIRMATION_LABELS = {
   fr: { title: 'Action en attente de confirmation', confirm: 'Confirmer', cancel: 'Annuler', yes: 'Je confirme.', no: 'J’annule.' },
@@ -87,6 +90,7 @@ function MounaAssistant() {
   const [listening, setListening] = useState(false)
   const [speaking, setSpeaking] = useState(false)
   const [mounaLanguage, setMounaLanguage] = useState('fr')
+  const [accountName, setAccountName] = useState('')
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Bonjour.' }
@@ -100,16 +104,24 @@ function MounaAssistant() {
 
   const refreshMounaLanguage = useCallback(async () => {
     try {
-      const preferences = await appStorage.getUserPreferences()
+      const [preferences, sessionResult] = await Promise.all([
+        appStorage.getUserPreferences(),
+        supabase.auth.getSession()
+      ])
       const nextLanguage = ['fr', 'ar', 'wo'].includes(preferences?.mouna_language)
         ? preferences.mouna_language
         : 'fr'
+      const user = sessionResult?.data?.session?.user
+      const nextAccountName = String(user?.user_metadata?.name || user?.user_metadata?.full_name || '').trim().slice(0, 60)
       setMounaLanguage(nextLanguage)
+      setAccountName(nextAccountName)
       setMessages((current) => current.length === 1 && current[0]?.role === 'assistant'
-        ? [{ role: 'assistant', content: getGreeting(nextLanguage) }]
+        ? [{ role: 'assistant', content: getMounaGreeting(nextLanguage, nextAccountName) }]
         : current)
+      return { language: nextLanguage, accountName: nextAccountName }
     } catch (error) {
       console.error('Erreur de chargement de la langue de Mouna:', error)
+      return null
     }
   }, [])
 
@@ -134,7 +146,7 @@ function MounaAssistant() {
   }
 
   const speakInBrowser = (text, locale) => {
-    if (!('speechSynthesis' in window)) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
       setSpeaking(false)
       return
     }
@@ -154,17 +166,24 @@ function MounaAssistant() {
     window.speechSynthesis.speak(utterance)
   }
 
-  const speak = async (text) => {
-    if (!open || typeof window === 'undefined') return
+  const speak = async (text, languageOverride = mounaLanguage) => {
+    if (typeof window === 'undefined') return
     const raw = String(text || '').trim()
     if (!raw) return
 
     stopSpeech()
-    const locale = MOUNA_LANGUAGES[mounaLanguage]?.speechLocale || 'fr-FR'
+    const language = ['fr', 'ar', 'wo'].includes(languageOverride) ? languageOverride : 'fr'
+    const locale = MOUNA_LANGUAGES[language]?.speechLocale || 'fr-FR'
     const shortText = raw.split(/(?<=[.!?؟])\s+/).find(Boolean) || raw
-    const spokenText = (mounaLanguage === 'fr' ? makeSpeechFriendlyText(shortText) : stripEmojiAndNoise(shortText)).slice(0, 600)
+    const spokenText = (language === 'fr' ? makeSpeechFriendlyText(shortText) : stripEmojiAndNoise(shortText)).slice(0, 600)
     if (!spokenText) {
       setSpeaking(false)
+      return
+    }
+
+    // Use the browser voice first: it starts immediately and does not wait for the remote TTS service.
+    if ('speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined') {
+      speakInBrowser(spokenText, locale)
       return
     }
 
@@ -310,7 +329,9 @@ function MounaAssistant() {
             // L’erreur localisée ci-dessous suffit si le serveur ne renvoie pas de JSON.
           }
         }
-        throw new Error(serviceMessage || error.message || 'Erreur réseau')
+        const failure = new Error(serviceMessage || error.message || 'Erreur réseau')
+        failure.status = error.context?.status
+        throw failure
       }
 
       const reply = data?.reply || (confirm
@@ -319,14 +340,11 @@ function MounaAssistant() {
       setMessages((m) => [...m, { role: 'assistant', content: reply }])
       setPendingConfirmation(null)
       setSaleState(null)
-      if (isVoiceInput) void speak(reply)
+      void speak(reply)
     } catch (error) {
-      const messagesByLanguage = {
-        fr: 'Je n’ai pas pu traiter la confirmation. Réessaie ou reconnecte-toi.',
-        ar: 'تعذّر تنفيذ التأكيد. حاول مرة أخرى أو أعد تسجيل الدخول.',
-        wo: 'Mënul a doxal dëggal gi. Jéemaat walla duggwaat.'
-      }
-      setMessages((m) => [...m, { role: 'assistant', content: messagesByLanguage[mounaLanguage] || messagesByLanguage.fr }])
+      const message = getMounaErrorMessage(mounaLanguage, error)
+      setMessages((m) => [...m, { role: 'assistant', content: message }])
+      void speak(message)
       console.error('Erreur de confirmation Mouna:', error)
     } finally {
       setBusy(false)
@@ -343,9 +361,9 @@ function MounaAssistant() {
 
     if (isGreeting(text)) {
       setInput('')
-      const greeting = getGreeting(mounaLanguage)
+      const greeting = getMounaGreeting(mounaLanguage, accountName)
       setMessages((m) => [...m, { role: 'assistant', content: greeting }])
-      if (isVoiceInput) void speak(greeting)
+      void speak(greeting)
       return
     }
 
@@ -356,12 +374,16 @@ function MounaAssistant() {
       if (decision) return runPendingAction(decision === 'confirm', isVoiceInput, true)
       const notice = PENDING_ACTION_NOTICE[mounaLanguage] || PENDING_ACTION_NOTICE.fr
       setMessages((m) => [...m, { role: 'assistant', content: notice }])
-      if (isVoiceInput) void speak(notice)
+      void speak(notice)
       return
     }
 
     setInput('')
     setMessages((m) => [...m, { role: 'user', content: text }])
+    const progressId = globalThis.crypto?.randomUUID?.() || `mouna-${Date.now()}`
+    const progressMessage = getMounaProgressMessage(mounaLanguage)
+    setMessages((m) => [...m, { id: progressId, role: 'assistant', content: progressMessage }])
+    void speak(progressMessage, mounaLanguage)
     setBusy(true)
 
     try {
@@ -383,7 +405,9 @@ function MounaAssistant() {
             // Le message générique ci-dessous suffit si la réponse n'est pas JSON.
           }
         }
-        throw new Error(serviceMessage || `Mouna API: ${status || error.message || 'erreur réseau'}`)
+        const failure = new Error(serviceMessage || `Mouna API: ${status || error.message || 'erreur réseau'}`)
+        failure.status = status
+        throw failure
       }
 
       const reply = data.reply || 'Je n’ai pas reçu de réponse exploitable.'
@@ -394,6 +418,9 @@ function MounaAssistant() {
       } else if (pending) {
         setSaleState(null)
       }
+      setMessages((m) => m.map((message) => message.id === progressId
+        ? { ...message, content: reply }
+        : message))
       handleAction(data.action)
 
       if (/télécharger|telecharger/i.test(text)) {
@@ -405,16 +432,13 @@ function MounaAssistant() {
         handleWhatsAppShare(whatsappMatch[1], reply)
       }
 
-      setMessages((m) => [...m, { role: 'assistant', content: reply }])
-      if (isVoiceInput) speak(reply)
+      void speak(reply)
     } catch (error) {
-      const errorMessages = {
-        fr: 'Je n’arrive pas à joindre le moteur de Mouna. Vérifie ta connexion ou reconnecte-toi, puis réessaie.',
-        ar: 'تعذّر على منى الاتصال بمحرك الذكاء الاصطناعي. تحقق من الاتصال أو سجّل الدخول مجدداً ثم حاول مرة أخرى.',
-        wo: 'Mouna mënul jokkoo ak xel mu màndarga. Seetal sa jokkoo walla duggwaat, nga jéemaat.'
-      }
-      const message = errorMessages[mounaLanguage] || errorMessages.fr
-      setMessages((m) => [...m, { role: 'assistant', content: message }])
+      const message = getMounaErrorMessage(mounaLanguage, error)
+      setMessages((m) => m.map((item) => item.id === progressId
+        ? { ...item, content: message }
+        : item))
+      void speak(message)
       console.error('Erreur Edge Function Mouna:', error)
     } finally {
       setBusy(false)
@@ -440,7 +464,7 @@ function MounaAssistant() {
 
           <div className="h-80 space-y-3 overflow-y-auto p-4 bg-slate-50">
             {messages.map((message, index) => (
-              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={message.id || index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div dir="auto" lang={message.role === 'assistant' ? mounaLanguage : undefined} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 border border-slate-200'}`}>
                   {message.content}
                 </div>
@@ -481,7 +505,14 @@ function MounaAssistant() {
       )}
 
       {!open && (
-        <button onClick={() => { void refreshMounaLanguage(); setOpen(true) }} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-4 font-bold text-white shadow-2xl shadow-indigo-500/30 transition hover:scale-105" aria-label="Ouvrir Mouna">
+        <button onClick={() => {
+          setOpen(true)
+          const greeting = getMounaGreeting(mounaLanguage, accountName)
+          setMessages((current) => current.length === 1 && current[0]?.role === 'assistant'
+            ? [{ role: 'assistant', content: greeting }]
+            : [...current, { role: 'assistant', content: greeting }])
+          void speak(greeting, mounaLanguage)
+        }} className="fixed bottom-5 right-5 z-[60] flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-4 font-bold text-white shadow-2xl shadow-indigo-500/30 transition hover:scale-105" aria-label="Ouvrir Mouna">
           <Sparkles size={20} /> Mouna
         </button>
       )}
