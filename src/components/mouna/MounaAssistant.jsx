@@ -3,6 +3,12 @@ import { Mic, MicOff, Send, X, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { supabase } from '../../supabase/config'
 import { appStorage } from '../../utils/storage'
 import { useUserPreferencesRealtime } from '../../hooks/useRealtime'
+import {
+  classifyMounaConfirmation,
+  getMounaPendingConfirmation,
+  makeMounaConfirmationBody,
+  makeMounaRequestBody
+} from '../../utils/mounaConversation.mjs'
 
 const MOUNA_LANGUAGES = {
   fr: { name: 'Français', speechLocale: 'fr-FR', greeting: 'Bonjour.' },
@@ -11,6 +17,18 @@ const MOUNA_LANGUAGES = {
 }
 
 const getGreeting = (language) => MOUNA_LANGUAGES[language]?.greeting || MOUNA_LANGUAGES.fr.greeting
+
+const CONFIRMATION_LABELS = {
+  fr: { title: 'Action en attente de confirmation', confirm: 'Confirmer', cancel: 'Annuler', yes: 'Je confirme.', no: 'J’annule.' },
+  ar: { title: 'إجراء بانتظار التأكيد', confirm: 'تأكيد', cancel: 'إلغاء', yes: 'أؤكد.', no: 'أُلغي.' },
+  wo: { title: 'Jëfandikoo bi dafay xaar dëggal', confirm: 'Dëggal', cancel: 'Nekkal', yes: 'Dëggal naa.', no: 'Nekk na.' }
+}
+
+const PENDING_ACTION_NOTICE = {
+  fr: 'Confirme ou annule l’action en attente avant une autre demande.',
+  ar: 'يرجى تأكيد العملية المعلّقة أو إلغاؤها قبل طلب شيء آخر.',
+  wo: 'Dëggal walla nekkal jëfandikoo bi bala nga laaj beneen lu.'
+}
 
 const stripEmojiAndNoise = (text = '') => {
   return String(text)
@@ -64,103 +82,6 @@ const makeSpeechFriendlyText = (text = '') => {
 
 const isGreeting = (text = '') => /^(bonjour|salut|bonsoir|hello|hi|salam|salaam|assalamu(?:\s+alaykum)?|naka nga def|nanga def|السلام عليكم|مرحبا|مرحباً)$/i.test(String(text).trim())
 
-const getGuidedFlow = (text = '') => {
-  const value = String(text).toLowerCase().trim()
-  if (!value) return null
-
-  if (/ajout.*produit|cr[eé]e.*produit|cr[ée]er.*produit|nouveau produit|ajouter.*produit/i.test(value)) {
-    return {
-      type: 'add_product',
-      questions: [
-        'Quel est le nom du produit ?',
-        'Dans quelle catégorie va-t-il ?',
-        'Quel est le stock initial ?',
-        'Quel est le prix d’achat ?',
-        'Quel est le prix de vente ?',
-        'Quel est le stock minimum ?',
-      ],
-      keys: ['name', 'category', 'stock', 'buying_price', 'selling_price', 'min_stock']
-    }
-  }
-
-  if (/ajout.*d[eé]pense|ajoute.*d[eé]pense|nouvelle d[eé]pense|d[eé]pense/i.test(value)) {
-    return {
-      type: 'add_expense',
-      questions: [
-        'Quelle dépense veux-tu enregistrer ?',
-        'Quel est le montant ?',
-      ],
-      keys: ['name', 'amount']
-    }
-  }
-
-  if (/modif.*produit|modifier.*produit|change.*prix.*produit|met.*prix.*produit|maj.*produit|mise.*jour.*produit/i.test(value)) {
-    return {
-      type: 'update_product',
-      questions: [
-        'Quel est le produit à modifier ?',
-        'Quel est le nouveau prix de vente ?',
-      ],
-      keys: ['name', 'selling_price']
-    }
-  }
-
-  if (/ajout.*vente|ajoute.*vente|enregistre.*vente|vente.*produit|vend/i.test(value)) {
-    return {
-      type: 'add_sale',
-      questions: [
-        'Quel produit veux-tu vendre ?',
-        'Quelle quantité ?',
-      ],
-      keys: ['name', 'quantity']
-    }
-  }
-
-  return null
-}
-
-const parseFlowValue = (key, text) => {
-  const normalized = String(text).trim()
-  if (!normalized) return null
-
-  if (key === 'stock' || key === 'buying_price' || key === 'selling_price' || key === 'min_stock' || key === 'amount' || key === 'quantity') {
-    const match = normalized.match(/\d+(?:[.,]\d+)?/)
-    return match ? Number(match[0].replace(',', '.')) : null
-  }
-
-  if (key === 'name' || key === 'category') {
-    return normalized.replace(/^.*?(?:est|c'est|c est|est le|est la|le|la)\s+/i, '').trim()
-  }
-
-  return normalized
-}
-
-const buildFlowSentence = (type, values) => {
-  if (type === 'add_product') {
-    const name = values.name || 'produit'
-    const category = values.category || 'général'
-    const stock = values.stock || 0
-    const buying = values.buying_price || 0
-    const selling = values.selling_price || 0
-    const minStock = values.min_stock || 0
-    return `crée le produit ${name} dans la catégorie ${category} avec un stock initial de ${stock}, un prix d'achat de ${buying}, un prix de vente de ${selling} et un stock minimum de ${minStock}`
-  }
-
-  if (type === 'add_expense') {
-    return `ajoute une dépense ${values.name || 'générale'} de ${values.amount || 0}`
-  }
-
-  if (type === 'update_product') {
-    return `modifie le produit ${values.name || 'produit'} avec un prix de vente de ${values.selling_price || 0}`
-  }
-
-  if (type === 'add_sale') {
-    return `vend ${values.quantity || 0} ${values.name || 'produit'}`
-  }
-
-  return 'aide-moi sur cette demande'
-}
-
 function MounaAssistant() {
   const [open, setOpen] = useState(false)
   const [listening, setListening] = useState(false)
@@ -172,9 +93,10 @@ function MounaAssistant() {
   ])
   const [busy, setBusy] = useState(false)
   const [inputMode, setInputMode] = useState('text')
+  const [pendingConfirmation, setPendingConfirmation] = useState(null)
+  const [saleState, setSaleState] = useState(null)
   const recognitionRef = useRef(null)
   const audioRef = useRef(null)
-  const guidedFlowRef = useRef(null)
 
   const refreshMounaLanguage = useCallback(async () => {
     try {
@@ -186,7 +108,6 @@ function MounaAssistant() {
       setMessages((current) => current.length === 1 && current[0]?.role === 'assistant'
         ? [{ role: 'assistant', content: getGreeting(nextLanguage) }]
         : current)
-      if (nextLanguage !== 'fr') guidedFlowRef.current = null
     } catch (error) {
       console.error('Erreur de chargement de la langue de Mouna:', error)
     }
@@ -366,6 +287,52 @@ function MounaAssistant() {
     URL.revokeObjectURL(url)
   }
 
+  const runPendingAction = async (confirm, isVoiceInput = false, userMessageAdded = false) => {
+    const pending = pendingConfirmation
+    if (!pending?.id || busy) return
+
+    const labels = CONFIRMATION_LABELS[mounaLanguage] || CONFIRMATION_LABELS.fr
+    if (!userMessageAdded) {
+      setMessages((m) => [...m, { role: 'user', content: confirm ? labels.yes : labels.no }])
+    }
+    setBusy(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('mouna', {
+        body: makeMounaConfirmationBody(pending.id, confirm)
+      })
+      if (error) {
+        let serviceMessage = ''
+        if (error.context instanceof Response) {
+          try {
+            const payload = await error.context.clone().json()
+            serviceMessage = payload?.error || ''
+          } catch {
+            // L’erreur localisée ci-dessous suffit si le serveur ne renvoie pas de JSON.
+          }
+        }
+        throw new Error(serviceMessage || error.message || 'Erreur réseau')
+      }
+
+      const reply = data?.reply || (confirm
+        ? (mounaLanguage === 'ar' ? 'تم تنفيذ الإجراء.' : mounaLanguage === 'wo' ? 'Jëfandikoo bi am na.' : 'Action confirmée et effectuée.')
+        : (mounaLanguage === 'ar' ? 'أُلغيت العملية.' : mounaLanguage === 'wo' ? 'Nekk na.' : 'Action annulée.'))
+      setMessages((m) => [...m, { role: 'assistant', content: reply }])
+      setPendingConfirmation(null)
+      setSaleState(null)
+      if (isVoiceInput) void speak(reply)
+    } catch (error) {
+      const messagesByLanguage = {
+        fr: 'Je n’ai pas pu traiter la confirmation. Réessaie ou reconnecte-toi.',
+        ar: 'تعذّر تنفيذ التأكيد. حاول مرة أخرى أو أعد تسجيل الدخول.',
+        wo: 'Mënul a doxal dëggal gi. Jéemaat walla duggwaat.'
+      }
+      setMessages((m) => [...m, { role: 'assistant', content: messagesByLanguage[mounaLanguage] || messagesByLanguage.fr }])
+      console.error('Erreur de confirmation Mouna:', error)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const sendMessage = async (forcedText) => {
     const text = (forcedText ?? input).trim()
     if (!text || busy) return
@@ -382,38 +349,14 @@ function MounaAssistant() {
       return
     }
 
-    if (guidedFlowRef.current) {
-      const flow = guidedFlowRef.current
-      const key = flow.keys[flow.index]
-      const value = parseFlowValue(key, text)
-
-      if (value !== null && key) {
-        flow.values[key] = value
-      }
-
-      flow.index += 1
-
-      if (flow.index < flow.questions.length) {
-        setInput('')
-        const question = flow.questions[flow.index]
-        setMessages((m) => [...m, { role: 'assistant', content: question }])
-        if (isVoiceInput) void speak(question)
-        return
-      }
-
-      const finalPrompt = buildFlowSentence(flow.type, flow.values)
-      guidedFlowRef.current = null
+    if (pendingConfirmation) {
       setInput('')
-      setMessages((m) => [...m, { role: 'assistant', content: 'Je mets ça en ordre.' }])
-      return sendMessage(finalPrompt)
-    }
-
-    const flow = mounaLanguage === 'fr' ? getGuidedFlow(text) : null
-    if (flow) {
-      guidedFlowRef.current = { ...flow, index: 0, values: {} }
-      setInput('')
-      setMessages((m) => [...m, { role: 'assistant', content: flow.questions[0] }])
-      if (isVoiceInput) void speak(flow.questions[0])
+      setMessages((m) => [...m, { role: 'user', content: text }])
+      const decision = classifyMounaConfirmation(text, mounaLanguage)
+      if (decision) return runPendingAction(decision === 'confirm', isVoiceInput, true)
+      const notice = PENDING_ACTION_NOTICE[mounaLanguage] || PENDING_ACTION_NOTICE.fr
+      setMessages((m) => [...m, { role: 'assistant', content: notice }])
+      if (isVoiceInput) void speak(notice)
       return
     }
 
@@ -423,10 +366,11 @@ function MounaAssistant() {
 
     try {
       const { data, error } = await supabase.functions.invoke('mouna', {
-        body: {
+        body: makeMounaRequestBody({
           message: text,
-          history: messages.slice(-10)
-        }
+          history: messages,
+          saleState
+        })
       })
       if (error) {
         const status = error.context?.status
@@ -441,7 +385,15 @@ function MounaAssistant() {
         }
         throw new Error(serviceMessage || `Mouna API: ${status || error.message || 'erreur réseau'}`)
       }
+
       const reply = data.reply || 'Je n’ai pas reçu de réponse exploitable.'
+      const pending = getMounaPendingConfirmation(data)
+      setPendingConfirmation(pending)
+      if (data?.sale_state && typeof data.sale_state === 'object' && !Array.isArray(data.sale_state)) {
+        setSaleState(data.sale_state)
+      } else if (pending) {
+        setSaleState(null)
+      }
       handleAction(data.action)
 
       if (/télécharger|telecharger/i.test(text)) {
@@ -495,6 +447,21 @@ function MounaAssistant() {
               </div>
             ))}
             {busy && <div className="text-xs text-slate-500">Mouna réfléchit…</div>}
+            {pendingConfirmation && (
+              <div className="mx-1 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                <div dir="auto" lang={mounaLanguage} className="mb-2 text-xs font-medium text-amber-900">
+                  {(CONFIRMATION_LABELS[mounaLanguage] || CONFIRMATION_LABELS.fr).title}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => void runPendingAction(true)} disabled={busy} className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                    {(CONFIRMATION_LABELS[mounaLanguage] || CONFIRMATION_LABELS.fr).confirm}
+                  </button>
+                  <button onClick={() => void runPendingAction(false)} disabled={busy} className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
+                    {(CONFIRMATION_LABELS[mounaLanguage] || CONFIRMATION_LABELS.fr).cancel}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-slate-200 bg-white p-3">

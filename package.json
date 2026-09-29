@@ -16,6 +16,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test:mouna": "node --test tests/mouna.test.mjs",
     "deploy": "node deploy.js",
     "generate-icons": "node generate-icons.js",
     "check-env": "node scripts/check-env.js",
