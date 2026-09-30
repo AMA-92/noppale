@@ -384,12 +384,6 @@ Y(async (e) => {
           ? `${R}${B}${productContext}`
           : `${R}${productContext}`,
       F = P(s, !!m),
-      forceSaleTool =
-        F.includes("create_sale") &&
-        (!!m ||
-          /\b(vente|vendre|vendu|vends?|client|panier|paiement|payer|esp[eè]ces|wave|orange money|mobile money|cr[eé]dit)\b/i.test(
-            s,
-          )),
       K = C.filter((r) => F.includes(r.name)).map((r) => ({
         type: "function",
         function: {
@@ -421,6 +415,10 @@ Y(async (e) => {
               u.model === "claude-sonnet-5" &&
               y === 1
                 ? "claude-opus-5"
+                : u.name === "CodeCraft" &&
+                    u.model === "claude-sonnet-5" &&
+                    y === 2
+                  ? "claude-opus-4.6"
                 : u.model;
             try {
               const l = await he(
@@ -499,9 +497,7 @@ Y(async (e) => {
             {
               messages: [{ role: "system", content: $ }, ...r],
               tools: K,
-              tool_choice: forceSaleTool
-                ? { type: "function", function: { name: "create_sale" } }
-                : "auto",
+              tool_choice: "auto",
               temperature: 0.2,
               max_tokens: ye,
             },
