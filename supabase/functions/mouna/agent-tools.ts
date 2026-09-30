@@ -319,6 +319,11 @@ const T =
           MOUNA_DB_LIMITS.customerPhone,
         ),
         items: oe,
+        total: {
+          ...A,
+          description:
+            "Total annoncé par l’assistant pour guider le flux; le serveur le recalcule toujours depuis les prix réels du catalogue.",
+        },
         items_complete: { type: "boolean" },
         awaiting_next_product: { type: "boolean" },
         sale_total_confirmed: { type: "boolean" },
