@@ -495,6 +495,40 @@ Y(async (e) => {
           f = (await u.json())?.choices?.[0]?.message || {};
         i = typeof f.content == "string" ? f.content : i;
         const l = Array.isArray(f.tool_calls) ? f.tool_calls : [];
+        const activeMutationFlow =
+          !!m ||
+          !!productState ||
+          operationState.some((name) =>
+            ["update_product", "delete_product", "create_sale"].includes(name),
+          );
+        const explicitMutationRequest =
+          /\b(ajout(?:e|er|ez)?|crée(?:r|z)?|modifie(?:r|z)?|change(?:r|z)?|supprime(?:r|z)?|efface(?:r|z)?|vends?|vendre|vente|enregistre(?:r|z)?)\b/i.test(
+            s,
+          ) &&
+          F.some((name) =>
+            [
+              "create_product",
+              "update_product",
+              "delete_product",
+              "create_sale",
+            ].includes(name),
+          );
+        if (
+          !l.length &&
+          (activeMutationFlow || explicitMutationRequest) &&
+          c < 5
+        ) {
+          r = [
+            ...r,
+            f,
+            {
+              role: "user",
+              content:
+                "Le flux métier est actif. N’annonce aucune action et ne réponds pas avec un texte générique : appelle maintenant l’outil métier approprié avec toutes les valeurs déjà connues. Si une valeur manque, appelle quand même l’outil pour obtenir sa question unique.",
+            },
+          ];
+          continue;
+        }
         if (!l.length) {
           const _ = Z(
             [...g, { role: "user", content: s }],
