@@ -35,9 +35,9 @@ const U = {
     }),
   oe = () => createMounaProviders((name) => Deno.env.get(name)),
   E = new Map(),
-  se = 2,
-  ae = 3e4,
-  I = 1,
+  se = 4,
+  ae = 15e3,
+  I = 3,
   j = (e) => {
     const n = E.get(e) || { failures: 0, openedUntil: 0, halfOpen: !1 };
     return (E.set(e, n), n);
