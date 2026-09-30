@@ -410,11 +410,17 @@ Y(async (e) => {
           }
           for (let y = 0; y < I; y += 1) {
             const f = Date.now();
+            const model =
+              u.name === "CodeCraft" &&
+              u.model === "claude-sonnet-5" &&
+              y === 1
+                ? "claude-opus-5"
+                : u.model;
             try {
               const l = await he(
                   u.baseUrl,
                   u.apiKey,
-                  { ...r, model: u.model },
+                  { ...r, model },
                   u.name === "CodeCraft" ? 20e3 : 12e3,
                 ),
                 _ = Date.now() - f;
@@ -454,6 +460,7 @@ Y(async (e) => {
                 S(u.name),
                 A({
                   provider: u.name,
+                  model,
                   request_id: i,
                   status: 0,
                   latency: Date.now() - f,
