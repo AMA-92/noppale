@@ -1028,7 +1028,7 @@ async function le(r, e, i) {
             description: "description",
           }[u] || u;
           const value = ["selling_price", "buying_price"].includes(u)
-            ? `${b(N)} FCFA`
+            ? b(N)
             : N;
           return `${label} : ${value}`;
         })
