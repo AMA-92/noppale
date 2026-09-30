@@ -384,6 +384,12 @@ Y(async (e) => {
           ? `${R}${B}${productContext}`
           : `${R}${productContext}`,
       F = P(s, !!m),
+      forceSaleTool =
+        F.includes("create_sale") &&
+        (!!m ||
+          /\b(vente|vendre|vendu|vends?|client|panier|paiement|payer|esp[eè]ces|wave|orange money|mobile money|cr[eé]dit)\b/i.test(
+            s,
+          )),
       K = C.filter((r) => F.includes(r.name)).map((r) => ({
         type: "function",
         function: {
@@ -493,7 +499,9 @@ Y(async (e) => {
             {
               messages: [{ role: "system", content: $ }, ...r],
               tools: K,
-              tool_choice: "auto",
+              tool_choice: forceSaleTool
+                ? { type: "function", function: { name: "create_sale" } }
+                : "auto",
               temperature: 0.2,
               max_tokens: ye,
             },
