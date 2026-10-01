@@ -16,6 +16,7 @@ import {
   selectMounaToolNames,
 } from "./intent-tools.mjs";
 import { createMounaProviders } from "./provider-config.mjs";
+import { runGeminiLiveTurn } from "./gemini-live.mjs";
 import {
   localizeConfirmedActionReply,
   localizeMounaReply,
@@ -25,7 +26,7 @@ import { formatMounaStockReply } from "./db-contracts.mjs";
 const U = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-api-key, anthropic-version",
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   },
   p = (e, n = 200) =>
@@ -141,30 +142,6 @@ const U = {
     return n;
   },
   Ne = C.map((e) => ({ ...e, input_schema: b(e.input_schema) })),
-  Te = async (e, n, t) => {
-    const s = `${e.replace(/\/$/, "")}/messages`;
-    return await fetch(s, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": n,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify(t),
-    });
-  },
-  he = async (e, n, t, timeoutMs = 12e3) => {
-    const s = `${e.replace(/\/$/, "")}/chat/completions`;
-    return await fetch(s, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${n}`,
-      },
-      body: JSON.stringify(t),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-  },
   A = (e) => {
     console.info(
       JSON.stringify({
@@ -173,17 +150,6 @@ const U = {
         at: new Date().toISOString(),
       }),
     );
-  },
-  providerErrorCode = async (response) => {
-    try {
-      const body = await response.clone().json();
-      const code = body?.error?.code ?? body?.code;
-      return typeof code === "string" || typeof code === "number"
-        ? String(code).slice(0, 40)
-        : null;
-    } catch {
-      return null;
-    }
   },
   x = (e) => new Promise((n) => setTimeout(n, e));
 Y(async (e) => {
@@ -393,90 +359,42 @@ Y(async (e) => {
         },
       })),
       G = async (r, i) => {
-        const o = [];
-        let c = !1;
-        for (const u of n) {
-          if (!ie(u.name)) {
-            (o.push({ name: u.name, network: !0 }),
-              A({
-                provider: u.name,
-                request_id: i,
-                status: 503,
-                error_code: "circuit_open",
-                fallback_used: !0,
-              }),
-              (c = !0));
-            continue;
-          }
-          for (let y = 0; y < I; y += 1) {
-            const f = Date.now();
-            const model =
-              u.name === "CodeCraft" &&
-              u.model === "claude-sonnet-5" &&
-              y === 1
-                ? "claude-opus-5"
-                : u.name === "CodeCraft" &&
-                    u.model === "claude-sonnet-5" &&
-                    y === 2
-                  ? "claude-opus-4.6"
-                : u.model;
-            try {
-              const l = await he(
-                  u.baseUrl,
-                  u.apiKey,
-                  { ...r, model },
-                  u.name === "CodeCraft" ? 20e3 : 12e3,
-                ),
-                _ = Date.now() - f;
-              if (l.ok)
-                return (
-                  ce(u.name),
-                  A({
-                    provider: u.name,
-                    request_id: i,
-                    status: l.status,
-                    latency: _,
-                    fallback_used: c,
-                  }),
-                  { response: l, brain: u }
-                );
-              const upstreamCode = await providerErrorCode(l);
-              o.push({ name: u.name, status: l.status });
-              A({
-                provider: u.name,
-                request_id: i,
-                status: l.status,
-                latency: _,
-                error_code: `http_${l.status}`,
-                ...(upstreamCode ? { upstream_error_code: upstreamCode } : {}),
-                fallback_used: c,
-              });
-              if (l.status === 401 || l.status === 403) {
-                S(u.name);
-                break;
-              }
-              S(u.name);
-              if (le(l.status) && y + 1 < I) await x(150 * 2 ** y);
-              else break;
-            } catch (l) {
-              if (l instanceof Error && /^Le cerveau /.test(l.message)) throw l;
-              (o.push({ name: u.name, network: !0 }),
-                S(u.name),
-                A({
-                  provider: u.name,
-                  model,
-                  request_id: i,
-                  status: 0,
-                  latency: Date.now() - f,
-                  error_code: "network_or_timeout",
-                  fallback_used: c,
-                }),
-                y + 1 < I && (await x(150 * 2 ** y)));
-            }
-          }
-          c = !0;
+        const brain = n[0];
+        if (!brain) throw de([{ name: "Gemini Live", network: true }]);
+        const startedAt = Date.now();
+        try {
+          const message = await runGeminiLiveTurn({
+            apiKey: brain.apiKey,
+            model: brain.model,
+            language: N,
+            voiceStyle: brain.voiceStyle,
+            messages: r.messages,
+            tools: r.tools,
+            timeoutMs: 15000,
+          });
+          ce(brain.name);
+          A({
+            provider: brain.name,
+            model: brain.model,
+            request_id: i,
+            status: 200,
+            latency: Date.now() - startedAt,
+            fallback_used: false,
+          });
+          return { response: message, brain };
+        } catch (error) {
+          S(brain.name);
+          A({
+            provider: brain.name,
+            model: brain.model,
+            request_id: i,
+            status: 0,
+            latency: Date.now() - startedAt,
+            error_code: "gemini_live_error",
+            fallback_used: false,
+          });
+          throw error;
         }
-        throw de(o);
       };
     if (!K.length)
       return p({
@@ -493,17 +411,13 @@ Y(async (e) => {
         i = "",
         o = null;
       for (let c = 0; c < 6; c++) {
-        const { response: u } = await G(
-            {
-              messages: [{ role: "system", content: $ }, ...r],
-              tools: K,
-              tool_choice: "auto",
-              temperature: 0.2,
-              max_tokens: ye,
-            },
-            M,
-          ),
-          f = (await u.json())?.choices?.[0]?.message || {};
+        const { response: f } = await G(
+          {
+            messages: [{ role: "system", content: $ }, ...r],
+            tools: K,
+          },
+          M,
+        );
         i = typeof f.content == "string" ? f.content : i;
         const l = Array.isArray(f.tool_calls) ? f.tool_calls : [];
         const activeMutationFlow =
@@ -592,9 +506,8 @@ Y(async (e) => {
             if (quickReply) return p({ reply: quickReply, ok: !0 });
           }
           r.push({
-            role: "tool",
-            tool_call_id: _.id,
-            content: String(v?.content || "OK").slice(0, 12e3),
+            role: "user",
+            content: `Résultat de l’outil ${D} confirmé par le serveur : ${String(v?.content || "OK").slice(0, 12e3)}`,
           });
         }
       }

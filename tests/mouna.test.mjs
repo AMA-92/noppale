@@ -33,13 +33,11 @@ import {
 
 const saleTools = ['list_customers', 'list_products', 'list_sales', 'create_sale', 'record_sale_payment']
 
-test('CodeCraft est le seul fournisseur conversationnel et Claude Sonnet 5 est le modèle par défaut', () => {
+test('Gemini Live est le seul fournisseur conversationnel et son modèle est configurable', () => {
   const values = {
     GLM_API_KEY: 'test-glm-key',
     GLM_BASE_URL: 'https://api.z.ai/api/paas/v4',
     GLM_MODEL: 'glm-5.3-flash',
-    CODECRAFT_API_KEY: 'test-codecraft-key',
-    CODECRAFT_BASE_URL: 'https://www.codecraftapi.com/v1',
     GEMINI_API_KEY: 'test-gemini-key',
     OPENAI_API_KEY: 'test-openai-key',
     AI_API_KEY: 'test-ai-key',
@@ -48,9 +46,8 @@ test('CodeCraft est le seul fournisseur conversationnel et Claude Sonnet 5 est l
   }
   const providers = createMounaProviders((name) => values[name])
 
-  assert.deepEqual(providers.map(({ name }) => name), ['CodeCraft'])
-  assert.equal(providers[0].baseUrl, 'https://codecraftapi.com/v1')
-  assert.equal(providers[0].model, 'claude-sonnet-5')
+  assert.deepEqual(providers.map(({ name }) => name), ['Gemini Live'])
+  assert.equal(providers[0].model, 'gemini-3.8-live')
 })
 
 test('les limites des champs reflètent le schéma Supabase et les dates sont calendaires', () => {
@@ -78,17 +75,16 @@ test('les questions générales de stock et de prix sont routées vers la base',
   assert.deepEqual(selectMounaToolNames('Modifie le prix de vente du Chargeur à 7000.'), ['list_products', 'update_product'])
 })
 
-test('le modèle CodeCraft peut être configuré et les fournisseurs secondaires ne remplacent jamais CodeCraft', () => {
+test('Gemini Live peut être configuré sans fournisseur secondaire', () => {
   const values = {
-    CODECRAFT_API_KEY: 'test-codecraft-key',
-    CODECRAFT_MODEL: 'deepseek-v4-flash-0731',
+    GEMINI_LIVE_MODEL: 'gemini-3.8-live-custom',
     GLM_API_KEY: 'test-glm-key',
     GEMINI_API_KEY: 'test-gemini-key',
   }
   const providers = createMounaProviders((name) => values[name])
 
-  assert.deepEqual(providers.map(({ name }) => name), ['CodeCraft'])
-  assert.equal(providers[0].model, 'deepseek-v4-flash-0731')
+  assert.deepEqual(providers.map(({ name }) => name), ['Gemini Live'])
+  assert.equal(providers[0].model, 'gemini-3.8-live-custom')
   assert.deepEqual(createMounaProviders((name) => name === 'GLM_API_KEY' ? 'test-glm-key' : undefined), [])
 })
 
@@ -264,11 +260,11 @@ test('les salutations personnalisées et prises en charge sont localisées', () 
 test('une erreur de fournisseur montre le diagnostic non sensible au lieu du message générique', () => {
   const error = {
     status: 503,
-    message: 'Mouna est temporairement indisponible : aucun fournisseur IA n’a accepté la requête (CodeCraft: erreur réseau, Gemini: 400).',
+    message: 'Mouna est temporairement indisponible : aucun fournisseur IA n’a accepté la requête (Gemini Live: erreur réseau).',
   }
   const result = getMounaErrorMessage('fr', error)
-  assert.match(result, /CodeCraft/u)
-  assert.match(result, /Gemini: 400/u)
+  assert.match(result, /Gemini Live/u)
+  assert.match(result, /Gemini Live: erreur réseau/u)
   assert.match(getMounaErrorMessage('ar', { status: 401 }), /سجّل الدخول/u)
 })
 

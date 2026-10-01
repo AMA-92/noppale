@@ -1,22 +1,12 @@
-export function normalizeMounaProviderBaseUrl(configured, fallback) {
-  const value = (configured || fallback).trim()
-  if (!value) return fallback
-
-  const baseUrl = value.replace(/\/+$/, '')
-  if (baseUrl.includes('generativelanguage.googleapis.com/v1beta/openai')) return baseUrl
-  if (/\/v\d+$/.test(baseUrl)) return baseUrl
-  return `${baseUrl}/v1`
-}
-
 export function createMounaProviders(getEnv) {
-  const apiKey = getEnv('CODECRAFT_API_KEY')
+  const apiKey = getEnv('GEMINI_API_KEY')
   if (typeof apiKey !== 'string' || !apiKey.trim()) return []
 
   return [{
-    name: 'CodeCraft',
+    name: 'Gemini Live',
     apiKey: apiKey.trim(),
-    baseUrl: normalizeMounaProviderBaseUrl(getEnv('CODECRAFT_BASE_URL'), 'https://codecraftapi.com/v1')
-      .replace(/^https:\/\/www\.codecraftapi\.com(?=\/|$)/i, 'https://codecraftapi.com'),
-    model: getEnv('CODECRAFT_MODEL') || 'claude-sonnet-5',
+    model: getEnv('GEMINI_LIVE_MODEL') || 'gemini-3.8-live',
+    voiceStyle: getEnv('MOUNA_VOICE_STYLE') || 'female_soft_warm',
+    language: getEnv('MOUNA_DEFAULT_LANGUAGE') || 'fr',
   }]
 }
